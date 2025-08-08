@@ -7,9 +7,11 @@
     "port": 8000
   },
   "can_bus_service": {
-    "channel": "can0",
+    "interface": "virtual",
+    "channel": "vcan0",
     "bitrate": 500000,
-    "log_file": "can_raw.log"
+    "log_file": "can_raw.log",
+    "dbc_file": "config/sample.dbc"
   },
   "global": {
     "nats_url": "nats://localhost:4222"

@@ -15,7 +15,6 @@ class ManagerService(Microservice):
     """
     The Microservice Manager.
     Discovers, starts, and monitors other microservices.
-    This service is a special case and does not connect to NATS itself.
     """
 
     def __init__(self):
@@ -23,77 +22,59 @@ class ManagerService(Microservice):
         self.services_dir = "services"
         self.managed_processes: Dict[str, subprocess.Popen] = {}
         self.log_files: Dict[str, io.TextIOWrapper] = {}
-        # Create a directory for logs if it doesn't exist
         os.makedirs("logs", exist_ok=True)
 
-
     def discover_services(self):
-        """
-        Discovers available services in the services directory.
-        A service is a directory containing a main.py file.
-        """
+        """Discovers available services in the services directory."""
         discovered = []
         for service_name in os.listdir(self.services_dir):
             service_path = os.path.join(self.services_dir, service_name)
             if os.path.isdir(service_path) and "main.py" in os.listdir(service_path):
-                if service_name != "manager": # Exclude the manager itself
+                if service_name != "manager":
                     discovered.append(service_name)
-        print(f"[{self.service_name}] Discovered services: {discovered}")
+        self.logger.info(f"Discovered services: {discovered}")
         return discovered
 
     def start_service(self, service_name: str):
         """Starts a microservice as a new process and logs its output."""
         if service_name in self.managed_processes and self.managed_processes[service_name].poll() is None:
-            print(f"[{self.service_name}] Service '{service_name}' is already running.")
+            self.logger.info(f"Service '{service_name}' is already running.")
             return
 
         service_main_path = os.path.join(self.services_dir, service_name, "main.py")
         if not os.path.exists(service_main_path):
-            print(f"[{self.service_name}] Could not find main.py for service '{service_name}'.")
+            self.logger.error(f"Could not find main.py for service '{service_name}'.")
             return
 
-        print(f"[{self.service_name}] Starting service '{service_name}'...")
+        self.logger.info(f"Starting service '{service_name}'...")
         try:
-            log_path = os.path.join("logs", f"{service_name}.log")
-            log_file = open(log_path, "w")
-            self.log_files[service_name] = log_file
-
-            process = subprocess.Popen(
-                [sys.executable, service_main_path],
-                stdout=log_file,
-                stderr=log_file
-            )
+            # Note: The logging for the child process is configured within the child itself.
+            # The manager does not need to handle its log files anymore.
+            process = subprocess.Popen([sys.executable, service_main_path])
             self.managed_processes[service_name] = process
-            print(f"[{self.service_name}] Service '{service_name}' started with PID {process.pid}. Log: {log_path}")
+            self.logger.info(f"Service '{service_name}' started with PID {process.pid}.")
         except Exception as e:
-            print(f"[{self.service_name}] Error starting service '{service_name}': {e}")
+            self.logger.error(f"Error starting service '{service_name}': {e}", exc_info=True)
 
     def stop_service(self, service_name: str):
-        """Stops a microservice and closes its log file."""
+        """Stops a microservice."""
         process = self.managed_processes.get(service_name)
         if process and process.poll() is None:
-            print(f"[{self.service_name}] Stopping service '{service_name}' (PID {process.pid})...")
+            self.logger.info(f"Stopping service '{service_name}' (PID {process.pid})...")
             process.terminate()
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                print(f"[{self.service_name}] Service '{service_name}' did not terminate gracefully. Killing.")
+                self.logger.warning(f"Service '{service_name}' did not terminate gracefully. Killing.")
                 process.kill()
-
-            print(f"[{self.service_name}] Service '{service_name}' stopped.")
+            self.logger.info(f"Service '{service_name}' stopped.")
 
         if service_name in self.managed_processes:
             del self.managed_processes[service_name]
 
-        if service_name in self.log_files:
-            self.log_files[service_name].close()
-            del self.log_files[service_name]
-
     async def _start_logic(self):
-        """
-        Starts the manager logic: discover and start all services.
-        """
-        print(f"[{self.service_name}] Starting service discovery...")
+        """Starts the manager logic: discover and start all services."""
+        self.logger.info("Starting service discovery...")
         all_services = self.discover_services()
 
         if "settings_service" in all_services:
@@ -107,44 +88,44 @@ class ManagerService(Microservice):
             self.start_service(service_name)
 
     async def _stop_logic(self):
-        """
-        Stops all managed microservices.
-        """
-        print(f"[{self.service_name}] Stopping all managed services...")
+        """Stops all managed microservices."""
+        self.logger.info("Stopping all managed services...")
         for service_name in list(self.managed_processes.keys()):
             self.stop_service(service_name)
-        print(f"[{self.service_name}] All managed services have been signaled to stop.")
+        self.logger.info("All managed services have been signaled to stop.")
 
     async def run(self):
         """
         The main entry point for the manager service.
         """
-        self.is_running = True
+        self.logger.info("Service starting...")
         loop = asyncio.get_running_loop()
-
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(sig, lambda: asyncio.create_task(self.stop()))
+        try:
+            for sig in (signal.SIGINT, signal.SIGTERM):
+                loop.add_signal_handler(sig, self._signal_handler)
+        except NotImplementedError:
+            self.logger.warning("loop.add_signal_handler not implemented. Using signal.signal().")
+            signal.signal(signal.SIGINT, self._signal_handler)
+            signal.signal(signal.SIGTERM, self._signal_handler)
 
         try:
             await self._start_logic()
-            print(f"[{self.service_name}] Manager is running. Press Ctrl+C to stop.")
+            self.logger.info("Manager is running. Waiting for shutdown signal.")
 
-            while self.is_running:
+            while not self._shutdown_event.is_set():
                 for name, process in list(self.managed_processes.items()):
                     if process.poll() is not None:
-                        print(f"[{self.service_name}] Service '{name}' (PID {process.pid}) has terminated.")
-                        self.stop_service(name) # Ensure log file is closed
-                await asyncio.sleep(2)
+                        self.logger.info(f"Service '{name}' (PID {process.pid}) has terminated.")
+                        self.stop_service(name)
 
-        except asyncio.CancelledError:
-            pass
+                try:
+                    await asyncio.wait_for(self._shutdown_event.wait(), timeout=2.0)
+                except asyncio.TimeoutError:
+                    pass
+
+        except Exception as e:
+            self.logger.critical(f"An unhandled error occurred during run: {e}", exc_info=True)
         finally:
+            self.logger.info("Shutting down...")
             await self._stop_logic()
-            print(f"[{self.service_name}] Manager service has stopped.")
-
-    async def stop(self):
-        """Stops the manager service."""
-        if not self.is_running:
-            return
-        print(f"[{self.service_name}] Initiating shutdown...")
-        self.is_running = False
+            self.logger.info("Manager service has stopped.")

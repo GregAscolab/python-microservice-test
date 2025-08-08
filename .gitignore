@@ -1,2 +1,26 @@
-__pycache__
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Virtual environment
+venv/
+env/
+
+# Logs and temporary files
 *.log
+*.zip
+*.tar.gz
+nats-server
+nats_install.sh
+debug_log.txt
+
+# OS-specific
+.DS_Store
+Thumbs.db
