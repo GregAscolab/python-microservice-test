@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Web App</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    {% include 'header.html' %}
+    <div class="container">
+        {% include 'sidebar.html' %}
+        <main>
+            <h2>Welcome to My Web App</h2>
+        </main>
+    </div>
+    {% include 'footer.html' %}
+
+    <script>
+        // document.querySelector("body").requestFullscreen();
+        document.body.requestFullscreen();
+
+        // try {
+        // const primaryScreen = (await getScreenDetails()).screens.find(
+        //     (screen) => screen.isPrimary,
+        // );
+        // await document.body.requestFullscreen({ screen: primaryScreen });
+        // } catch (err) {
+        // console.error(err.name, err.message);
+        // }
+
+        console.log("fullscreen");
+    </script>
+</body>
+</html>

@@ -11,6 +11,8 @@ from common.microservice import Microservice
 class SettingsService(Microservice):
     """
     The Settings Management Microservice.
+    It loads settings from a file, serves them to other services,
+    handles update requests, persists changes, and broadcasts updates.
     """
 
     def __init__(self):
@@ -26,16 +28,24 @@ class SettingsService(Microservice):
                 self.all_settings = json.load(f)
             self.logger.info("Settings loaded successfully.")
         except FileNotFoundError:
-            self.logger.error(f"{self.settings_path} not found.")
+            self.logger.error(f"'{self.settings_path}' not found. Starting with empty settings.")
             self.all_settings = {}
         except json.JSONDecodeError:
-            self.logger.error(f"Could not decode JSON from {self.settings_path}.")
+            self.logger.error(f"Could not decode JSON from '{self.settings_path}'. Starting with empty settings.")
             self.all_settings = {}
 
+    def _save_settings(self):
+        """Saves the current settings to the JSON file."""
+        self.logger.info(f"Saving settings to {self.settings_path}...")
+        try:
+            with open(self.settings_path, 'w') as f:
+                json.dump(self.all_settings, f, indent=4)
+            self.logger.info("Settings saved successfully.")
+        except IOError as e:
+            self.logger.error(f"Could not save settings to file: {e}")
+
     async def _settings_request_handler(self, msg: Msg):
-        """
-        Handles requests for settings.
-        """
+        """Handles read requests for settings."""
         subject = msg.subject
         reply = msg.reply
         service_key = subject.split('.')[-1]
@@ -51,28 +61,54 @@ class SettingsService(Microservice):
             await self.messaging_client.publish(reply, response_json.encode())
             self.logger.debug(f"Sent settings for '{service_key}' to {reply}")
 
+    async def _handle_update_setting_command(self, group: str, key: str, value: any):
+        """Handles the 'update_setting' command."""
+        self.logger.info(f"Received update for setting '{group}.{key}' with value '{value}'")
+
+        if group not in self.all_settings:
+            self.all_settings[group] = {}
+
+        # Check if setting is read-only
+        if key in self.all_settings[group] and self.all_settings[group][key].get('ro', False):
+            self.logger.warning(f"Attempted to modify read-only setting: {group}.{key}")
+            return
+
+        # Update the setting
+        if key not in self.all_settings[group]:
+             self.all_settings[group][key] = {}
+        self.all_settings[group][key]['value'] = value
+
+        # Persist the changes
+        self._save_settings()
+
+        # Broadcast the change to all services
+        update_payload = {
+            "group": group,
+            "key": key,
+            "value": value
+        }
+        await self.messaging_client.publish("settings.updated", json.dumps(update_payload).encode())
+        self.logger.info(f"Broadcasted update for {group}.{key}")
+
     async def _start_logic(self):
         """
-        Connects to the messaging bus, loads its own settings from a file,
-        and subscribes to handle settings requests from other services.
+        Connects, loads settings, and subscribes to requests and commands.
         """
         await self._load_settings()
 
-        # The settings service must connect to NATS to serve others.
-        # It retries internally until successful.
         if not await self.connect():
             self.logger.error("Could not connect to NATS, shutting down.")
             await self.stop()
             return
 
+        # Register handlers
         self.logger.info("Subscribing to settings requests...")
         await self.messaging_client.subscribe("settings.get.*", cb=self._settings_request_handler)
         self.logger.info("Subscribed to 'settings.get.*'")
 
-        # Also subscribe to the commands for this service
+        self.command_handler.register_command("update_setting", self._handle_update_setting_command)
         await self._subscribe_to_commands()
 
     async def _stop_logic(self):
-        """Stops the settings service logic."""
         self.logger.info("Stop logic executed.")
         pass

@@ -1,0 +1,9 @@
+<nav class="sidebar">
+    <ul>
+        <li><a href="/dashboard" class="{{ 'active' if request.url.path == '/dashboard' else '' }}">Dashboard</a></li>
+        <li><a href="/logger" class="{{ 'active' if request.url.path == '/logger' else '' }}">Logger</a></li>
+        <li><a href="/map" class="{{ 'active' if request.url.path == '/map' else '' }}">Map</a></li>
+        <li><a href="/sensors" class="{{ 'active' if request.url.path == '/sensors' else '' }}">Sensors</a></li>
+        <li><a href="/settings" class="{{ 'active' if request.url.path == '/settings' else '' }}">Settings</a></li>
+    </ul>
+</nav>
