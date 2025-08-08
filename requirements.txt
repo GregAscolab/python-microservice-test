@@ -1,0 +1,6 @@
+nats-py
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+aiofiles

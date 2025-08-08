@@ -1,0 +1,17 @@
+{
+  "manager": {
+    "discovery_interval": 10
+  },
+  "ui_service": {
+    "host": "0.0.0.0",
+    "port": 8000
+  },
+  "can_bus_service": {
+    "channel": "can0",
+    "bitrate": 500000,
+    "log_file": "can_raw.log"
+  },
+  "global": {
+    "nats_url": "nats://localhost:4222"
+  }
+}

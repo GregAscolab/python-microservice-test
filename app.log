@@ -1,0 +1,256 @@
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
+nats: encountered error
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/client.py", line 1396, in _select_next_server
+    await self._transport.connect(
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/nats/aio/transport.py", line 121, in connect
+    r, w = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 1140, in create_connection
+    raise OSError('Multiple exceptions: {}'.format(
+OSError: Multiple exceptions: [Errno 111] Connect call failed ('127.0.0.1', 4222), [Errno 97] Address family not supported by protocol
