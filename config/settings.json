@@ -10,8 +10,14 @@
     "interface": "virtual",
     "channel": "vcan0",
     "bitrate": 500000,
-    "log_file": "can_raw.log",
-    "dbc_file": "config/sample.dbc"
+    "log_file_format": ".blf",
+    "log_dir": "can_logs",
+    "log_file_size": 100000,
+    "dbc_file": "config/sample.dbc",
+    "s3_endpoint_url": "http://dev.ascolab.fr:10000",
+    "s3_bucket": "eiffage-test",
+    "s3_access_key": "MoqWL43ayrgZgKgCuLqT",
+    "s3_secret_key": "lVfCiJLQ3dq1zd50mtufd0oQVo9B94O7gvWkLfGw"
   },
   "global": {
     "nats_url": "nats://localhost:4222"
