@@ -16,12 +16,18 @@ from datetime import datetime, timezone
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from common.microservice import Microservice
 
+# --- Absolute Path Setup ---
+# This ensures that file paths are correct regardless of the working directory
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(APP_DIR, "frontend", "static")
+TEMPLATES_DIR = os.path.join(APP_DIR, "frontend", "templates")
+# Use an absolute path for the main log directory as well
+LOG_DIR = os.path.abspath("logs")
+
 # We use an APIRouter now, which will be included by the main app in service.py
 router = APIRouter()
 
-# The static files and templates are now managed relative to the project root
-router.mount("/static", StaticFiles(directory="services/ui_service/frontend/static"), name="static")
-templates = Jinja2Templates(directory="services/ui_service/frontend/templates")
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 
 class ConnectionManager:
@@ -34,12 +40,10 @@ class ConnectionManager:
         if channel not in self.active_connections:
             self.active_connections[channel] = []
         self.active_connections[channel].append(websocket)
-        print(f"WebSocket connected to channel: {channel}")
 
     def disconnect(self, websocket: WebSocket, channel: str):
         if channel in self.active_connections:
             self.active_connections[channel].remove(websocket)
-            print(f"WebSocket disconnected from channel: {channel}")
 
     async def broadcast(self, message: str, channel: str):
         if channel in self.active_connections:
@@ -49,7 +53,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # --- Helper function to get the parent service ---
-def get_service(request: Request) -> Microservice:
+def get_service(request: Request) -> "UiService":
     return request.app.state.service
 
 # --- HTML Page Routes ---
@@ -58,20 +62,17 @@ def get_service(request: Request) -> Microservice:
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-@router.get("/logger", response_class=HTMLResponse)
 @router.get("/logger/{path:path}", response_class=HTMLResponse)
 async def read_logger_path(request: Request, path: str = ""):
     service = get_service(request)
-    # This logic needs to be adapted or moved, as the UI service shouldn't
-    # have direct file system access like this for security reasons.
-    # For now, we'll leave it but acknowledge it's a potential issue.
-    # In a real system, this would be a request to a dedicated "file_service".
     try:
-        # A safer root directory for logs
-        log_root = "logs"
-        os.makedirs(log_root, exist_ok=True)
+        os.makedirs(LOG_DIR, exist_ok=True)
+        full_path = os.path.normpath(os.path.join(LOG_DIR, path))
 
-        full_path = os.path.join(log_root, path)
+        # Security check to prevent path traversal
+        if not full_path.startswith(LOG_DIR):
+            return HTMLResponse("Forbidden", status_code=403)
+
         items = os.listdir(full_path)
         files = {item: os.path.getsize(os.path.join(full_path, item)) for item in items if os.path.isfile(os.path.join(full_path, item))}
         dirs = [item for item in items if os.path.isdir(os.path.join(full_path, item))]
@@ -96,7 +97,6 @@ async def websocket_data_endpoint(websocket: WebSocket):
     await manager.connect(websocket, "can_data")
     try:
         while True:
-            # We just listen for data from the server, no need to receive from client
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket, "can_data")
@@ -111,11 +111,11 @@ async def websocket_gps_endpoint(websocket: WebSocket):
         manager.disconnect(websocket, "gps")
 
 @router.websocket("/ws_settings")
-async def websocket_settings_endpoint(websocket: WebSocket, request: Request):
+async def websocket_settings_endpoint(websocket: WebSocket):
+    request = websocket
     service = get_service(request)
     await manager.connect(websocket, "settings")
 
-    # Send all current settings on connect
     all_settings_payload = {"settings": service.settings}
     await websocket.send_text(json.dumps(all_settings_payload))
 
@@ -132,7 +132,6 @@ async def websocket_settings_endpoint(websocket: WebSocket, request: Request):
                         "key": key,
                         "value": setting_data["value"]
                     }
-                    # Publish a command to the settings_service to update the setting
                     await service.messaging_client.publish(
                         "commands.settings_service",
                         json.dumps(command).encode()
@@ -147,9 +146,10 @@ async def websocket_settings_endpoint(websocket: WebSocket, request: Request):
 
 @router.get("/download/{file_path:path}")
 async def download_file(file_path: str):
-    # This should also be handled by a dedicated service in a real system.
-    log_root = "logs"
-    full_path = os.path.join(log_root, file_path)
+    full_path = os.path.normpath(os.path.join(LOG_DIR, file_path))
+    if not full_path.startswith(LOG_DIR):
+        return HTMLResponse("Forbidden", status_code=403)
+
     if os.path.exists(full_path):
         return FileResponse(full_path, filename=os.path.basename(full_path))
     return HTMLResponse("File not found", status_code=404)
@@ -160,16 +160,13 @@ class FileToConvert(BaseModel):
 
 @router.post("/convert")
 def convert_file(file_content: FileToConvert, request: Request):
-    # This is compute-heavy and blocks. In a real system, this would be
-    # a request to a dedicated "processing_service".
     service = get_service(request)
     service.logger.info(f"Converting file: {file_content.name} in folder {file_content.folder}")
 
-    # This logic remains largely the same, but uses the service's logger.
     try:
-        db = cantools.database.load_file("config/sample.dbc")
-        log_root = "logs"
-        file_path = os.path.join(log_root, file_content.folder, file_content.name)
+        db_path = os.path.abspath("config/sample.dbc")
+        db = cantools.database.load_file(db_path)
+        file_path = os.path.join(LOG_DIR, file_content.folder, file_content.name)
 
         time_series_data = []
         signals_cache = {}
@@ -184,7 +181,7 @@ def convert_file(file_content: FileToConvert, request: Request):
                         signals_cache[k]['timestamps'].append(utc_time_str)
                         signals_cache[k]['values'].append(v)
                 except Exception:
-                    continue # Ignore messages not in DBC
+                    continue
 
         for data in signals_cache.values():
             time_series_data.append(data)
