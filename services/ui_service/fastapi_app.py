@@ -22,7 +22,7 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "frontend", "static")
 TEMPLATES_DIR = os.path.join(APP_DIR, "frontend", "templates")
 # Use an absolute path for the main log directory as well
-LOG_DIR = os.path.abspath("logs")
+CAN_LOGS_DIR = os.path.abspath("can_logs")
 
 # We use an APIRouter now, which will be included by the main app in service.py
 router = APIRouter()
@@ -66,11 +66,11 @@ async def read_root(request: Request):
 async def read_logger_path(request: Request, path: str = ""):
     service = get_service(request)
     try:
-        os.makedirs(LOG_DIR, exist_ok=True)
-        full_path = os.path.normpath(os.path.join(LOG_DIR, path))
+        os.makedirs(CAN_LOGS_DIR, exist_ok=True)
+        full_path = os.path.normpath(os.path.join(CAN_LOGS_DIR, path))
 
         # Security check to prevent path traversal
-        if not full_path.startswith(LOG_DIR):
+        if not full_path.startswith(CAN_LOGS_DIR):
             return HTMLResponse("Forbidden", status_code=403)
 
         items = os.listdir(full_path)
@@ -146,8 +146,8 @@ async def websocket_settings_endpoint(websocket: WebSocket):
 
 @router.get("/download/{file_path:path}")
 async def download_file(file_path: str):
-    full_path = os.path.normpath(os.path.join(LOG_DIR, file_path))
-    if not full_path.startswith(LOG_DIR):
+    full_path = os.path.normpath(os.path.join(CAN_LOGS_DIR, file_path))
+    if not full_path.startswith(CAN_LOGS_DIR):
         return HTMLResponse("Forbidden", status_code=403)
 
     if os.path.exists(full_path):
@@ -166,7 +166,7 @@ def convert_file(file_content: FileToConvert, request: Request):
     try:
         db_path = os.path.abspath("config/sample.dbc")
         db = cantools.database.load_file(db_path)
-        file_path = os.path.join(LOG_DIR, file_content.folder, file_content.name)
+        file_path = os.path.join(CAN_LOGS_DIR, file_content.folder, file_content.name)
 
         time_series_data = []
         signals_cache = {}
