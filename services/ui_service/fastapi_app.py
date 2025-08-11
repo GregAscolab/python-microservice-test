@@ -95,19 +95,31 @@ async def read_page(request: Request, page: str):
 
 @router.websocket("/ws_data")
 async def websocket_data_endpoint(websocket: WebSocket):
+    request = websocket
+    service = get_service(request)
     await manager.connect(websocket, "can_data")
     try:
         while True:
-            await websocket.receive_text()
+            data = await websocket.receive_text()
+            await service.messaging_client.publish(
+                "commands.can_bus_service",
+                data.encode()
+            )
     except WebSocketDisconnect:
         manager.disconnect(websocket, "can_data")
 
 @router.websocket("/ws_gps")
 async def websocket_gps_endpoint(websocket: WebSocket):
+    request = websocket
+    service = get_service(request)
     await manager.connect(websocket, "gps")
     try:
         while True:
-            await websocket.receive_text()
+            data = await websocket.receive_text()
+            await service.messaging_client.publish(
+                "commands.gps_service",
+                data.encode()
+            )
     except WebSocketDisconnect:
         manager.disconnect(websocket, "gps")
 
@@ -118,7 +130,7 @@ async def websocket_settings_endpoint(websocket: WebSocket):
     await manager.connect(websocket, "settings")
 
     all_settings_payload = {"settings": service.settings}
-    await websocket.send_text(json.dumps(all_settings_payload))
+    await websocket.send_text(json.dumps(all_settings_payload, indent=None, separators=(',',':')))
 
     try:
         while True:
