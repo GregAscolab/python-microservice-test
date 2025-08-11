@@ -85,8 +85,9 @@ class CanBusService(Microservice):
                 try:
                     decoded = self.db.decode_message(msg.arbitration_id, msg.data)
                     for name, value in decoded.items():
-                        payload = {'name': name, 'value': round(float(value), 3), 'ts': time.time()}
-                        await self.messaging_client.publish("can_data", json.dumps(payload).encode())
+                        current_time = int(msg.timestamp * 1000)
+                        payload = {'name': name, 'value': round(float(value), 3), 'ts': current_time}
+                        await self.messaging_client.publish(f"can_data", json.dumps(payload, indent=None, separators=(',',':')).encode())
                         self.logger.debug(f"Published decoded signal: {payload}")
                 except Exception:
                     pass
