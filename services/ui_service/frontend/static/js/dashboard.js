@@ -38,8 +38,8 @@ const ws_data = new WebSocket(url_data);
 const pressureTableBody = document.querySelector('#pressureTable tbody');
 const angleTableBody = document.querySelector('#angleTable tbody');
 
-// Cache to store received names
-const nameCache = new Set();
+// Cache to store received names/values
+const nameCache = new Map();
 
 // Get the buttons
 const toggleRecordingButton = document.getElementById('toggleRecording');
@@ -59,6 +59,19 @@ const typeToUnitMap = new Map([
   ["angle","deg"],
 ]);
 
+// Update display according nameCache values
+function updateDisplay() {
+    // Loop on cache data
+    for (const [name, val] of nameCache) {
+        // Update the value of data in table
+        const cell = document.getElementById(name + "_val");
+        cell.textContent = val;
+    }
+}
+
+// Period refresh of the display, based on value received and store in cache
+const intervalID = setInterval(updateDisplay, 200);
+
 // Handle incoming messages
 ws_data.onmessage = function(event) {
     // Parse the incoming message
@@ -68,14 +81,7 @@ ws_data.onmessage = function(event) {
 
 
     // Check if the name already exists in the cache
-    if (nameCache.has(data.name)) {
-        // Update the value if the name exists
-        const cell = document.getElementById(data.name + "_val");
-        cell.textContent = data.value;
-    } else {
-        // Add the name to the cache
-        nameCache.add(data.name);
-
+    if (! nameCache.has(data.name)) {
         // Create a new row
         const newRow = document.createElement('tr');
         newRow.id = data.name; // Set the id attribute based on the name
@@ -116,6 +122,15 @@ ws_data.onmessage = function(event) {
         // Append the new row to the table body
         tableBody.appendChild(newRow);
     }
+    else {
+        // Nothing to add in table
+    }
+
+    // Always store data value in cache
+    nameCache.set(data.name, data.value);
+
+    // Will be displayed by periodic function.
+    // updateDisplay();
 };
 
 // Handle WebSocket errors
