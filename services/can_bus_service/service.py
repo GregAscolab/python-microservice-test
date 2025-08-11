@@ -39,6 +39,7 @@ class CanBusService(Microservice):
 
         interface = self.settings.get("interface", "virtual")
         channel = self.settings.get("channel", "vcan0")
+        if channel == "" : channel=None
 
         try:
             self.logger.info(f"Initializing CAN bus: interface={interface}, channel={channel}")
