@@ -1,0 +1,88 @@
+VERSION ""
+
+
+NS_ : 
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: 
+
+
+BO_ 394 DIN0_3: 8 Vector__XXX
+ SG_ DIN0_3 : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 650 AIN1_4: 8 Vector__XXX
+ SG_ A4_STICK_BP_b : 48|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
+ SG_ A3_STICK_HP_b : 32|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
+ SG_ A2_BOOM_BP_b : 16|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
+ SG_ A1_BOOM_HP_b : 0|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
+
+BO_ 906 AIN5_8: 8 Vector__XXX
+ SG_ A8 : 48|16@1- (1,0) [0|0] "" Vector__XXX
+ SG_ A7 : 32|16@1- (1,0) [0|0] "" Vector__XXX
+ SG_ A6_TOOTH_BP_b : 16|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
+ SG_ A5_TOOTH_HP_b : 0|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
+
+BO_ 658 PF_CHASSIS_PFAng: 8 Vector__XXX
+ SG_ PF_CHASSIS_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_CHASSIS_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_CHASSIS_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_CHASSIS_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
+
+BO_ 662 PF_BOOM_PFAng: 8 Vector__XXX
+ SG_ PF_BOOM_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BOOM_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_BOOM_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_BOOM_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
+
+BO_ 666 PF_BAL_PFAng: 8 Vector__XXX
+ SG_ PF_BAL_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BAL_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_BAL_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_BAL_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
+
+BO_ 670 PF_BUCKET_PFAng: 8 Vector__XXX
+ SG_ PF_BUCKET_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BUCKET_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_BUCKET_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_BUCKET_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
+
+
+
+
+
+
+
+
+
+
+
+

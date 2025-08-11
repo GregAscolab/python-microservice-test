@@ -55,7 +55,7 @@ class SettingsService(Microservice):
         else:
             response_data = self.all_settings.get(service_key, {})
 
-        response_json = json.dumps(response_data)
+        response_json = json.dumps(response_data, indent=None, separators=(',',':'))
 
         if reply:
             await self.messaging_client.publish(reply, response_json.encode())
@@ -87,7 +87,7 @@ class SettingsService(Microservice):
             "key": key,
             "value": value
         }
-        await self.messaging_client.publish("settings.updated", json.dumps(update_payload).encode())
+        await self.messaging_client.publish("settings.updated", json.dumps(update_payload, indent=None, separators=(',',':')).encode())
         self.logger.info(f"Broadcasted update for {group}.{key}")
 
     async def _start_logic(self):
