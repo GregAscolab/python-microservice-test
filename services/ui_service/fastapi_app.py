@@ -62,6 +62,7 @@ def get_service(request: Request) -> "UiService":
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+@router.get("/logger", response_class=HTMLResponse)
 @router.get("/logger/{path:path}", response_class=HTMLResponse)
 async def read_logger_path(request: Request, path: str = ""):
     service = get_service(request)
@@ -158,13 +159,18 @@ class FileToConvert(BaseModel):
     name: str
     folder: str
 
-@router.post("/convert")
+class TimeSeriesData(BaseModel):
+    name: str
+    timestamps: List[str]
+    values: List[float]
+
+@router.post("/convert", response_model=List[TimeSeriesData])
 def convert_file(file_content: FileToConvert, request: Request):
     service = get_service(request)
     service.logger.info(f"Converting file: {file_content.name} in folder {file_content.folder}")
 
     try:
-        db_path = os.path.abspath("config/sample.dbc")
+        db_path = os.path.abspath("config/db-full.dbc")
         db = cantools.database.load_file(db_path)
         file_path = os.path.join(CAN_LOGS_DIR, file_content.folder, file_content.name)
 
