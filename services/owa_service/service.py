@@ -8,10 +8,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 
 from common.microservice import Microservice
 
-if sys.platform == 'linux':
-    from common.owa_rtu import Rtu
-    from common.owa_io import Io
-
 class OwaService(Microservice):
     """
     A microservice to manage Owasys hardware initialization and shutdown.
@@ -21,12 +17,23 @@ class OwaService(Microservice):
         super().__init__("owa_service")
         self.rtu = None
         self.io = None
+        self.use_owa_hardware = False
 
     async def _start_logic(self):
-        self.logger.info("Starting OWA hardware initialization...")
+        self.logger.info("Waiting for settings...")
+        await self.get_settings()
 
-        if sys.platform == 'linux':
+        if self._shutdown_event.is_set(): return
+
+        self.use_owa_hardware = self.settings.get("global", {}).get("hardware_platform") == "owa5x"
+
+        self.logger.info(f"OWA Service starting. Hardware platform: {'owa5x' if self.use_owa_hardware else 'generic'}")
+
+        if self.use_owa_hardware:
             try:
+                from common.owa_rtu import Rtu
+                from common.owa_io import Io
+
                 # Owasys RTU initialization to be done first
                 self.logger.info("Initializing Owasys RTU...")
                 self.rtu = Rtu()
@@ -48,23 +55,23 @@ class OwaService(Microservice):
                 res = self.io.switch_gps_on_off(1)
                 self.logger.info(f"Switch ON GPS result = {res}")
 
-                # Publish hardware ready status
-                self.logger.info("Publishing hardware ready status to 'owa.status'")
-                await self.messaging_client.publish("owa.status", json.dumps({"status": "ready"}).encode())
                 self.logger.info("OWA hardware is ready.")
 
             except Exception as e:
                 self.logger.error(f"Error during OWA hardware initialization: {e}", exc_info=True)
+                # If hardware fails, we should not say it's ready
+                return
         else:
-            self.logger.warning("Not on Linux platform. Skipping OWA hardware initialization.")
-            # On non-Linux platforms, we can simulate the hardware being ready
-            self.logger.info("Publishing simulated hardware ready status to 'owa.status'")
-            await self.messaging_client.publish("owa.status", json.dumps({"status": "ready"}).encode())
+            self.logger.info("Running on a generic platform. Skipping OWA hardware initialization.")
+
+        # Always publish a ready status so other services can start
+        self.logger.info("Publishing hardware ready status to 'owa.status'")
+        await self.messaging_client.publish("owa.status", json.dumps({"status": "ready"}).encode())
 
 
     async def _stop_logic(self):
         self.logger.info("Stopping OWA hardware...")
-        if sys.platform == 'linux':
+        if self.use_owa_hardware:
             if self.io:
                 self.io.finalize()
                 self.logger.info("Owasys IO finalized.")
@@ -72,4 +79,4 @@ class OwaService(Microservice):
                 self.rtu.finalize()
                 self.logger.info("Owasys RTU finalized.")
         else:
-            self.logger.info("Not on Linux platform. Skipping OWA hardware finalization.")
+            self.logger.info("Running on a generic platform. Skipping OWA hardware finalization.")

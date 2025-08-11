@@ -20,6 +20,7 @@
     "s3_secret_key": "lVfCiJLQ3dq1zd50mtufd0oQVo9B94O7gvWkLfGw"
   },
   "global": {
-    "nats_url": "nats://localhost:4222"
+    "nats_url": "nats://localhost:4222",
+    "hardware_platform": "generic"
   }
 }
