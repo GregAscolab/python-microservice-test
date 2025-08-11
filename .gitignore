@@ -1,3 +1,7 @@
+# App specific
+can_logs/
+*.blf
+
 # Python
 __pycache__/
 *.pyc
