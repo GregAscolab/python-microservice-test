@@ -48,15 +48,9 @@ class ManagerService(Microservice):
 
         self.logger.info(f"Starting service '{service_name}'...")
         try:
-            log_path = os.path.join("logs", f"{service_name}.log")
-            log_file = open(log_path, "w")
-            self.log_files[service_name] = log_file
-
-            process = subprocess.Popen(
-                [sys.executable, service_main_path],
-                stdout=log_file,
-                stderr=log_file
-            )
+            # The child process will handle its own logging.
+            # We do not redirect stdout/stderr here.
+            process = subprocess.Popen([sys.executable, service_main_path])
             self.managed_processes[service_name] = process
             self.logger.info(f"Service '{service_name}' started with PID {process.pid}. Log: {log_path}")
         except Exception as e:
