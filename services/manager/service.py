@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 import signal
+import io
 from typing import Dict
 
 # Add the project root to the Python path
@@ -20,6 +21,8 @@ class ManagerService(Microservice):
         super().__init__("manager_service")
         self.services_dir = "services"
         self.managed_processes: Dict[str, subprocess.Popen] = {}
+        self.log_files: Dict[str, io.TextIOWrapper] = {}
+        os.makedirs("logs", exist_ok=True)
 
     def discover_services(self):
         """Discovers available services in the services directory."""
@@ -33,7 +36,7 @@ class ManagerService(Microservice):
         return discovered
 
     def start_service(self, service_name: str):
-        """Starts a microservice as a new process."""
+        """Starts a microservice as a new process and redirects its output to a log file."""
         if service_name in self.managed_processes and self.managed_processes[service_name].poll() is None:
             self.logger.info(f"Service '{service_name}' is already running.")
             return
@@ -49,12 +52,12 @@ class ManagerService(Microservice):
             # We do not redirect stdout/stderr here.
             process = subprocess.Popen([sys.executable, service_main_path])
             self.managed_processes[service_name] = process
-            self.logger.info(f"Service '{service_name}' started with PID {process.pid}.")
+            self.logger.info(f"Service '{service_name}' started with PID {process.pid}. Log: {log_path}")
         except Exception as e:
             self.logger.error(f"Error starting service '{service_name}': {e}", exc_info=True)
 
     def stop_service(self, service_name: str):
-        """Stops a microservice."""
+        """Stops a microservice and closes its log file."""
         process = self.managed_processes.get(service_name)
         if process and process.poll() is None:
             self.logger.info(f"Stopping service '{service_name}' (PID {process.pid})...")
@@ -68,6 +71,10 @@ class ManagerService(Microservice):
 
         if service_name in self.managed_processes:
             del self.managed_processes[service_name]
+
+        if service_name in self.log_files:
+            self.log_files[service_name].close()
+            del self.log_files[service_name]
 
     async def _start_logic(self):
         """Starts the manager logic: discover and start all services."""
