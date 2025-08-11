@@ -76,7 +76,7 @@ class CanBusService(Microservice):
 
     async def _message_listener(self):
         reader = can.AsyncBufferedReader()
-        self.notifier = can.Notifier(self.can_bus, [reader])
+        self.notifier = can.Notifier(self.can_bus, [reader], loop=asyncio.get_running_loop())
 
         try:
             while True:
