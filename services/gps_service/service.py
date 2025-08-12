@@ -21,20 +21,36 @@ class GpsService(Microservice):
 
     def __init__(self):
         super().__init__("gps_service")
-        self.hardware_ready = asyncio.Event()
         self.use_owa_hardware = False
         self.gps = None
         self.publisher_task = None
 
-    async def _on_hardware_status(self, msg: Msg):
-        """Callback for receiving hardware status messages."""
-        try:
-            data = json.loads(msg.data)
-            if data.get("status") == "ready":
-                self.logger.info("Received hardware ready signal. Proceeding with GPS initialization.")
-                self.hardware_ready.set()
-        except json.JSONDecodeError:
-            self.logger.error("Failed to decode hardware status message.")
+    async def _wait_for_owa_service(self, timeout=60.0, retry_delay=2.0):
+        """Waits for the OWA service to be ready using a request-reply pattern."""
+        self.logger.info("Checking OWA service status...")
+        start_time = asyncio.get_event_loop().time()
+        while asyncio.get_event_loop().time() - start_time < timeout:
+            try:
+                response = await self.messaging_client.request(
+                    "owa.service.status.request",
+                    b'',
+                    timeout=retry_delay
+                )
+                status_data = json.loads(response.data)
+                if status_data.get("status") == "ready":
+                    self.logger.info("OWA service reported status: ready.")
+                    return True
+                else:
+                    self.logger.warning(f"OWA service reported status: {status_data.get('status')}. Retrying...")
+            except asyncio.TimeoutError:
+                self.logger.warning("Request to OWA service timed out. Retrying...")
+            except Exception as e:
+                self.logger.error(f"Error requesting OWA status: {e}. Retrying...")
+
+            await asyncio.sleep(retry_delay)
+
+        self.logger.critical("Timed out waiting for OWA service to become ready.")
+        return False
 
     async def _start_logic(self):
         """Starts the GPS service logic."""
@@ -47,14 +63,8 @@ class GpsService(Microservice):
             self.use_owa_hardware = self.settings.get("global", {}).get("hardware_platform") == "owa5x"
             self.logger.info(f"GPS Service starting. Hardware platform: {'owa5x' if self.use_owa_hardware else 'generic'}")
 
-            self.logger.info("Subscribing to OWA hardware status...")
-            await self.messaging_client.subscribe("owa.status", cb=self._on_hardware_status)
-
-            try:
-                self.logger.info("Waiting for OWA hardware to be ready...")
-                await asyncio.wait_for(self.hardware_ready.wait(), timeout=60.0)
-            except asyncio.TimeoutError:
-                self.logger.critical("Timed out waiting for OWA hardware. GPS service will not start.")
+            if not await self._wait_for_owa_service():
+                await self.stop()
                 return
 
             if self.use_owa_hardware:
@@ -72,7 +82,6 @@ class GpsService(Microservice):
             self.logger.info("GPS data publisher started.")
         except Exception as e:
             self.logger.error(f"An error occurred during GPS service startup: {e}", exc_info=True)
-            # Ensure the service stops if startup fails
             await self.stop()
 
 
@@ -109,7 +118,6 @@ class GpsService(Microservice):
                 "SV_Azimuth": random.randint(0, 359),
                 "SV_SNR": random.randint(10, 50)
             })
-        # Pad with empty data to match the structure
         for _ in range(sv_in_view, 64):
             sv_data.append({"SV_Id": 0, "SV_Elevation": 0, "SV_Azimuth": 0, "SV_SNR": 0})
         return {"SV_InView": sv_in_view, "SV": sv_data}
