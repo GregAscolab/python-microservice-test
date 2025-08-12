@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Status</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/libs/leaflet/leaflet.css">
+    <link rel="stylesheet" href="/static/libs/datatables/datatables.min.css">
+</head>
+<body>
+    {% include 'header.html' %}
+    <div class="container">
+        {% include 'sidebar.html' %}
+        <main>
+            <h2>GPS Status</h2>
+            <div id="gps-container">
+                <div class="gps-row">
+                    <div id="gps-map-container">
+                        <h3>Map</h3>
+                        <div id="map"></div>
+                    </div>
+                    <div id="gps-skyview-container">
+                        <h3>Satellite Skyview</h3>
+                        <div id="skyviewChart"></div>
+                    </div>
+                </div>
+                <div class="gps-row">
+                    <div id="gps-data-container">
+                        <h3>GPS Data</h3>
+                        <table id="gpsDataTable" class="display" width="100%">
+                            <thead>
+                                <tr>
+                                    <th>Property</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- GPS data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    {% include 'footer.html' %}
+    <script src="/static/libs/jquery/jquery-3.7.1.min.js"></script>
+    <script src="/static/libs/datatables/datatables.min.js"></script>
+    <script src="/static/libs/leaflet/leaflet.js"></script>
+    <script src="/static/libs/plotly/plotly.min.js"></script>
+    <script src="/static/js/gps.js"></script>
+</body>
+</html>

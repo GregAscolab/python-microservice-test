@@ -52,7 +52,7 @@ class ManagerService(Microservice):
             # We do not redirect stdout/stderr here.
             process = subprocess.Popen([sys.executable, service_main_path])
             self.managed_processes[service_name] = process
-            self.logger.info(f"Service '{service_name}' started with PID {process.pid}. Log: {log_path}")
+            self.logger.info(f"Service '{service_name}' started with PID {process.pid}.")
         except Exception as e:
             self.logger.error(f"Error starting service '{service_name}': {e}", exc_info=True)
 
