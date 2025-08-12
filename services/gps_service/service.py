@@ -70,7 +70,7 @@ class GpsService(Microservice):
             if self.use_owa_hardware:
                 self.logger.info("Initializing real GPS...")
                 try:
-                    self.gps = Gps(nats=self.messaging_client)
+                    self.gps = Gps()
                     self.gps.gps_init(modem_type="owa5x")
                 except Exception as e:
                     self.logger.error(f"Error initializing GPS: {e}", exc_info=True)
