@@ -10,7 +10,6 @@ from common.owa_errors import OwaErrors as oe, OwaErrorMgt as oem
 from math import modf
 from datetime import datetime, timezone
 
-from common.messaging import MessagingClient
 import json
 
 from enum import IntEnum
@@ -122,7 +121,7 @@ class GSV_Data(Structure):
 # Main GPS class wrapper
 class Gps():
 
-    def __init__(self, nats:MessagingClient|None=None) -> None:
+    def __init__(self) -> None:
         global libGps
         if libGps is None:
             libGps = cdll.LoadLibrary("libGPS2_Module.so")
@@ -134,8 +133,6 @@ class Gps():
         self.gps_time_ok = False
         self.gps_pos_ok = False
         self.oem = oem()
-
-        self.nats=nats
 
     def setConfig(self, staticThreshold, measRate):
         # Set static threshold
@@ -237,3 +234,144 @@ class Gps():
                 self.lastCoord.Altitude, self.lastCoord.HorizAccu, self.lastCoord.VertiAccu, self.lastCoord.Speed, self.lastCoord.Course) )
         positionString +=("HDOP({}),VDOP({}), TDOP({}), numSvs({})".format(
                 self.lastCoord.HDOP, self.lastCoord.VDOP, self.lastCoord.TDOP, self.lastCoord.numSvs ) )
+        return positionString
+
+    def printPosition(self):
+        print(self.__repr__())
+        
+    def getFullGPSPosition(self):
+        ReturnCode = 0
+        UpdateFlag = False
+        LocalCoords = GPS_PositionData()
+        
+        gps_GetAllPositionData = utils.wrap_function(libGps, 'GPS_GetAllPositionData', c_int, [POINTER(GPS_PositionData)])
+        ReturnCode = gps_GetAllPositionData( byref(LocalCoords) )
+
+        if( ReturnCode != 0 ) :
+            log.error( "Error " + str(ReturnCode) + " in GPS_GetAllPositionData()...")
+        else:
+            if( LocalCoords.OldValue != 0):
+                self.NumOld += 1
+
+            self.x += 1
+            if LocalCoords.PosValid :
+                if not self.gps_pos_ok:
+                    self.gps_pos_ok = True
+
+                if not self.gps_time_ok:
+                    self.updateStartupTimestamp()
+
+                if (self.lastCoord.LatDecimal != LocalCoords.LatDecimal) or (self.lastCoord.LonDecimal != LocalCoords.LonDecimal) :
+                    UpdateFlag = True
+                    self.lastCoord = LocalCoords
+                    log.debug("Coordinates updated...\n%s", str(self))
+                    
+        return (UpdateFlag, ReturnCode)
+
+    def GPS_initialize(self, config:GPS_Configuration) -> oe:
+        __GPS_Initialize = utils.wrap_function(libGps,'GPS_Initialize', c_int, [POINTER(GPS_Configuration)])
+        res = oe( __GPS_Initialize(byref(config)) )
+        if res != oe.NO_ERROR:
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()}"
+            self.oem.error_action(error_msg)
+        return res
+    
+    def start(self) -> oe :
+        res = oe( libGps.GPS_Start() )
+        if res != oe.NO_ERROR:
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()}"
+            self.oem.error_action(error_msg)
+        return res
+    
+    def is_active(self) -> Tuple[oe, bool]:
+        __GPS_IsActive = utils.wrap_function(libGps, "GPS_IsActive", c_int, [POINTER(c_int)])
+        state = c_int()
+        res = oe( __GPS_IsActive(byref(state)) )
+        if res != oe.NO_ERROR:
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()}"
+            self.oem.error_action(error_msg)
+        return res, bool(state.value)
+    
+    def finalize(self) -> oe:
+        res = oe( libGps.GPS_Finalize() )
+        if res != oe.NO_ERROR:
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()}"
+            self.oem.error_action(error_msg)
+        return res
+    
+    def GPS_SetDynamicModel(self, mode:OwaGpsDynamicModel):
+        __GPS_SetDynamicModel = utils.wrap_function(libGps, "GPS_SetDynamicModel", c_int, [c_char])
+        res = oe( __GPS_SetDynamicModel(c_char(mode)) )
+        if res != oe.NO_ERROR:
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()}"
+            self.oem.error_action(error_msg)
+        return res
+    
+    def gps_init(self, modem_type:str="owa4x"):
+        # Create GPS configuration : Use of "0o" for octal number notation !!!
+        device_name = create_string_buffer(b"GPS_UBLOX",20)
+        speed_b115200 = c_uint(0o10002) # B115200
+        length_cs8 = c_ubyte(0o60) # CS8
+        parity_ignpar = c_int(0o4) # IGNPAR
+        protocol_name = create_string_buffer(b"NMEA",10)
+
+        if modem_type == "owa5x":
+            gps_port = c_ubyte(OwaComPort.COM4)
+        else:
+            gps_port = c_ubyte(OwaComPort.COM1)
+        log.info(f"GPS COM port={OwaComPort(gps_port.value).name} Modem={modem_type}")
+
+        gps_config = GPS_Configuration( DeviceReceiverName = device_name.raw,
+                                    ParamBaud = speed_b115200,
+                                    ParamParity = parity_ignpar,
+                                    ParamLength = length_cs8,
+                                    ProtocolName = protocol_name.raw,
+                                    GPSPort = gps_port)
+        
+        log.info(f"GPS_config={gps_config}")
+
+        # Init GPS
+        res = self.GPS_initialize(gps_config)
+        if res != oe.NO_ERROR:
+            log.error(f"Error initializing GPS : {res.name}")
+
+        # Start GPS
+        self.start()
+
+        res, val = self.is_active()
+        if val:
+            r, model = self.GPS_Get_Model()
+            log.info(f"GPS model={model} (r={r.name})")
+
+            # Set GPS model to "Automotive = 4"
+            self.GPS_SetDynamicModel(OwaGpsDynamicModel.AUTOMOTIVE)
+
+            self.setNormalConfig()
+        else:
+            log.error(f"GPS is not started !!! ({val}, {res.name})")
+
+
+    async def format(self, format="geojson"):
+        (r, d) = self.GPS_GetSV_inView()
+        if format=="geojson":
+            payload = {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [self.lastCoord.LonDecimal, self.lastCoord.LatDecimal]
+                        },
+                        "properties": {
+                            "lastCoord": utils.getdict(self.lastCoord),
+                            "SV": utils.getdict(d)
+                        }
+                    }
+                ]
+            }
+        else:
+            log.error(f"Unknowed format for publishing ({format})")
+            return
+
+        return json.dumps(payload).encode()

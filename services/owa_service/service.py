@@ -52,10 +52,16 @@ class OwaService(Microservice):
                 self.rtu.initialize()
                 self.rtu.start()
 
+                res, val = self.rtu.is_active()
+                self.logger.info(f"RTU is_active = {res}, {val}")
+
                 self.logger.info("Initializing Owasys IO...")
                 self.io = Io()
                 self.io.initialize()
                 self.io.start()
+
+                res, val = self.io.is_active()
+                self.logger.info(f"IOs is_active = {res}, {val}")
 
                 self.logger.info("Switching GPS power ON...")
                 self.io.switch_gps_on_off(1)

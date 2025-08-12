@@ -55,7 +55,7 @@ class Microservice(ABC):
                 settings_client = NatsMessagingClient()
                 await settings_client.connect(self.nats_url)
 
-                subject = f"settings.get.{self.service_name}"
+                subject = f"settings.get.all"
                 self.logger.info(f"Requesting settings on subject: {subject}")
                 response = await settings_client.request(subject, b'', timeout=2.0)
                 await settings_client.disconnect()
