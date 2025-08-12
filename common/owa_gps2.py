@@ -15,7 +15,7 @@ import json
 
 from enum import IntEnum
 
-libGps=cdll.LoadLibrary("libGPS2_Module.so")
+libGps = None
 
 ######## Logger config ##########
 log = logging.getLogger(__name__)
@@ -123,6 +123,10 @@ class GSV_Data(Structure):
 class Gps():
 
     def __init__(self, nats:MessagingClient|None=None) -> None:
+        global libGps
+        if libGps is None:
+            libGps = cdll.LoadLibrary("libGPS2_Module.so")
+
         self.lastCoord = GPS_PositionData()
         self.x = 0
         self.NumOld = 0
@@ -232,4 +236,4 @@ class Gps():
         positionString +=("ALTITUDE {}, hAcc {}, vAcc {}, speed {}, course {}\n".format(
                 self.lastCoord.Altitude, self.lastCoord.HorizAccu, self.lastCoord.VertiAccu, self.lastCoord.Speed, self.lastCoord.Course) )
         positionString +=("HDOP({}),VDOP({}), TDOP({}), numSvs({})".format(
-                self.lastCoord.HDOP, self.lastCoord.VDOP,.
+                self.lastCoord.HDOP, self.lastCoord.VDOP, self.lastCoord.TDOP, self.lastCoord.numSvs ) )

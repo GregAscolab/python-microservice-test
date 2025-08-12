@@ -35,6 +35,7 @@ class UiService(Microservice):
     async def _nats_data_handler(self, msg: Msg):
         channel = msg.subject
         data = msg.data.decode()
+        self.logger.debug(f"Received message on '{channel}', broadcasting to WebSocket.")
         await connection_manager.broadcast(data, channel)
 
     async def _settings_update_handler(self, msg: Msg):
