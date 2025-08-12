@@ -48,11 +48,18 @@ class ManagerService(Microservice):
 
         self.logger.info(f"Starting service '{service_name}'...")
         try:
-            # The child process will handle its own logging.
-            # We do not redirect stdout/stderr here.
-            process = subprocess.Popen([sys.executable, service_main_path])
+            # Redirect stdout and stderr to a log file
+            log_file_path = f"logs/{service_name}.log"
+            log_file = open(log_file_path, "a")
+            self.log_files[service_name] = log_file
+
+            process = subprocess.Popen(
+                [sys.executable, service_main_path],
+                stdout=log_file,
+                stderr=subprocess.STDOUT
+            )
             self.managed_processes[service_name] = process
-            self.logger.info(f"Service '{service_name}' started with PID {process.pid}.")
+            self.logger.info(f"Service '{service_name}' started with PID {process.pid}. Output logged to {log_file_path}")
         except Exception as e:
             self.logger.error(f"Error starting service '{service_name}': {e}", exc_info=True)
 
@@ -117,7 +124,7 @@ class ManagerService(Microservice):
             while not self._shutdown_event.is_set():
                 for name, process in list(self.managed_processes.items()):
                     if process.poll() is not None:
-                        self.logger.info(f"Service '{name}' (PID {process.pid}) has terminated.")
+                        self.logger.info(f"Service '{name}' (PID {process.pid}) has terminated with exit code {process.returncode}.")
                         self.stop_service(name)
 
                 try:

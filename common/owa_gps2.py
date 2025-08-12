@@ -336,7 +336,9 @@ class Gps():
             log.error(f"Error initializing GPS : {res.name}")
 
         # Start GPS
+        log.info("Attempting to start GPS...")
         self.start()
+        log.info("GPS start call completed.")
 
         res, val = self.is_active()
         if val:
