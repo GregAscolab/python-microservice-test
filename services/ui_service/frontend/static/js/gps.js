@@ -1,5 +1,4 @@
 $(document).ready(function() {
-    debugger;
     // --- Leaflet Map Initialization ---
     var map = L.map('map').setView([45.525, 4.924], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -47,7 +46,7 @@ $(document).ready(function() {
 
     ws_gps.onmessage = function(event) {
         const data = JSON.parse(event.data);
-        console.log("Received GPS data:", data);
+        // console.log("Received GPS data:", data);
 
         if (data && data.geometry && data.geometry.type === 'Point') {
             // Update Leaflet Map
