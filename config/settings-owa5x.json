@@ -21,6 +21,6 @@
   },
   "global": {
     "nats_url": "nats://localhost:4222",
-    "hardware_platform": "owa5"
+    "hardware_platform": "owa5x"
   }
 }
