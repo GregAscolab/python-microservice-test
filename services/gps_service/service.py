@@ -25,6 +25,7 @@ class GpsService(Microservice):
         self.use_owa_hardware = False
         self.gps = None
         self.publisher_task = None
+        self.update_pos_counter = 0
 
     async def _wait_for_owa_service(self, timeout=60.0, retry_delay=2.0):
         """Waits for the OWA service to be ready using a request-reply pattern."""
@@ -154,6 +155,7 @@ class GpsService(Microservice):
             update_flag, _ = self.gps.getFullGPSPosition()
             # if self.gps.gps_pos_ok and update_flag:
             if self.gps.gps_pos_ok:
+                self.update_pos_counter += 1
                 payload = {
                     "type": "Feature",
                     "geometry": {
@@ -168,20 +170,25 @@ class GpsService(Microservice):
 
                 # Get satellite in view informations
                 # await asyncio.sleep(1)
-                r, d = self.gps.GPS_GetSV_inView()
-                if r == OwaErrors.NO_ERROR:
-                    sv = utils.getdict(d)
-                    # Filter SV data to get only usefull (remove empty SV data)
-                    sv_use_table = sv["SV"][0:sv["SV_InView"]]
-                    sv["SV"] = sv_use_table
-                    payload["properties"]["SV"]=sv
+                if (self.update_pos_counter % 3 == 0):
+                    r, d = self.gps.GPS_GetSV_inView()
+                    if r == OwaErrors.NO_ERROR:
+                        sv = utils.getdict(d)
+                        # Filter SV data to get only usefull (remove empty SV data)
+                        sv_use_table = sv["SV"][0:sv["SV_InView"]]
+                        sv["SV"] = sv_use_table
+                        payload["properties"]["SV"]=sv
 
                 # Get time from GPS
                 # await asyncio.sleep(1)
-                dt, res = self.gps.getUTCDateTime()
-                if isinstance(dt, datetime) :
-                    self.logger.debug("GPS UTC datetime is : " + str(dt) )
-                    payload["properties"]["datetime"]=str(dt)
+                if (self.update_pos_counter % 10 == 0):
+                    dt, res = self.gps.getUTCDateTime()
+                    if isinstance(dt, datetime) :
+                        self.logger.debug("GPS UTC datetime is : " + str(dt) )
+                        payload["properties"]["datetime"]=str(dt)
+
+                if (self.update_pos_counter % (3*10) == 0):
+                    self.update_pos_counter=0
             else:
                 self.logger.debug(f"GPS not ready ({self.gps.gps_pos_ok}), or no change in position ({update_flag})")
         else:
