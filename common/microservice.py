@@ -18,6 +18,7 @@ class Microservice(ABC):
         self.service_name = service_name
         self.logger = setup_logging(service_name)
         self.settings = {}
+        self.global_settings = {}
         self._shutdown_event = asyncio.Event()
         self.messaging_client: MessagingClient = NatsMessagingClient()
         self.command_handler = CommandHandler(self.service_name, self.logger)
@@ -60,7 +61,16 @@ class Microservice(ABC):
                 response = await settings_client.request(subject, b'', timeout=2.0)
                 await settings_client.disconnect()
 
-                self.settings = json.loads(response.data)
+                try:
+                    self.settings = json.loads(response.data)[self.service_name]
+                except KeyError:
+                    self.settings = {}
+
+                try:
+                    self.global_settings = json.loads(response.data)["global"]
+                except KeyError:
+                    self.global_settings = {}
+                    
                 self.logger.info(f"Settings received successfully: {self.settings}")
 
                 # Now connect the main client with the correct URL

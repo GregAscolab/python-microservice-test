@@ -4,15 +4,16 @@ import sys
 import os
 import random
 
+from datetime import datetime, timezone
+
 # Add the project root to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from common.microservice import Microservice
+from common.owa_errors import OwaErrors
+import common.utils as utils
 from nats.aio.msg import Msg
 
-if sys.platform == 'linux':
-    from common.owa_gps2 import Gps
-    import common.utils as utils
 
 class GpsService(Microservice):
     """
@@ -24,6 +25,7 @@ class GpsService(Microservice):
         self.use_owa_hardware = False
         self.gps = None
         self.publisher_task = None
+        self.update_pos_counter = 0
 
     async def _wait_for_owa_service(self, timeout=60.0, retry_delay=2.0):
         """Waits for the OWA service to be ready using a request-reply pattern."""
@@ -60,7 +62,7 @@ class GpsService(Microservice):
 
             if self._shutdown_event.is_set(): return
 
-            self.use_owa_hardware = self.settings.get("global", {}).get("hardware_platform") == "owa5x"
+            self.use_owa_hardware = self.global_settings.get("hardware_platform") == "owa5x"
             self.logger.info(f"GPS Service starting. Hardware platform: {'owa5x' if self.use_owa_hardware else 'generic'}")
 
             if not await self._wait_for_owa_service():
@@ -69,6 +71,30 @@ class GpsService(Microservice):
 
             if self.use_owa_hardware:
                 self.logger.info("Initializing real GPS...")
+                from common.owa_rtu import Rtu
+                from common.owa_io import Io
+                from common.owa_gps2 import Gps
+
+                self.logger.info("Initializing Owasys RTU...")
+                self.rtu = Rtu()
+                self.rtu.initialize()
+                self.rtu.start()
+
+                res, val = self.rtu.is_active()
+                self.logger.info(f"RTU is_active = {res}, {val}")
+
+                self.logger.info("Initializing Owasys IO...")
+                self.io = Io()
+                self.io.initialize()
+                self.io.start()
+
+                res, val = self.io.is_active()
+                self.logger.info(f"IOs is_active = {res}, {val}")
+
+                self.logger.info("Switching GPS power ON...")
+                self.io.switch_gps_on_off(1)
+
+                self.logger.info("OWA Initializing real GPS...")
                 try:
                     self.gps = Gps()
                     self.gps.gps_init(modem_type="owa5x")
@@ -127,8 +153,9 @@ class GpsService(Microservice):
         payload = {}
         if self.gps and self.use_owa_hardware:
             update_flag, _ = self.gps.getFullGPSPosition()
-            if self.gps.gps_pos_ok and update_flag:
-                r, d = self.gps.GPS_GetSV_inView()
+            # if self.gps.gps_pos_ok and update_flag:
+            if self.gps.gps_pos_ok:
+                self.update_pos_counter += 1
                 payload = {
                     "type": "Feature",
                     "geometry": {
@@ -137,9 +164,33 @@ class GpsService(Microservice):
                     },
                     "properties": {
                         "lastCoord": utils.getdict(self.gps.lastCoord),
-                        "SV": utils.getdict(d)
+                        # "SV": utils.getdict(d)
                     }
                 }
+
+                # Get satellite in view informations
+                # await asyncio.sleep(1)
+                if (self.update_pos_counter % 3 == 0):
+                    r, d = self.gps.GPS_GetSV_inView()
+                    if r == OwaErrors.NO_ERROR:
+                        sv = utils.getdict(d)
+                        # Filter SV data to get only usefull (remove empty SV data)
+                        sv_use_table = sv["SV"][0:sv["SV_InView"]]
+                        sv["SV"] = sv_use_table
+                        payload["properties"]["SV"]=sv
+
+                # Get time from GPS
+                # await asyncio.sleep(1)
+                if (self.update_pos_counter % 10 == 0):
+                    dt, res = self.gps.getUTCDateTime()
+                    if isinstance(dt, datetime) :
+                        self.logger.debug("GPS UTC datetime is : " + str(dt) )
+                        payload["properties"]["datetime"]=str(dt)
+
+                if (self.update_pos_counter % (3*10) == 0):
+                    self.update_pos_counter=0
+            else:
+                self.logger.debug(f"GPS not ready ({self.gps.gps_pos_ok}), or no change in position ({update_flag})")
         else:
             fake_lat = 45.5257585 + random.uniform(-0.001, 0.001)
             fake_lon = 4.9240768 + random.uniform(-0.001, 0.001)
@@ -170,6 +221,7 @@ class GpsService(Microservice):
                     },
                     "SV": self._generate_fake_sv_data(),
                     "fake": True,
+                    "datetime":str(datetime.now()),
                 }
             }
 

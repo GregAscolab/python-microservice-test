@@ -47,6 +47,22 @@ class CanBusService(Microservice):
         except Exception as e:
             self.logger.error(f"Error initializing CAN bus: {e}", exc_info=True)
             return
+        
+        try:
+            self.logger.info("Send CANopen NMT start")
+            msg = can.Message(
+                arbitration_id=0x00,
+                data=[0x01, 0x00],
+                is_extended_id=False
+            )
+            try:
+                self.can_bus.send(msg)
+                self.logger.info(f"Message sent on {self.can_bus.channel_info}")
+            except can.CanError:
+                self.logger.error("Message NOT sent")
+        except Exception as e:
+            self.logger.error(f"Error sending NMT start message: {e}", exc_info=True)
+            return
 
         if dbc_file := self.settings.get("dbc_file"):
             try:

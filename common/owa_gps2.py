@@ -134,20 +134,24 @@ class Gps():
         self.gps_pos_ok = False
         self.oem = oem()
 
-    def setConfig(self, staticThreshold, measRate):
+    def setConfig(self, staticThreshold, measRate) -> oe:
         # Set static threshold
         gps_SetStaticThreshold = utils.wrap_function(libGps, "GPS_SetStaticThreshold", c_int, [c_char])
-        res = gps_SetStaticThreshold(c_char(staticThreshold))
-        if res != 0:
-            log.error("Error " + str(res) + " in GPS_SetStaticThreshold()")
+        res = oe( gps_SetStaticThreshold(c_char(staticThreshold)) )
+        if res != oe.NO_ERROR:
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()} calling GPS_SetStaticThreshold()"
+            self.oem.error_action(error_msg)
             return res
 
         # Set measurement rate
         gps_SetMeasurementRate = utils.wrap_function(libGps, "GPS_SetMeasurementRate", c_int, [c_char])
-        res = gps_SetMeasurementRate(c_char(measRate))
-        if res != 0:
-            log.error("Error " + str(res) + " in GPS_SetMeasurementRate()")
+        res = oe( gps_SetMeasurementRate(c_char(measRate)) )
+        if res != oe.NO_ERROR:
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()} calling GPS_SetMeasurementRate()"
+            self.oem.error_action(error_msg)
             return res
+        
+        return oe.NO_ERROR
 
     def setNormalConfig(self):
         return self.setConfig(15, 1)
@@ -155,14 +159,15 @@ class Gps():
     def setActiveConfig(self):
         return self.setConfig(0, 4)
 
-    def getUTCDateTime(self):
+    def getUTCDateTime(self) -> Tuple[datetime | None, oe]:
         utcStruct = UTC_DateTime()
         gps_GetUTCDateTime = utils.wrap_function(libGps, "GPS_GetUTCDateTime", c_int, [POINTER(UTC_DateTime)])
-        res = gps_GetUTCDateTime( byref(utcStruct) )
-        if res != 0:
+        res = oe( gps_GetUTCDateTime( byref(utcStruct) ) )
+        if res != oe.NO_ERROR:
             self.gps_time_ok = False
             dt = None
-            log.error("Error " + str(res) + " in getUTCDateTime()")
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()} calling GPS_GetUTCDateTime()"
+            self.oem.error_action(error_msg)
         else:
             log.debug("GPS time struct = %s (res=%s)", str(utcStruct), str(res))
             if(utcStruct.Year!=0 and utcStruct.Month!=0 and utcStruct.Day!=0):
@@ -171,7 +176,7 @@ class Gps():
             else:
                 self.gps_time_ok = False
                 dt=None
-                res=1
+                res=oe.GPS_ERROR_BASE
 
         if isinstance(dt, datetime) :
             log.debug("GPS UTC datetime is : " + str(dt) )
@@ -179,10 +184,11 @@ class Gps():
 
         return (dt, res)
 
-    def updateStartupTimestamp(self):
+    def updateStartupTimestamp(self) -> oe:
         (dt,res) = self.getUTCDateTime()
-        if res != 0:
-            log.error("Error " + str(res) + " in GPS_GetUTCDateTime()")
+        if res != oe.NO_ERROR:
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()} calling GPS_GetUTCDateTime()"
+            self.oem.error_action(error_msg)
         else:
             self.startupTimestamp = int(datetime.timestamp(dt))
             self.gps_time_ok = True
@@ -202,7 +208,7 @@ class Gps():
 
 
 
-    def GPS_Get_Model(self):
+    def GPS_Get_Model(self) -> tuple[oe, str]:
         __GPS_Get_Model = utils.wrap_function(libGps, "GPS_Get_Model", c_int, [POINTER(c_char)])
         buffer = create_string_buffer(20)
         res = oe( __GPS_Get_Model( buffer ) )
@@ -211,7 +217,7 @@ class Gps():
             self.oem.error_action(error_msg)
         return res, str(buffer.value)
 
-    def GPS_GetSV_inView (self):
+    def GPS_GetSV_inView (self) -> tuple[oe, GSV_Data]:
         __GPS_GetSV_inView = utils.wrap_function(libGps, "GPS_GetSV_inView", c_int, [POINTER(GSV_Data)])
         gsv_data = GSV_Data()
         res = oe( __GPS_GetSV_inView( byref(gsv_data) ) )
@@ -239,16 +245,17 @@ class Gps():
     def printPosition(self):
         print(self.__repr__())
         
-    def getFullGPSPosition(self):
+    def getFullGPSPosition(self) -> Tuple[bool, oe]:
         ReturnCode = 0
         UpdateFlag = False
         LocalCoords = GPS_PositionData()
         
         gps_GetAllPositionData = utils.wrap_function(libGps, 'GPS_GetAllPositionData', c_int, [POINTER(GPS_PositionData)])
-        ReturnCode = gps_GetAllPositionData( byref(LocalCoords) )
+        ReturnCode = oe( gps_GetAllPositionData( byref(LocalCoords) ) )
 
-        if( ReturnCode != 0 ) :
-            log.error( "Error " + str(ReturnCode) + " in GPS_GetAllPositionData()...")
+        if( ReturnCode != oe.NO_ERROR ) :
+            error_msg = f"Error {ReturnCode.name} ({ReturnCode.value}) in {self.__class__.__name__}.{utils.current_method_name()} calling GPS_GetAllPositionData()"
+            self.oem.error_action(error_msg)
         else:
             if( LocalCoords.OldValue != 0):
                 self.NumOld += 1
@@ -299,7 +306,7 @@ class Gps():
             self.oem.error_action(error_msg)
         return res
     
-    def GPS_SetDynamicModel(self, mode:OwaGpsDynamicModel):
+    def GPS_SetDynamicModel(self, mode:OwaGpsDynamicModel) -> oe:
         __GPS_SetDynamicModel = utils.wrap_function(libGps, "GPS_SetDynamicModel", c_int, [c_char])
         res = oe( __GPS_SetDynamicModel(c_char(mode)) )
         if res != oe.NO_ERROR:
@@ -307,7 +314,7 @@ class Gps():
             self.oem.error_action(error_msg)
         return res
     
-    def gps_init(self, modem_type:str="owa4x"):
+    def gps_init(self, modem_type:str="owa4x") -> oe:
         # Create GPS configuration : Use of "0o" for octal number notation !!!
         device_name = create_string_buffer(b"GPS_UBLOX",20)
         speed_b115200 = c_uint(0o10002) # B115200
@@ -333,7 +340,9 @@ class Gps():
         # Init GPS
         res = self.GPS_initialize(gps_config)
         if res != oe.NO_ERROR:
-            log.error(f"Error initializing GPS : {res.name}")
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()} calling GPS_initialize()"
+            self.oem.error_action(error_msg)
+            return res
 
         # Start GPS
         log.info("Attempting to start GPS...")
@@ -350,30 +359,39 @@ class Gps():
 
             self.setNormalConfig()
         else:
-            log.error(f"GPS is not started !!! ({val}, {res.name})")
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()} calling is_active() (val={val})"
+            self.oem.error_action(error_msg)
+            return res
+        
+        return oe.NO_ERROR
 
 
-    async def format(self, format="geojson"):
-        (r, d) = self.GPS_GetSV_inView()
-        if format=="geojson":
-            payload = {
-                "type": "FeatureCollection",
-                "features": [
-                    {
-                        "type": "Feature",
-                        "geometry": {
-                            "type": "Point",
-                            "coordinates": [self.lastCoord.LonDecimal, self.lastCoord.LatDecimal]
-                        },
-                        "properties": {
-                            "lastCoord": utils.getdict(self.lastCoord),
-                            "SV": utils.getdict(d)
+    async def format(self, format="geojson") -> bytes:
+        payload = {}
+        (res, d) = self.GPS_GetSV_inView()
+        if res == oe.NO_ERROR:
+            if format=="geojson":
+                payload = {
+                    "type": "FeatureCollection",
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [self.lastCoord.LonDecimal, self.lastCoord.LatDecimal]
+                            },
+                            "properties": {
+                                "lastCoord": utils.getdict(self.lastCoord),
+                                "SV": utils.getdict(d)
+                            }
                         }
-                    }
-                ]
-            }
+                    ]
+                }
+            else:
+                log.error(f"Unknowed format for publishing ({format})")
+                return b''
         else:
-            log.error(f"Unknowed format for publishing ({format})")
-            return
+            error_msg = f"Error {res.name} ({res.value}) in {self.__class__.__name__}.{utils.current_method_name()} calling GPS_GetSV_inView()"
+            self.oem.error_action(error_msg)
 
         return json.dumps(payload).encode()

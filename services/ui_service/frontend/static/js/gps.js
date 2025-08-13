@@ -118,6 +118,7 @@ $(document).ready(function() {
         const trace = {
             r: satellites.map(s => 90 - s.SV_Elevation),
             theta: satellites.map(s => s.SV_Azimuth),
+            customdata: satellites.map(s => s.SV_SNR),
             mode: 'markers+text',
             text: satellites.map(s => s.SV_Id),
             textposition: 'top center',
@@ -126,6 +127,7 @@ $(document).ready(function() {
                 size: 15,
                 symbol: 'circle'
             },
+            hovertemplate: "r=%{r} t=%{theta} snr=%{customdata}",
             type: 'scatterpolar'
         };
 
