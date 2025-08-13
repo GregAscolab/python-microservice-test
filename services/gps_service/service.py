@@ -69,6 +69,30 @@ class GpsService(Microservice):
 
             if self.use_owa_hardware:
                 self.logger.info("Initializing real GPS...")
+                from common.owa_rtu import Rtu
+                from common.owa_io import Io
+                from common.owa_gps2 import Gps
+
+                self.logger.info("Initializing Owasys RTU...")
+                self.rtu = Rtu()
+                self.rtu.initialize()
+                self.rtu.start()
+
+                res, val = self.rtu.is_active()
+                self.logger.info(f"RTU is_active = {res}, {val}")
+
+                self.logger.info("Initializing Owasys IO...")
+                self.io = Io()
+                self.io.initialize()
+                self.io.start()
+
+                res, val = self.io.is_active()
+                self.logger.info(f"IOs is_active = {res}, {val}")
+
+                self.logger.info("Switching GPS power ON...")
+                self.io.switch_gps_on_off(1)
+
+                self.logger.info("OWA Initializing real GPS...")
                 try:
                     self.gps = Gps()
                     self.gps.gps_init(modem_type="owa5x")
