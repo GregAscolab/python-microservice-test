@@ -39,7 +39,7 @@ class OwaService(Microservice):
         await self.messaging_client.subscribe("owa.service.status.request", cb=self._handle_status_request)
         self.logger.info("Subscribed to status requests on 'owa.service.status.request'")
 
-        self.use_owa_hardware = self.settings.get("global", {}).get("hardware_platform") == "owa5x"
+        self.use_owa_hardware = self.global_settings.get("hardware_platform") == "owa5x"
         self.logger.info(f"OWA Service starting. Hardware platform: {'owa5x' if self.use_owa_hardware else 'generic'}")
 
         if self.use_owa_hardware:

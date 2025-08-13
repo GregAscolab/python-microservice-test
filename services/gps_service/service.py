@@ -60,7 +60,7 @@ class GpsService(Microservice):
 
             if self._shutdown_event.is_set(): return
 
-            self.use_owa_hardware = self.settings.get("global", {}).get("hardware_platform") == "owa5x"
+            self.use_owa_hardware = self.global_settings.get("hardware_platform") == "owa5x"
             self.logger.info(f"GPS Service starting. Hardware platform: {'owa5x' if self.use_owa_hardware else 'generic'}")
 
             if not await self._wait_for_owa_service():
