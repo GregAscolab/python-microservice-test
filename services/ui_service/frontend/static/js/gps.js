@@ -35,19 +35,8 @@ $(document).ready(function() {
     };
     Plotly.newPlot(skyviewDiv, [], layout);
 
-
     // --- WebSocket Connection ---
-    const url_gps = "ws://" + window.location.host + "/ws_gps";
-    const ws_gps = new WebSocket(url_gps);
-
-    ws_gps.onopen = function(event) {
-        console.log("GPS WebSocket connection opened.");
-    };
-
-    ws_gps.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        // console.log("Received GPS data:", data);
-
+    connectionManager.addMessageListener('gps', (data) => {
         if (data && data.geometry && data.geometry.type === 'Point') {
             // Update Leaflet Map
             const coords = data.geometry.coordinates;
@@ -63,15 +52,7 @@ $(document).ready(function() {
                 updateSkyviewChart(data.properties.SV);
             }
         }
-    };
-
-    ws_gps.onerror = function(error) {
-        console.error('GPS WebSocket error:', error);
-    };
-
-    ws_gps.onclose = function(event) {
-        console.log('GPS WebSocket connection closed:', event);
-    };
+    });
 
     // --- Helper Functions ---
 

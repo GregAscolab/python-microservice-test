@@ -3,19 +3,9 @@ $(document).ready(function() {
     let settings = {};
     let activeTab = null;
 
-    // WebSocket connection
-    const url = "ws://" + window.location.host + "/ws_settings";
-    const ws = new WebSocket(url);
-
-    // Handle WebSocket connection
-    ws.onopen = function() {
-        console.log("WebSocket connection established");
-    };
-
     // Handle WebSocket messages
-    ws.onmessage = function(event) {
+    connectionManager.addMessageListener('settings', (data) => {
         try {
-            const data = JSON.parse(event.data);
             console.log("Received data:", data);
 
             if (data.settings) {
@@ -27,17 +17,7 @@ $(document).ready(function() {
         } catch (error) {
             console.error("Error parsing WebSocket message:", error);
         }
-    };
-
-    // Handle WebSocket errors
-    ws.onerror = function(error) {
-        console.error("WebSocket error:", error);
-    };
-
-    // Handle WebSocket close
-    ws.onclose = function() {
-        console.log("WebSocket connection closed");
-    };
+    });
 
     // Function to update settings
     function updateSettings(data) {
@@ -109,7 +89,7 @@ $(document).ready(function() {
                             value: newValue
                         }
                     };
-                    ws.send(JSON.stringify(updateData));
+                    connectionManager.sendMessage('settings', JSON.stringify(updateData));
                 });
 
                 tabContent.append(inputField);

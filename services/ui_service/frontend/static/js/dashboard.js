@@ -1,9 +1,3 @@
-// $(document).ready(function() {
-// });
-
-// Initialize DataTable
-// var table = $('#dataTable').DataTable();
-
 // Initialize Leaflet map
 var map = L.map('map').setView([51.505, -0.09], 13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -11,45 +5,14 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 var geoJSONLayer = L.geoJSON().addTo(map);
 
-// WebSocket connection
-const url_gps = "ws://" + window.location.host + "/ws_gps";
-let ws_gps;
-
-const url_data = "ws://" + window.location.host + "/ws_data";
-let ws_data;
-
-const connectionStatus = document.getElementById('connection-status');
-
-function connect() {
-    ws_gps = new WebSocket(url_gps);
-    ws_data = new WebSocket(url_data);
-
-    ws_gps.onopen = function() {
-        console.log('ws_gps connection opened');
-        connectionStatus.textContent = 'Connected';
-        connectionStatus.style.color = 'green';
-    };
-
-    ws_data.onopen = function() {
-        console.log('ws_data connection opened');
-        connectionStatus.textContent = 'Connected';
-        connectionStatus.style.color = 'green';
-    };
-
-    ws_gps.onmessage = function(event) {
-        var data = JSON.parse(event.data);
-        // console.log("ws_gps onmessage =" + JSON.stringify(data));
-
-        // Update table
-        // table.row.add([data.column1, data.column2]).draw(false);
-
-        // Update map
-        if (data) {
-            geoJSONLayer.clearLayers();
-            geoJSONLayer.addData(data);
-            map.fitBounds(geoJSONLayer.getBounds());
-        }
-    };
+// Handle GPS data
+connectionManager.addMessageListener('gps', (data) => {
+    if (data) {
+        geoJSONLayer.clearLayers();
+        geoJSONLayer.addData(data);
+        map.fitBounds(geoJSONLayer.getBounds());
+    }
+});
 
 // Get the table body element
 const pressureTableBody = document.querySelector('#pressureTable tbody');
@@ -89,16 +52,10 @@ function updateDisplay() {
 // Period refresh of the display, based on value received and store in cache
 const intervalID = setInterval(updateDisplay, 200);
 
-// Handle incoming messages
-ws_data.onmessage = function(event) {
-    // Parse the incoming message
-    const data = JSON.parse(event.data);
-    // console.log("buf="+ws_data.bufferedAmount)
-    // console.log(JSON.stringify(data))
-
-
+// Handle incoming data messages
+connectionManager.addMessageListener('data', (data) => {
     // Check if the name already exists in the cache
-    if (! nameCache.has(data.name)) {
+    if (!nameCache.has(data.name)) {
         // Create a new row
         const newRow = document.createElement('tr');
         newRow.id = data.name; // Set the id attribute based on the name
@@ -139,44 +96,7 @@ ws_data.onmessage = function(event) {
         // Append the new row to the table body
         tableBody.appendChild(newRow);
     }
-    else {
-        // Nothing to add in table
-    }
 
     // Always store data value in cache
     nameCache.set(data.name, data.value);
-
-    // Will be displayed by periodic function.
-    // updateDisplay();
-};
-
-    // Handle WebSocket errors
-    ws_data.onerror = function(error) {
-        console.error('ws_data error:', error);
-        connectionStatus.textContent = 'Connection Error';
-        connectionStatus.style.color = 'red';
-    };
-
-    ws_gps.onerror = function(error) {
-        console.error('ws_gps error:', error);
-        connectionStatus.textContent = 'Connection Error';
-        connectionStatus.style.color = 'red';
-    };
-
-    // Handle WebSocket close
-    ws_data.onclose = function(event) {
-        console.log('ws_data connection closed:', event);
-        connectionStatus.textContent = 'Disconnected. Retrying...';
-        connectionStatus.style.color = 'orange';
-        setTimeout(connect, 5000); // Try to reconnect every 5 seconds
-    };
-
-    ws_gps.onclose = function(event) {
-        console.log('ws_gps connection closed:', event);
-        connectionStatus.textContent = 'Disconnected. Retrying...';
-        connectionStatus.style.color = 'orange';
-        setTimeout(connect, 5000); // Try to reconnect every 5 seconds
-    };
-}
-
-connect();
+});

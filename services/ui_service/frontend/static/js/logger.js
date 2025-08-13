@@ -122,10 +122,6 @@ function displayPlot(data) {
     }
 
 
-    // Establish a WebSocket connection
-const url = "ws://" + window.location.host + "/ws_data";
-const socket = new WebSocket(url);
-
 // Get the buttons
 const toggleRecordingButton = document.getElementById('toggleRecording');
 const recorderSpin = document.getElementById('recorderSpin');
@@ -141,27 +137,15 @@ let isRecordingCandump = false;
 let isRecordingPythonCan = false;
 
 // Handle incoming messages
-socket.onmessage = function(event) {
-    // Parse the incoming message
-    const data = JSON.parse(event.data);
+connectionManager.addMessageListener('data', (data) => {
     // console.log('WebSocket onmessage:', data);
-};
-
-// Handle WebSocket errors
-socket.onerror = function(error) {
-    console.error('WebSocket error:', error);
-};
-
-// Handle WebSocket close
-socket.onclose = function(event) {
-    console.log('WebSocket connection closed:', event);
-};
+});
 
 // Toggle recording button click event
 toggleRecordingButton.addEventListener('click', function() {
     isRecording = !isRecording;
     const command = isRecording ? 'startRecording' : 'stopRecording';
-    socket.send(JSON.stringify({ command }));
+    connectionManager.sendMessage('data', JSON.stringify({ command }));
     toggleRecordingButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
     recorderSpin.style.display = isRecording ? "block" : "none";
     toggleRecordingButton.classList.toggle('recording', isRecording);
@@ -171,7 +155,7 @@ toggleRecordingButton.addEventListener('click', function() {
 toggleRecordingCandumpButton.addEventListener('click', function() {
     isRecordingCandump = !isRecordingCandump;
     const command = isRecordingCandump ? 'startCanDumpRecording' : 'stopCanDumpRecording';
-    socket.send(JSON.stringify({ command }));
+    connectionManager.sendMessage('data', JSON.stringify({ command }));
     toggleRecordingCandumpButton.textContent = isRecordingCandump ? 'Stop Recording Candump' : 'Start Recording Candump';
     recorderCanDumpSpin.style.display = isRecordingCandump ? "block" : "none";
     toggleRecordingCandumpButton.classList.toggle('recording', isRecordingCandump);
@@ -181,7 +165,7 @@ toggleRecordingCandumpButton.addEventListener('click', function() {
 toggleRecordingPythonCanButton.addEventListener('click', function() {
     isRecordingPythonCan = !isRecordingPythonCan;
     const command = isRecordingPythonCan ? 'startPythonCanRecording' : 'stopPythonCanRecording';
-    socket.send(JSON.stringify({ command }));
+    connectionManager.sendMessage('data', JSON.stringify({ command }));
     toggleRecordingPythonCanButton.textContent = isRecordingPythonCan ? 'Stop Recording PythonCan' : 'Start Recording PythonCan';
     recorderPythonCanSpin.style.display = isRecordingPythonCan ? "block" : "none";
     toggleRecordingPythonCanButton.classList.toggle('recording', isRecordingPythonCan);
@@ -189,5 +173,5 @@ toggleRecordingPythonCanButton.addEventListener('click', function() {
 
 // Quit button click event
 quitButton.addEventListener('click', function() {
-    socket.send(JSON.stringify({ command: 'quit' }));
+    connectionManager.sendMessage('data', JSON.stringify({ command: 'quit' }));
 });
