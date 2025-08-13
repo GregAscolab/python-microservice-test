@@ -30,7 +30,12 @@ self.addEventListener('install', event => {
                 console.log('Opened cache');
                 return cache.addAll(urlsToCache);
             })
+            .then(() => self.skipWaiting())
     );
+});
+
+self.addEventListener('activate', event => {
+    event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', event => {
@@ -52,9 +57,15 @@ self.addEventListener('fetch', event => {
         );
     } else {
         event.respondWith(
-            caches.match(event.request)
+            fetch(event.request)
                 .then(response => {
-                    return response || fetch(event.request);
+                    return caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, response.clone());
+                        return response;
+                    });
+                })
+                .catch(() => {
+                    return caches.match(event.request);
                 })
         );
     }
