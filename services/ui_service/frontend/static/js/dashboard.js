@@ -13,26 +13,43 @@ var geoJSONLayer = L.geoJSON().addTo(map);
 
 // WebSocket connection
 const url_gps = "ws://" + window.location.host + "/ws_gps";
-const ws_gps = new WebSocket(url_gps);
+let ws_gps;
 
-ws_gps.onmessage = function(event) {
-    var data = JSON.parse(event.data);
-    // console.log("ws_gps onmessage =" + JSON.stringify(data));
-
-    // Update table
-    // table.row.add([data.column1, data.column2]).draw(false);
-
-    // Update map
-    if (data) {
-        geoJSONLayer.clearLayers();
-        geoJSONLayer.addData(data);
-        map.fitBounds(geoJSONLayer.getBounds());
-    }
-};
-
-// Establish a WebSocket connection
 const url_data = "ws://" + window.location.host + "/ws_data";
-const ws_data = new WebSocket(url_data);
+let ws_data;
+
+const connectionStatus = document.getElementById('connection-status');
+
+function connect() {
+    ws_gps = new WebSocket(url_gps);
+    ws_data = new WebSocket(url_data);
+
+    ws_gps.onopen = function() {
+        console.log('ws_gps connection opened');
+        connectionStatus.textContent = 'Connected';
+        connectionStatus.style.color = 'green';
+    };
+
+    ws_data.onopen = function() {
+        console.log('ws_data connection opened');
+        connectionStatus.textContent = 'Connected';
+        connectionStatus.style.color = 'green';
+    };
+
+    ws_gps.onmessage = function(event) {
+        var data = JSON.parse(event.data);
+        // console.log("ws_gps onmessage =" + JSON.stringify(data));
+
+        // Update table
+        // table.row.add([data.column1, data.column2]).draw(false);
+
+        // Update map
+        if (data) {
+            geoJSONLayer.clearLayers();
+            geoJSONLayer.addData(data);
+            map.fitBounds(geoJSONLayer.getBounds());
+        }
+    };
 
 // Get the table body element
 const pressureTableBody = document.querySelector('#pressureTable tbody');
@@ -133,18 +150,33 @@ ws_data.onmessage = function(event) {
     // updateDisplay();
 };
 
-// Handle WebSocket errors
-ws_data.onerror = function(error) {
-    console.error('ws_data error:', error);
-};
+    // Handle WebSocket errors
+    ws_data.onerror = function(error) {
+        console.error('ws_data error:', error);
+        connectionStatus.textContent = 'Connection Error';
+        connectionStatus.style.color = 'red';
+    };
 
-// Handle WebSocket close
-ws_data.onclose = function(event) {
-    console.log('ws_data connection closed:', event);
-};
+    ws_gps.onerror = function(error) {
+        console.error('ws_gps error:', error);
+        connectionStatus.textContent = 'Connection Error';
+        connectionStatus.style.color = 'red';
+    };
 
-ws_data.onopen = function(event) {
-    console.log('ws_data opened');
-    console.log("ws_data ext="+ws_data.extensions)
-    console.log("ws_data protocol="+ws_data.protocol)
-};
+    // Handle WebSocket close
+    ws_data.onclose = function(event) {
+        console.log('ws_data connection closed:', event);
+        connectionStatus.textContent = 'Disconnected. Retrying...';
+        connectionStatus.style.color = 'orange';
+        setTimeout(connect, 5000); // Try to reconnect every 5 seconds
+    };
+
+    ws_gps.onclose = function(event) {
+        console.log('ws_gps connection closed:', event);
+        connectionStatus.textContent = 'Disconnected. Retrying...';
+        connectionStatus.style.color = 'orange';
+        setTimeout(connect, 5000); // Try to reconnect every 5 seconds
+    };
+}
+
+connect();

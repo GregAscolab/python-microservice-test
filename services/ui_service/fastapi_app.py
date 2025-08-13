@@ -84,6 +84,14 @@ async def read_logger_path(request: Request, path: str = ""):
 
     return templates.TemplateResponse("logger.html", {"request": request, "files": files, "dirs": dirs, "extensions": extensions, "current_path": path})
 
+@router.get("/manifest.json", response_class=FileResponse)
+async def read_manifest(request: Request):
+    return FileResponse(os.path.join(APP_DIR, "frontend", "manifest.json"))
+
+@router.get("/service-worker.js", response_class=FileResponse)
+async def read_service_worker(request: Request):
+    return FileResponse(os.path.join(APP_DIR, "frontend", "service-worker.js"))
+
 @router.get("/{page}", response_class=HTMLResponse)
 async def read_page(request: Request, page: str):
     try:
