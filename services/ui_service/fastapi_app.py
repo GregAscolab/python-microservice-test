@@ -92,6 +92,10 @@ async def read_manifest(request: Request):
 async def read_service_worker(request: Request):
     return FileResponse(os.path.join(APP_DIR, "frontend", "service-worker.js"))
 
+@router.get("/offline", response_class=HTMLResponse)
+async def read_offline_page(request: Request):
+    return templates.TemplateResponse("offline.html", {"request": request})
+
 @router.get("/{page}", response_class=HTMLResponse)
 async def read_page(request: Request, page: str):
     try:

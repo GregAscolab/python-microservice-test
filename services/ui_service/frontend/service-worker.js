@@ -1,7 +1,15 @@
 const CACHE_NAME = 'rockmeter-cache-v1';
 const urlsToCache = [
     '/',
+    '/dashboard',
+    '/gps',
+    '/logger',
+    '/map',
+    '/sensors',
+    '/settings',
+    '/offline',
     '/static/css/styles.css',
+    '/static/js/connection.js',
     '/static/js/dashboard.js',
     '/static/js/gps.js',
     '/static/js/logger.js',
@@ -12,17 +20,7 @@ const urlsToCache = [
     '/static/libs/leaflet/leaflet.css',
     '/static/libs/leaflet/leaflet.js',
     '/static/libs/plotly/plotly-2.32.0.min.js',
-    '/manifest.json',
-    '/templates/index.html',
-    '/templates/dashboard.html',
-    '/templates/gps.html',
-    '/templates/logger.html',
-    '/templates/map.html',
-    '/templates/sensors.html',
-    '/templates/settings.html',
-    '/templates/header.html',
-    '/templates/footer.html',
-    '/templates/sidebar.html'
+    '/manifest.json'
 ];
 
 self.addEventListener('install', event => {
@@ -36,13 +34,28 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                if (response) {
-                    return response;
-                }
-                return fetch(event.request);
-            })
-    );
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            caches.match(event.request)
+                .then(response => {
+                    return response || fetch(event.request)
+                        .then(fetchResponse => {
+                            return caches.open(CACHE_NAME).then(cache => {
+                                cache.put(event.request, fetchResponse.clone());
+                                return fetchResponse;
+                            });
+                        });
+                })
+                .catch(() => {
+                    return caches.match('/offline');
+                })
+        );
+    } else {
+        event.respondWith(
+            caches.match(event.request)
+                .then(response => {
+                    return response || fetch(event.request);
+                })
+        );
+    }
 });
