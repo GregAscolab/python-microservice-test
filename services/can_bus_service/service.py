@@ -132,20 +132,26 @@ class CanBusService(Microservice):
         except Exception as e:
             self.logger.error(f"S3 upload failed: {e}", exc_info=True)
 
-    async def _handle_start_recording(self):
+    async def _handle_start_recording(self, filename: str | None = None):
         if self.can_logger:
             self.logger.warning("Recording is already in progress.")
             return
 
         log_dir = self.settings.get("log_dir", "can_logs")
         os.makedirs(log_dir, exist_ok=True)
-
         file_format = self.settings.get("log_file_format", ".blf")
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
-        self.current_log_path_pattern = os.path.join(log_dir, f"can_log_{timestamp}")
+        if filename:
+            # Use the provided filename
+            # Remove extension if present, as it will be added
+            base_name, _ = os.path.splitext(filename)
+            self.current_log_path_pattern = os.path.join(log_dir, base_name)
+        else:
+            # Use the timestamp-based filename
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            self.current_log_path_pattern = os.path.join(log_dir, f"can_log_{timestamp}")
+
         log_path_with_ext = f"{self.current_log_path_pattern}{file_format}"
-
         self.logger.info(f"Starting CAN recording to {log_path_with_ext}")
 
         try:

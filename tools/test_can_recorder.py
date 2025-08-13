@@ -8,6 +8,7 @@ import boto3
 import os
 import glob
 from botocore.exceptions import NoCredentialsError
+from datetime import datetime
 
 def load_settings(path="config/settings-linux.json") -> dict:
     """Loads settings from a JSON file."""
@@ -55,21 +56,21 @@ async def main(args):
         nats_client = await nats.connect(nats_url)
         print(f"Test script connected to NATS at {nats_url}.")
         
-        num_messages_to_send = 20
+        # Generate a unique filename for this test run
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        test_filename = f"test_log_{timestamp}.blf"
         
-        # Start sending CAN messages in the background
-        sender_task = asyncio.create_task(send_can_messages(args.interface, args.channel, num_messages_to_send))
-        
-        # Give the sender a moment to start
-        await asyncio.sleep(1)
-        
-        # Send start recording command
-        print("Sending 'startRecording' command...")
-        start_command = {"command": "startRecording"}
+        # Send start recording command with the specific filename
+        print(f"Sending 'startRecording' command with filename: {test_filename}")
+        start_command = {"command": "startRecording", "filename": test_filename}
         await nats_client.publish("commands.can_bus_service", json.dumps(start_command, indent=None, separators=(',',':')).encode())
+
+        # Give the service a moment to initialize the logger
+        await asyncio.sleep(0.5)
         
-        # Wait for all messages to be sent
-        sent_messages = await sender_task
+        # Start sending CAN messages and wait for them to complete
+        num_messages_to_send = 20
+        sent_messages = await send_can_messages(args.interface, args.channel, num_messages_to_send)
         print("CAN message sending complete.")
         
         # Give a little extra time for the last message to be logged
@@ -81,30 +82,31 @@ async def main(args):
         await nats_client.publish("commands.can_bus_service", json.dumps(stop_command, indent=None, separators=(',',':')).encode())
         
         # Verify local log file
-        local_log_dir = "can_logs"
-        latest_local_log = get_latest_log_file(local_log_dir)
-        if latest_local_log:
-            verify_log_file(latest_local_log, sent_messages)
+        local_log_dir = can_bus_settings.get("log_dir", "can_logs")
+        local_log_path = os.path.join(local_log_dir, test_filename)
+        if os.path.exists(local_log_path):
+            verify_log_file(local_log_path, sent_messages)
         else:
-            print(f"No local log file found in '{local_log_dir}'.")
+            print(f"  [FAIL] Local log file not found at '{local_log_path}'.")
 
-        # Wait for S3 upload and verify
+        # Wait for S3 upload to complete
+        print("Waiting for S3 upload...")
+        await asyncio.sleep(5) # Give the service time to upload
+
+        # Download and verify S3 log file
         s3_download_dir = "s3_downloads"
-        downloaded_log_path = None
+        downloaded_log_path = download_log_from_s3(can_bus_settings, test_filename, s3_download_dir)
 
-        for i in range(10): # Try for 10 seconds
-            downloaded_log_path = download_latest_log_from_s3(can_bus_settings, s3_download_dir)
-            if downloaded_log_path:
-                break
-            await asyncio.sleep(1)
-        
         if downloaded_log_path:
             verify_log_file(downloaded_log_path, sent_messages)
-            # Clean up
-            if latest_local_log and os.path.exists(latest_local_log):
-                os.remove(latest_local_log)
-            if os.path.exists(downloaded_log_path):
-                os.remove(downloaded_log_path)
+        else:
+            print(f"  [FAIL] Could not download '{test_filename}' from S3.")
+
+        # Clean up local and downloaded files
+        if os.path.exists(local_log_path):
+            os.remove(local_log_path)
+        if downloaded_log_path and os.path.exists(downloaded_log_path):
+            os.remove(downloaded_log_path)
         else:
             print("Failed to download log file from S3.")
 
@@ -117,18 +119,7 @@ async def main(args):
             await nats_client.close()
             print("Test script disconnected from NATS.")
 
-def get_latest_log_file(log_dir: str, prefix="can_log_") -> str | None:
-    """Gets the path of the most recent log file in a directory."""
-    try:
-        list_of_files = glob.glob(os.path.join(log_dir, f"{prefix}*"))
-        if not list_of_files:
-            return None
-        return max(list_of_files, key=os.path.getctime)
-    except Exception as e:
-        print(f"Error getting latest log file: {e}")
-        return None
-
-def download_latest_log_from_s3(s3_settings: dict, download_dir: str) -> str | None:
+def download_log_from_s3(s3_settings: dict, filename: str, download_dir: str) -> str | None:
     """Downloads the most recent CAN log file from S3."""
     print("Connecting to S3 to download log file...")
     try:
@@ -140,20 +131,11 @@ def download_latest_log_from_s3(s3_settings: dict, download_dir: str) -> str | N
         )
 
         bucket_name = s3_settings.get("s3_bucket")
-        response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix="can_log_")
-        if 'Contents' not in response:
-            print(f"No log files found in S3 bucket '{bucket_name}'.")
-            return None
-
-        all_logs = sorted(response['Contents'], key=lambda x: x['LastModified'], reverse=True)
-        latest_log = all_logs[0]
-        latest_log_name = latest_log['Key']
-
-        download_path = os.path.join(download_dir, latest_log_name)
+        download_path = os.path.join(download_dir, filename)
         os.makedirs(download_dir, exist_ok=True)
 
-        print(f"Downloading '{latest_log_name}' from S3 to '{download_path}'...")
-        s3_client.download_file(bucket_name, latest_log_name, download_path)
+        print(f"Downloading '{filename}' from S3 bucket '{bucket_name}' to '{download_path}'...")
+        s3_client.download_file(bucket_name, filename, download_path)
         print("Download complete.")
         return download_path
 
