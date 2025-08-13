@@ -21,8 +21,6 @@ class ManagerService(Microservice):
         super().__init__("manager_service")
         self.services_dir = "services"
         self.managed_processes: Dict[str, subprocess.Popen] = {}
-        self.log_files: Dict[str, io.TextIOWrapper] = {}
-        os.makedirs("logs", exist_ok=True)
 
     def discover_services(self):
         """Discovers available services in the services directory."""
@@ -36,7 +34,7 @@ class ManagerService(Microservice):
         return discovered
 
     def start_service(self, service_name: str):
-        """Starts a microservice as a new process and redirects its output to a log file."""
+        """Starts a microservice as a new process."""
         if service_name in self.managed_processes and self.managed_processes[service_name].poll() is None:
             self.logger.info(f"Service '{service_name}' is already running.")
             return
@@ -48,23 +46,16 @@ class ManagerService(Microservice):
 
         self.logger.info(f"Starting service '{service_name}'...")
         try:
-            # Redirect stdout and stderr to a log file
-            log_file_path = f"logs/{service_name}.log"
-            log_file = open(log_file_path, "a")
-            self.log_files[service_name] = log_file
-
-            process = subprocess.Popen(
-                [sys.executable, service_main_path],
-                stdout=log_file,
-                stderr=subprocess.STDOUT
-            )
+            # The child process will handle its own logging.
+            # We do not redirect stdout/stderr here.
+            process = subprocess.Popen([sys.executable, service_main_path])
             self.managed_processes[service_name] = process
-            self.logger.info(f"Service '{service_name}' started with PID {process.pid}. Output logged to {log_file_path}")
+            self.logger.info(f"Service '{service_name}' started with PID {process.pid}.")
         except Exception as e:
             self.logger.error(f"Error starting service '{service_name}': {e}", exc_info=True)
 
     def stop_service(self, service_name: str):
-        """Stops a microservice and closes its log file."""
+        """Stops a microservice."""
         process = self.managed_processes.get(service_name)
         if process and process.poll() is None:
             self.logger.info(f"Stopping service '{service_name}' (PID {process.pid})...")
@@ -78,10 +69,6 @@ class ManagerService(Microservice):
 
         if service_name in self.managed_processes:
             del self.managed_processes[service_name]
-
-        if service_name in self.log_files:
-            self.log_files[service_name].close()
-            del self.log_files[service_name]
 
     async def _start_logic(self):
         """Starts the manager logic: discover and start all services."""
@@ -124,7 +111,24 @@ class ManagerService(Microservice):
             while not self._shutdown_event.is_set():
                 for name, process in list(self.managed_processes.items()):
                     if process.poll() is not None:
-                        self.logger.info(f"Service '{name}' (PID {process.pid}) has terminated with exit code {process.returncode}.")
+                        exit_code = process.returncode
+                        if exit_code < 0:
+                            # Terminated by signal
+                            signal_num = -exit_code
+                            unsigned_code = 128 + signal_num
+                            try:
+                                signal_name = signal.Signals(signal_num).name
+                            except ValueError:
+                                signal_name = "UNKNOWN"
+                            self.logger.info(
+                                f"Service '{name}' (PID {process.pid}) has terminated. "
+                                f"Exit Code: {exit_code} (unsigned: {unsigned_code}, signal: {signal_name})"
+                            )
+                        else:
+                            # Normal exit
+                            self.logger.info(
+                                f"Service '{name}' (PID {process.pid}) has terminated with exit code {exit_code}."
+                            )
                         self.stop_service(name)
 
                 try:
