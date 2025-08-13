@@ -4,15 +4,16 @@ import sys
 import os
 import random
 
+from datetime import datetime, timezone
+
 # Add the project root to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from common.microservice import Microservice
+from common.owa_errors import OwaErrors
+import common.utils as utils
 from nats.aio.msg import Msg
 
-if sys.platform == 'linux':
-    from common.owa_gps2 import Gps
-    import common.utils as utils
 
 class GpsService(Microservice):
     """
@@ -151,8 +152,8 @@ class GpsService(Microservice):
         payload = {}
         if self.gps and self.use_owa_hardware:
             update_flag, _ = self.gps.getFullGPSPosition()
-            if self.gps.gps_pos_ok and update_flag:
-                r, d = self.gps.GPS_GetSV_inView()
+            # if self.gps.gps_pos_ok and update_flag:
+            if self.gps.gps_pos_ok:
                 payload = {
                     "type": "Feature",
                     "geometry": {
@@ -161,9 +162,28 @@ class GpsService(Microservice):
                     },
                     "properties": {
                         "lastCoord": utils.getdict(self.gps.lastCoord),
-                        "SV": utils.getdict(d)
+                        # "SV": utils.getdict(d)
                     }
                 }
+
+                # Get satellite in view informations
+                # await asyncio.sleep(1)
+                r, d = self.gps.GPS_GetSV_inView()
+                if r == OwaErrors.NO_ERROR:
+                    sv = utils.getdict(d)
+                    # Filter SV data to get only usefull (remove empty SV data)
+                    sv_use_table = sv["SV"][0:sv["SV_InView"]]
+                    sv["SV"] = sv_use_table
+                    payload["properties"]["SV"]=sv
+
+                # Get time from GPS
+                # await asyncio.sleep(1)
+                dt, res = self.gps.getUTCDateTime()
+                if isinstance(dt, datetime) :
+                    self.logger.debug("GPS UTC datetime is : " + str(dt) )
+                    payload["properties"]["datetime"]=str(dt)
+            else:
+                self.logger.debug(f"GPS not ready ({self.gps.gps_pos_ok}), or no change in position ({update_flag})")
         else:
             fake_lat = 45.5257585 + random.uniform(-0.001, 0.001)
             fake_lon = 4.9240768 + random.uniform(-0.001, 0.001)
@@ -194,6 +214,7 @@ class GpsService(Microservice):
                     },
                     "SV": self._generate_fake_sv_data(),
                     "fake": True,
+                    "datetime":str(datetime.now()),
                 }
             }
 
