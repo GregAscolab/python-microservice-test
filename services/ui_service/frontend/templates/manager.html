@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Manager</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-full">
+    <div class="min-h-full">
+        {% include 'header.html' %}
+        <main class="-mt-24 pb-8">
+            <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+                <h1 class="sr-only">Manager</h1>
+                <!-- Main 3 column grid -->
+                <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-3 lg:gap-8">
+                    <!-- Left column -->
+                    <div class="grid grid-cols-1 gap-4 lg:col-span-2">
+                        <section aria-labelledby="section-1-title">
+                             <h2 class="sr-only" id="section-1-title">Service Status</h2>
+                            <div class="overflow-hidden rounded-lg bg-white shadow">
+                                <div class="p-6">
+                                    <h1 class="text-3xl font-bold mb-6 text-gray-800">Service Manager</h1>
+                                    <div id="status-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                                        <!-- Service cards will be dynamically inserted here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Right column -->
+                    <div class="grid grid-cols-1 gap-4">
+                        <section aria-labelledby="section-2-title">
+                            <h2 class="sr-only" id="section-2-title">Actions</h2>
+                            <div class="overflow-hidden rounded-lg bg-white shadow">
+                                <div class="p-6">
+                                   <h3 class="text-xl font-bold text-gray-800 mb-4">Global Actions</h3>
+                                    <div class="flex flex-col space-y-4">
+                                        <button onclick="sendCommand('start_all', {})" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Start All Services</button>
+                                        <button onclick="sendCommand('stop_all', {})" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Stop All Services</button>
+                                         <button onclick="sendCommand('get_status', {})" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Refresh Status</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </main>
+        {% include 'footer.html' %}
+    </div>
+
+    <!-- Log Viewer Modal -->
+    <div id="log-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" style="z-index: 100;">
+      <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center pb-3">
+          <h3 class="text-2xl font-bold text-gray-900">Log Viewer: <span id="log-service-name"></span></h3>
+          <div class="cursor-pointer z-50" onclick="closeLogModal()">
+              <svg class="fill-current text-black" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18"><path d="M14.53 4.53l-1.06-1.06L9 7.94 4.53 3.47 3.47 4.53 7.94 9l-4.47 4.47 1.06 1.06L9 10.06l4.47 4.47 1.06-1.06L10.06 9z"></path></svg>
+          </div>
+        </div>
+        <div class="h-96 bg-gray-900 text-white font-mono text-sm p-4 overflow-y-scroll rounded">
+          <pre id="log-content"></pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        const statusGrid = document.getElementById('status-grid');
+        const logModal = document.getElementById('log-modal');
+        const logServiceName = document.getElementById('log-service-name');
+        const logContent = document.getElementById('log-content');
+        let logInterval;
+
+        function getWebSocketURL(path) {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            return `${protocol}//${host}${path}`;
+        }
+
+        const socket = new WebSocket(getWebSocketURL('/ws_manager'));
+
+        socket.onopen = function(event) {
+            console.log("Manager WebSocket connection established.");
+            // Request status immediately and then every 2 seconds to ensure it gets through
+            sendCommand('get_status', {});
+            setInterval(() => sendCommand('get_status', {}), 2000);
+        };
+
+        socket.onmessage = function(event) {
+            const services = JSON.parse(event.data);
+            updateStatusGrid(services);
+        };
+
+        socket.onclose = function(event) {
+            console.log("Manager WebSocket connection closed.");
+        };
+
+        socket.onerror = function(error) {
+            console.error("Manager WebSocket error:", error);
+        };
+
+        function sendCommand(command, payload) {
+            const message = { command, ...payload };
+            console.log("Sending command:", message);
+            socket.send(JSON.stringify(message));
+        }
+
+        function getStatusColor(status) {
+            switch (status) {
+                case 'running': return 'bg-green-500';
+                case 'stopped': return 'bg-red-500';
+                case 'stopping': return 'bg-yellow-500';
+                case 'restarting': return 'bg-yellow-500';
+                case 'crashed': return 'bg-red-800';
+                case 'error': return 'bg-red-800';
+                default: return 'bg-gray-400';
+            }
+        }
+
+        function updateStatusGrid(services) {
+            statusGrid.innerHTML = ''; // Clear existing grid
+            if (!services || services.length === 0) {
+                statusGrid.innerHTML = '<p class="text-gray-500">No services found or status not yet available.</p>';
+                return;
+            }
+            services.sort((a, b) => a.name.localeCompare(b.name)).forEach(service => {
+                const card = `
+                    <div class="bg-white shadow-lg rounded-lg p-6 flex flex-col justify-between transition-all duration-300 ease-in-out hover:shadow-xl">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-xl font-bold text-gray-800">${service.name}</h2>
+                                <span class="px-3 py-1 text-sm font-semibold text-white rounded-full ${getStatusColor(service.status)}">
+                                    ${service.status}
+                                </span>
+                            </div>
+                            <div class="text-gray-600 text-sm">
+                                <p><strong>PID:</strong> ${service.pid || 'N/A'}</p>
+                                <p><strong>Restarts:</strong> ${service.restart_count}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between mt-6">
+                            <div class="flex space-x-2">
+                                <button onclick="sendCommand('start_service', { service_name: '${service.name}' })" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400" ${service.status === 'running' ? 'disabled' : ''}>Start</button>
+                                <button onclick="sendCommand('stop_service', { service_name: '${service.name}' })" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-400" ${service.status !== 'running' ? 'disabled' : ''}>Stop</button>
+                                <button onclick="sendCommand('restart_service', { service_name: '${service.name}' })" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400" ${service.status !== 'running' ? 'disabled' : ''}>Restart</button>
+                            </div>
+                             <button onclick="openLogModal('${service.name}')" class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800">Logs</button>
+                        </div>
+                    </div>
+                `;
+                statusGrid.innerHTML += card;
+            });
+        }
+
+        async function fetchLogContent(serviceName) {
+            try {
+                const response = await fetch(\`/api/logs/\${serviceName}\`);
+                if (!response.ok) {
+                    logContent.textContent = 'Error fetching logs.';
+                    return;
+                }
+                const logs = await response.text();
+                logContent.textContent = logs || 'Log file is empty or does not exist.';
+                logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight;
+            } catch (error) {
+                console.error('Error fetching logs:', error);
+                logContent.textContent = 'Could not connect to server to fetch logs.';
+            }
+        }
+
+        function openLogModal(serviceName) {
+            logServiceName.textContent = serviceName;
+            logContent.textContent = 'Loading logs...';
+            logModal.style.display = 'block';
+
+            fetchLogContent(serviceName); // initial fetch
+            logInterval = setInterval(() => fetchLogContent(serviceName), 2000); // refresh every 2s
+        }
+
+        function closeLogModal() {
+            logModal.style.display = 'none';
+            clearInterval(logInterval);
+            logContent.textContent = '';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == logModal) {
+                closeLogModal();
+            }
+        }
+    </script>
+</body>
+</html>

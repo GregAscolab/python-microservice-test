@@ -2,143 +2,245 @@ import asyncio
 import os
 import subprocess
 import sys
-import signal
-import io
-from typing import Dict
+import json
+from typing import Dict, TypedDict, Optional
 
 # Add the project root to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from common.microservice import Microservice
 
+class ServiceStatus(TypedDict):
+    status: str  # e.g., 'stopped', 'running', 'error', 'restarting'
+    pid: Optional[int]
+    process: Optional[subprocess.Popen]
+    last_command: Optional[str] # 'start' or 'stop'
+    restart_count: int
+    name: str
+
 class ManagerService(Microservice):
     """
     The Microservice Manager.
     Discovers, starts, and monitors other microservices.
+    Receives commands via NATS to manage service lifecycles.
     """
 
     def __init__(self):
-        super().__init__("manager_service")
+        super().__init__("manager")
         self.services_dir = "services"
-        self.managed_processes: Dict[str, subprocess.Popen] = {}
+        self.managed_services: Dict[str, ServiceStatus] = {}
+        self.max_retries = 3
+        self._discover_and_initialize_services()
+        self._register_command_handlers()
 
-    def discover_services(self):
-        """Discovers available services in the services directory."""
-        discovered = []
+    def _discover_and_initialize_services(self):
+        """Discovers available services and initializes their status."""
+        self.logger.info("Discovering services...")
         for service_name in os.listdir(self.services_dir):
             service_path = os.path.join(self.services_dir, service_name)
-            if os.path.isdir(service_path) and "main.py" in os.listdir(service_path):
-                if service_name != "manager":
-                    discovered.append(service_name)
-        self.logger.info(f"Discovered services: {discovered}")
-        return discovered
+            # The manager does not manage itself.
+            if os.path.isdir(service_path) and "main.py" in os.listdir(service_path) and service_name != "manager":
+                self.managed_services[service_name] = {
+                    "status": "stopped",
+                    "pid": None,
+                    "process": None,
+                    "last_command": None,
+                    "restart_count": 0,
+                    "name": service_name,
+                }
+        self.logger.info(f"Discovered services: {list(self.managed_services.keys())}")
 
-    def start_service(self, service_name: str):
+    def _register_command_handlers(self):
+        """Registers handlers for manager commands."""
+        self.command_handler.register_command("start_service", self.start_service_command)
+        self.command_handler.register_command("stop_service", self.stop_service_command)
+        self.command_handler.register_command("restart_service", self.restart_service_command)
+        self.command_handler.register_command("get_status", self.get_status_command)
+        self.command_handler.register_command("start_all", self.start_all_command)
+        self.command_handler.register_command("stop_all", self.stop_all_command)
+
+    async def start_service(self, service_name: str) -> bool:
         """Starts a microservice as a new process."""
-        if service_name in self.managed_processes and self.managed_processes[service_name].poll() is None:
+        if service_name not in self.managed_services:
+            self.logger.error(f"Service '{service_name}' not found.")
+            return False
+
+        service_info = self.managed_services[service_name]
+        if service_info["status"] == 'running' and service_info["process"] and service_info["process"].poll() is None:
             self.logger.info(f"Service '{service_name}' is already running.")
-            return
+            return True
 
         service_main_path = os.path.join(self.services_dir, service_name, "main.py")
         if not os.path.exists(service_main_path):
             self.logger.error(f"Could not find main.py for service '{service_name}'.")
-            return
+            service_info["status"] = "error"
+            return False
 
         self.logger.info(f"Starting service '{service_name}'...")
         try:
-            # The child process will handle its own logging.
-            # We do not redirect stdout/stderr here.
             process = subprocess.Popen([sys.executable, service_main_path])
-            self.managed_processes[service_name] = process
+            service_info.update({
+                "status": "running",
+                "process": process,
+                "pid": process.pid,
+                "restart_count": 0, # Reset restart count on successful manual start
+                "last_command": "start"
+            })
             self.logger.info(f"Service '{service_name}' started with PID {process.pid}.")
+            return True
         except Exception as e:
             self.logger.error(f"Error starting service '{service_name}': {e}", exc_info=True)
+            service_info["status"] = "error"
+            return False
 
-    def stop_service(self, service_name: str):
+    async def stop_service(self, service_name: str):
         """Stops a microservice."""
-        process = self.managed_processes.get(service_name)
+        if service_name not in self.managed_services:
+            self.logger.error(f"Service '{service_name}' not found.")
+            return
+
+        service_info = self.managed_services[service_name]
+        process = service_info.get("process")
+
         if process and process.poll() is None:
             self.logger.info(f"Stopping service '{service_name}' (PID {process.pid})...")
+            service_info["status"] = "stopping"
+            service_info["last_command"] = "stop"
             process.terminate()
             try:
-                process.wait(timeout=5)
+                await asyncio.to_thread(process.wait, timeout=5)
+                self.logger.info(f"Service '{service_name}' terminated gracefully.")
             except subprocess.TimeoutExpired:
                 self.logger.warning(f"Service '{service_name}' did not terminate gracefully. Killing.")
                 process.kill()
-            self.logger.info(f"Service '{service_name}' stopped.")
+            except Exception as e:
+                self.logger.error(f"Error while stopping service {service_name}: {e}")
 
-        if service_name in self.managed_processes:
-            del self.managed_processes[service_name]
+        service_info.update({"status": "stopped", "pid": None, "process": None})
+
+    async def restart_service(self, service_name: str):
+        self.logger.info(f"Restarting service '{service_name}'...")
+        await self.stop_service(service_name)
+        await asyncio.sleep(1) # Give it a moment to release resources
+        await self.start_service(service_name)
+
+    # --- Command Handler Methods ---
+
+    async def start_service_command(self, payload: dict):
+        service_name = payload.get("service_name")
+        if service_name:
+            await self.start_service(service_name)
+
+    async def stop_service_command(self, payload: dict):
+        service_name = payload.get("service_name")
+        if service_name:
+            await self.stop_service(service_name)
+
+    async def restart_service_command(self, payload: dict):
+        service_name = payload.get("service_name")
+        if service_name:
+            await self.restart_service(service_name)
+
+    async def start_all_command(self, payload: dict):
+        """Starts all discovered services, ensuring settings_service starts first."""
+        self.logger.info("Executing start_all command...")
+
+        # Define service start order
+        service_names = list(self.managed_services.keys())
+        # Ensure settings_service is first if it exists
+        if "settings_service" in service_names:
+            service_names.insert(0, service_names.pop(service_names.index("settings_service")))
+
+        for service_name in service_names:
+            await self.start_service(service_name)
+            if service_name == "settings_service":
+                self.logger.info("Waiting for settings_service to initialize...")
+                await asyncio.sleep(2) # Give it time to start and be available
+
+    async def stop_all_command(self, payload: dict):
+        self.logger.info("Executing stop_all command...")
+        await self._stop_logic()
+
+    async def get_status_command(self, payload: dict):
+        """Publishes the current status of all services."""
+        await self.publish_status()
+
+    # --- Core Logic ---
 
     async def _start_logic(self):
-        """Starts the manager logic: discover and start all services."""
-        self.logger.info("Starting service discovery...")
-        all_services = self.discover_services()
+        """Connects to NATS, starts settings_service, subscribes, and monitors."""
+        # The manager is a special case. It connects to the default NATS URL
+        # without fetching settings first, because it is responsible for
+        # starting the settings_service itself.
+        self.logger.info("Manager connecting directly to NATS...")
+        await self.messaging_client.connect(self.nats_url)
+        self.logger.info("Manager connected to NATS.")
 
-        if "settings_service" in all_services:
-            self.start_service("settings_service")
-            await asyncio.sleep(2)
-            other_services = [s for s in all_services if s != "settings_service"]
-        else:
-            other_services = all_services
+        # Now subscribe to commands.
+        await self._subscribe_to_commands()
 
-        for service_name in other_services:
-            self.start_service(service_name)
+        # Auto-start the settings service as it's critical for other services
+        self.logger.info("Manager starting... auto-starting settings_service.")
+        await self.start_service("settings_service")
+
+        # Start the monitoring loop as a background task
+        asyncio.create_task(self.monitor_services())
+        self.logger.info("Service monitoring started.")
 
     async def _stop_logic(self):
         """Stops all managed microservices."""
         self.logger.info("Stopping all managed services...")
-        for service_name in list(self.managed_processes.keys()):
-            self.stop_service(service_name)
+        # Create a list of services to stop to avoid issues with modifying dict during iteration
+        service_names = list(self.managed_services.keys())
+        for service_name in service_names:
+            await self.stop_service(service_name)
         self.logger.info("All managed services have been signaled to stop.")
 
-    async def run(self):
-        """The main entry point for the manager service."""
-        self.logger.info("Service starting...")
-        loop = asyncio.get_running_loop()
-        try:
-            for sig in (signal.SIGINT, signal.SIGTERM):
-                loop.add_signal_handler(sig, self._signal_handler)
-        except NotImplementedError:
-            self.logger.warning("loop.add_signal_handler not implemented. Using signal.signal().")
-            signal.signal(signal.SIGINT, self._signal_handler)
-            signal.signal(signal.SIGTERM, self._signal_handler)
+    async def publish_status(self):
+        """Publishes the status of all managed services to NATS."""
+        status_payload = []
+        for name, info in self.managed_services.items():
+            # Don't send the process object over NATS
+            status_info = {k: v for k, v in info.items() if k != 'process'}
+            status_payload.append(status_info)
 
-        try:
-            await self._start_logic()
-            self.logger.info("Manager is running. Waiting for shutdown signal.")
+        self.logger.info(f"Publishing status update for {len(status_payload)} services.")
+        await self.messaging_client.publish(
+            "manager.status",
+            json.dumps(status_payload).encode()
+        )
 
-            while not self._shutdown_event.is_set():
-                for name, process in list(self.managed_processes.items()):
-                    if process.poll() is not None:
-                        exit_code = process.returncode
-                        if exit_code < 0:
-                            # Terminated by signal
-                            signal_num = -exit_code
-                            unsigned_code = 128 + signal_num
-                            try:
-                                signal_name = signal.Signals(signal_num).name
-                            except ValueError:
-                                signal_name = "UNKNOWN"
-                            self.logger.info(
-                                f"Service '{name}' (PID {process.pid}) has terminated. "
-                                f"Exit Code: {exit_code} (unsigned: {unsigned_code}, signal: {signal_name})"
-                            )
+    async def monitor_services(self):
+        """Periodically checks the health of services and handles crashes."""
+        while not self._shutdown_event.is_set():
+            for name, service_info in self.managed_services.items():
+                process = service_info.get("process")
+                if service_info["status"] == "running" and process and process.poll() is not None:
+                    # The process has terminated, but was it intentional?
+                    if service_info.get("last_command") != "stop":
+                        self.logger.warning(f"Service '{name}' terminated unexpectedly with code {process.returncode}.")
+                        service_info["status"] = "crashed"
+                        service_info["pid"] = None
+                        service_info["process"] = None
+
+                        if service_info["restart_count"] < self.max_retries:
+                            service_info["restart_count"] += 1
+                            self.logger.info(f"Attempting to restart '{name}' (Attempt {service_info['restart_count']}/{self.max_retries}).")
+                            service_info["status"] = "restarting"
+                            await self.start_service(name)
                         else:
-                            # Normal exit
-                            self.logger.info(
-                                f"Service '{name}' (PID {process.pid}) has terminated with exit code {exit_code}."
-                            )
-                        self.stop_service(name)
+                            self.logger.error(f"Service '{name}' has crashed too many times. Will not restart again.")
+                            service_info["status"] = "error"
+                    else:
+                        # This was an intentional stop, so we just clean up the state
+                        self.logger.info(f"Service '{name}' stopped as commanded.")
+                        service_info.update({"status": "stopped", "pid": None, "process": None})
 
-                try:
-                    await asyncio.wait_for(self._shutdown_event.wait(), timeout=2.0)
-                except asyncio.TimeoutError:
-                    pass
+            # Publish status periodically
+            await self.publish_status()
 
-        except Exception as e:
-            self.logger.critical(f"An unhandled error occurred during run: {e}", exc_info=True)
-        finally:
-            self.logger.info("Shutting down...")
-            await self._stop_logic()
-            self.logger.info("Manager service has stopped.")
+            try:
+                # Wait for 2 seconds or until shutdown is triggered
+                await asyncio.wait_for(self._shutdown_event.wait(), timeout=2.0)
+            except asyncio.TimeoutError:
+                pass # This is expected, continue the loop
