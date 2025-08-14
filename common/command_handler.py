@@ -40,7 +40,7 @@ class CommandHandler:
             args = {k: v for k, v in data.items() if k != 'command'}
 
             self.logger.info(f"Executing command '{command}' with args: {args}")
-            await handler(**args)
+            await handler(args)
 
         except json.JSONDecodeError:
             self.logger.error(f"Failed to decode JSON from message: {msg_payload}")
