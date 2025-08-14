@@ -57,11 +57,12 @@ $(document).ready(function() {
             }
 
             // Update the setting
-            settings[groupName][settingName] = {
-                value: settingData.value,
-                unit: settingData.unit || settings[groupName][settingName].unit || "",
-                ro: settingData.ro !== undefined ? settingData.ro : settings[groupName][settingName].ro || false
-            };
+            settings[groupName][settingName] = settingData.value;
+            // settings[groupName][settingName] = {
+            //     value: settingData.value,
+            //     unit: settingData.unit || settings[groupName][settingName].unit || "",
+            //     ro: settingData.ro !== undefined ? settingData.ro : settings[groupName][settingName].ro || false
+            // };
         });
 
         generateTabs(settings);
@@ -95,8 +96,11 @@ $(document).ready(function() {
                 const inputField = $(`
                     <div class="setting-field">
                         <label for="${settingName}">${settingName}</label>
+                        <input type="text" id="${settingName}" value="${setting}">
+                        <!--
                         <input type="text" id="${settingName}" value="${setting.value}" ${setting.ro ? 'readonly' : ''}>
                         <span class="unit">${setting.unit}</span>
+                        --!>
                     </div>
                 `);
 

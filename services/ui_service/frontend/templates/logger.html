@@ -16,11 +16,13 @@
         <div id="controls">
            <button id="toggleRecording">Start Recording</button>
            <div id="recorderSpin" class="recorderSpin" style="display: none;"></div>
+           <!--
            <button id="toggleRecordingCandump">Start Recording Candump</button>
            <div id="recorderCanDumpSpin" class="recorderSpin" style="display: none;"></div>
            <button id="toggleRecordingPythonCan">Start Recording with PythonCAN</button>
            <div id="recorderPythonCanSpin" class="recorderSpin" style="display: none;"></div>
            <button id="quitButton">Quit</button>
+            -->
         </div>
         <div class="log_container">
             <div id="files-panel">
@@ -35,11 +37,12 @@
                     </select>
                 </div>
 
-                <table>
+                <table id="filenameTable">
                     <thead>
                         <tr>
                             <th>Nom</th>
                             <th>Taille</th>
+                            <th>Status</th>
                             <th>Download</th>
                         </tr>
                     </thead>
@@ -50,6 +53,7 @@
                             <td><a href="/logger/{{ '/'.join(current_path.split('/')[:-1]) }}">..</a></td>
                             <td></td>
                             <td></td>
+                            <td></td>
                         </tr>
                         {% endif %}
 
@@ -58,13 +62,15 @@
                             <td><a href="/logger/{{ (current_path + '/' + dir) if current_path else dir }}">{{ dir }}</a></td>
                             <td></td>
                             <td></td>
+                            <td></td>
                         </tr>
                         {% endfor %}
 
                         {% for file, file_size in files.items() %}
-                        <tr class="file-row" data-ext="{{ file.split('.')[-1] if '.' in file else '' }}" onclick="openFile('{{ file }}', '{{current_path }}')">
-                            <td>{{ file }}</td>
+                        <tr class="file-row" data-ext="{{ file.split('.')[-1] if '.' in file else '' }}">
+                            <td onclick="openFile('{{ file }}', '{{current_path }}', this )">{{ file }}</td>
                             <td>{{ file_size }} octets</td>
+                            <td><span class="file-status"></span></td>
                             <td>
                                 <a href="/download/{{ (current_path + '/' + file) if current_path else file }}"
                                     class="download-btn">⬇️</a>
