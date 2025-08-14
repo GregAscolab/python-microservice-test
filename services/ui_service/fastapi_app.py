@@ -53,7 +53,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # --- Helper function to get the parent service ---
-def get_service(request: Request) -> "UiService":
+def get_service(request: Request) -> Microservice:
     return request.app.state.service
 
 # --- HTML Page Routes ---
@@ -129,7 +129,11 @@ async def websocket_settings_endpoint(websocket: WebSocket):
     service = get_service(request)
     await manager.connect(websocket, "settings")
 
-    all_settings_payload = {"settings": service.settings}
+    subject = f"settings.get.all"
+    service.logger.info(f"Requesting settings on subject: {subject}")
+    response = await service.messaging_client.request(subject, b'', timeout=2.0)
+
+    all_settings_payload = {"settings": json.loads(response.data)}
     await websocket.send_text(json.dumps(all_settings_payload, indent=None, separators=(',',':')))
 
     try:

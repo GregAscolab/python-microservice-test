@@ -69,14 +69,24 @@ class SettingsService(Microservice):
             self.all_settings[group] = {}
 
         # Check if setting is read-only
-        if key in self.all_settings[group] and self.all_settings[group][key].get('ro', False):
-            self.logger.warning(f"Attempted to modify read-only setting: {group}.{key}")
-            return
+        # if key in self.all_settings[group] and self.all_settings[group][key].get('ro', False):
+        #     self.logger.warning(f"Attempted to modify read-only setting: {group}.{key}")
+        #     return
+
+        # Try to convert text to number
+        try:
+            if str(value).isdigit():
+                converted_val = int(value)
+            else:
+                converted_val = float(value)
+        except ValueError:
+            converted_val = value
 
         # Update the setting
         if key not in self.all_settings[group]:
              self.all_settings[group][key] = {}
-        self.all_settings[group][key]['value'] = value
+        # self.all_settings[group][key]['value'] = converted_val
+        self.all_settings[group][key] = converted_val
 
         # Persist the changes
         self._save_settings()
@@ -84,10 +94,10 @@ class SettingsService(Microservice):
         # Broadcast the change to all services
         update_payload = {
             "group": group,
-            "key": key,
-            "value": value
+            # "key": key,
+            "value": converted_val
         }
-        await self.messaging_client.publish("settings.updated", json.dumps(update_payload, indent=None, separators=(',',':')).encode())
+        await self.messaging_client.publish("settings.updated", json.dumps({key:update_payload}, indent=None, separators=(',',':')).encode())
         self.logger.info(f"Broadcasted update for {group}.{key}")
 
     async def _start_logic(self):
