@@ -29,6 +29,7 @@ class ManagerService(Microservice):
         super().__init__("manager")
         self.services_dir = "services"
         self.managed_services: Dict[str, ServiceStatus] = {}
+        self.last_published_status = None
         self.max_retries = 3
         self._discover_and_initialize_services()
         self._register_command_handlers()
@@ -58,6 +59,7 @@ class ManagerService(Microservice):
         self.command_handler.register_command("get_status", self.get_status_command)
         self.command_handler.register_command("start_all", self.start_all_command)
         self.command_handler.register_command("stop_all", self.stop_all_command)
+        self.command_handler.register_command("restart_all", self.restart_all_command)
 
     async def start_service(self, service_name: str) -> bool:
         """Starts a microservice as a new process."""
@@ -161,9 +163,19 @@ class ManagerService(Microservice):
         self.logger.info("Executing stop_all command...")
         await self._stop_logic()
 
+    async def restart_all_command(self, payload: dict):
+        self.logger.info("Executing restart_all command...")
+        await self.stop_all_command({})
+        await self.start_all_command({})
+        self.logger.info("Finished restart_all command.")
+
     async def get_status_command(self, payload: dict):
         """Publishes the current status of all services."""
-        await self.publish_status()
+        current_status_payload = []
+        for name, info in self.managed_services.items():
+            status_info = {k: v for k, v in info.items() if k != 'process'}
+            current_status_payload.append(status_info)
+        await self.publish_status(current_status_payload)
 
     # --- Core Logic ---
 
@@ -196,23 +208,19 @@ class ManagerService(Microservice):
             await self.stop_service(service_name)
         self.logger.info("All managed services have been signaled to stop.")
 
-    async def publish_status(self):
-        """Publishes the status of all managed services to NATS."""
-        status_payload = []
-        for name, info in self.managed_services.items():
-            # Don't send the process object over NATS
-            status_info = {k: v for k, v in info.items() if k != 'process'}
-            status_payload.append(status_info)
-
+    async def publish_status(self, status_payload: list):
+        """Publishes the status of all managed services to NATS and stores it."""
         self.logger.info(f"Publishing status update for {len(status_payload)} services.")
         await self.messaging_client.publish(
             "manager.status",
             json.dumps(status_payload).encode()
         )
+        self.last_published_status = status_payload
 
     async def monitor_services(self):
         """Periodically checks the health of services and handles crashes."""
         while not self._shutdown_event.is_set():
+            state_changed = False
             for name, service_info in self.managed_services.items():
                 process = service_info.get("process")
                 if service_info["status"] == "running" and process and process.poll() is not None:
@@ -235,9 +243,17 @@ class ManagerService(Microservice):
                         # This was an intentional stop, so we just clean up the state
                         self.logger.info(f"Service '{name}' stopped as commanded.")
                         service_info.update({"status": "stopped", "pid": None, "process": None})
+                    state_changed = True
 
-            # Publish status periodically
-            await self.publish_status()
+            # Construct the current status payload
+            current_status_payload = []
+            for name, info in self.managed_services.items():
+                status_info = {k: v for k, v in info.items() if k != 'process'}
+                current_status_payload.append(status_info)
+
+            # Publish status only if it has changed
+            if state_changed or self.last_published_status != current_status_payload:
+                await self.publish_status(current_status_payload)
 
             try:
                 # Wait for 2 seconds or until shutdown is triggered
