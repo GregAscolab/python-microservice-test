@@ -179,9 +179,9 @@ class ManagerService(Microservice):
         # Now subscribe to commands.
         await self._subscribe_to_commands()
 
-        # Auto-start the settings service as it's critical for other services
-        self.logger.info("Manager starting... auto-starting settings_service.")
-        await self.start_service("settings_service")
+        # Start all services automatically on manager startup.
+        self.logger.info("Manager starting... auto-starting all services.")
+        await self.start_all_command({})
 
         # Start the monitoring loop as a background task
         asyncio.create_task(self.monitor_services())

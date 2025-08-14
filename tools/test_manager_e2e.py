@@ -35,7 +35,8 @@ class ManagerE2ETest:
         print("Starting main application...")
         main_script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'main.py'))
         self.app_process = subprocess.Popen([sys.executable, main_script_path])
-        await asyncio.sleep(5) # Give services time to start up
+        print("  - Waiting for all services to auto-start...")
+        await asyncio.sleep(10) # Give services time to auto-start
 
         # Connect NATS client
         print("Connecting NATS client for test commands...")
@@ -94,24 +95,18 @@ class ManagerE2ETest:
         """Runs the actual test cases."""
         print("\n--- Running tests ---")
 
-        # 1. Start All command
-        print("\n[TEST] Sending 'start_all' command...")
-        await self.nats_client.publish("commands.manager", b'{"command": "start_all"}')
-        print("  - Waiting for services to start...")
-        await asyncio.sleep(8) # Give all services ample time to start
-
-        # 2. Navigate to UI and check initial running state
-        print("\n[TEST] Navigating to UI and checking running states...")
+        # 1. Navigate to UI and check initial running state
+        print("\n[TEST] Navigating to UI and checking auto-start states...")
         await self.page.goto("http://localhost:8000/manager")
         await asyncio.sleep(2) # Wait for page to load and connect WebSocket
 
-        running_services = ["settings_service", "ui_service", "can_bus_service", "gps_service", "owa_service"]
-        for service in running_services:
+        all_services = ["settings_service", "ui_service", "can_bus_service", "gps_service", "owa_service"]
+        for service in all_services:
             status = await self.get_service_status(service)
-            assert status == "running", f"Expected {service} to be running, but it was {status}"
+            assert status == "running", f"Expected {service} to be running on startup, but it was {status}"
             print(f"  - {service} is running: PASSED")
 
-        # 3. Stop One Service
+        # 2. Stop One Service
         print("\n[TEST] Sending 'stop_service' for 'gps_service'...")
         await self.nats_client.publish("commands.manager", b'{"command": "stop_service", "service_name": "gps_service"}')
         await asyncio.sleep(3)
