@@ -55,38 +55,6 @@ async function openFile(file, folder, element) {
     }
 }
 
-convertSocket.onmessage = function(event) {
-    const data = JSON.parse(event.data);
-    const filename = data.filename;
-
-    // Find the table row for the file
-    const rows = document.querySelectorAll('.file-row');
-    let targetRow = null;
-    rows.forEach(row => {
-        if (row.querySelector('td').textContent.trim() === filename) {
-            targetRow = row;
-        }
-    });
-
-    if (!targetRow) return;
-
-    const statusSpan = targetRow.querySelector('.file-status');
-
-    if (data.status === "started") {
-        statusSpan.textContent = 'Converting...';
-        document.getElementById("loader").style.display = "block";
-        document.getElementById("plotly-panel").style.display = "none";
-    } else if (data.status === "success") {
-        statusSpan.textContent = 'Done';
-        document.getElementById("loader").style.display = "none";
-        displayPlot(data.data);
-        document.getElementById("plotly-panel").style.display = "block";
-    } else if (data.status === "error") {
-        statusSpan.textContent = `Error: ${data.message}`;
-        document.getElementById("loader").style.display = "none";
-    }
-};
-
 function displayPlot(data) {
       const plotsContainer = document.getElementById('plotly-panel');
       plotsContainer.innerHTML = '';
@@ -204,6 +172,38 @@ dataSocket.onerror = function(error) {
 // Handle WebSocket close
 dataSocket.onclose = function(event) {
     console.log('WebSocket connection closed:', event);
+};
+
+convertSocket.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    const filename = data.filename;
+
+    // Find the table row for the file
+    const rows = document.querySelectorAll('.file-row');
+    let targetRow = null;
+    rows.forEach(row => {
+        if (row.querySelector('td').textContent.trim() === filename) {
+            targetRow = row;
+        }
+    });
+
+    if (!targetRow) return;
+
+    const statusSpan = targetRow.querySelector('.file-status');
+
+    if (data.status === "started") {
+        statusSpan.textContent = 'Converting...';
+        document.getElementById("loader").style.display = "block";
+        document.getElementById("plotly-panel").style.display = "none";
+    } else if (data.status === "success") {
+        statusSpan.textContent = 'Done';
+        document.getElementById("loader").style.display = "none";
+        displayPlot(data.data);
+        document.getElementById("plotly-panel").style.display = "block";
+    } else if (data.status === "error") {
+        statusSpan.textContent = `Error: ${data.message}`;
+        document.getElementById("loader").style.display = "none";
+    }
 };
 
 // Toggle recording button click event
