@@ -7,7 +7,7 @@
     "port": 8000
   },
   "can_bus_service": {
-    "interface": "socketcan",
+    "interface": "virtual",
     "channel": "vcan0",
     "bitrate": 500000,
     "log_file_format": ".blf",
