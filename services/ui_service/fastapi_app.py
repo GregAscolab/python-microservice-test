@@ -11,6 +11,7 @@ import sys
 import cantools.database
 import can
 from datetime import datetime, timezone
+import base64
 
 # Add the project root to the Python path to allow for absolute imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -28,6 +29,9 @@ CAN_LOGS_DIR = os.path.abspath("can_logs")
 router = APIRouter()
 
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+def b64encode(input:str):
+    return base64.b64encode(input.encode("utf-8")).decode("utf-8")
+templates.env.filters["b64encode"] = b64encode
 
 
 class ConnectionManager:
@@ -243,8 +247,12 @@ async def get_service_logs(service_name: str, request: Request):
         return HTMLResponse(f"An error occurred while trying to read the log file.", status_code=500)
 
 
-@router.get("/download/{file_path:path}")
-async def download_file(file_path: str):
+@router.get("/download/{file_path_b64:path}")
+async def download_file(file_path_b64: str):
+    base64_bytes = file_path_b64.encode("utf-8")
+    file_path_bytes = base64.b64decode(base64_bytes)
+    file_path = file_path_bytes.decode("utf-8")
+
     full_path = os.path.normpath(os.path.join(CAN_LOGS_DIR, file_path))
     if not full_path.startswith(CAN_LOGS_DIR):
         return HTMLResponse("Forbidden", status_code=403)
