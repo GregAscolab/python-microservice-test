@@ -7,10 +7,11 @@ import argparse
 import boto3
 import os
 import glob
+import random
 from botocore.exceptions import NoCredentialsError
 from datetime import datetime
 
-def load_settings(path="config/settings-linux.json") -> dict:
+def load_settings(path="config/settings.json") -> dict:
     """Loads settings from a JSON file."""
     print(f"Loading settings from {path}...")
     try:
@@ -30,11 +31,11 @@ async def send_can_messages(interface: str, channel: str, num_messages: int) -> 
     try:
         with can.interface.Bus(channel=channel, interface=interface) as bus:
             for i in range(num_messages):
-                msg = can.Message(arbitration_id=100, data=[0xE8, 0x03, 0xAF, 0x0D, 0, 0, 0, 0], is_extended_id=False)
+                msg = can.Message(arbitration_id=random.randint(0,255), data=[random.randint(0,255), random.randint(0,255), random.randint(0,255), random.randint(0,255), random.randint(0,255), random.randint(0,255), random.randint(0,255), random.randint(0,255)], is_extended_id=False)
                 bus.send(msg)
                 sent_messages.append(msg)
-                print(f"Sent CAN message {i+1}/{num_messages}")
-                await asyncio.sleep(0.1)
+                print(f"Sent CAN message {i+1}/{num_messages}={msg.data}")
+                await asyncio.sleep(0.0001)
     except Exception as e:
         print(f"Error sending CAN messages: {e}")
     return sent_messages
@@ -53,41 +54,49 @@ async def main(args):
         global_settings = all_settings.get("global", {})
         nats_url = global_settings.get("nats_url", "nats://localhost:8888") # Default for safety
 
-        nats_client = await nats.connect(nats_url)
-        print(f"Test script connected to NATS at {nats_url}.")
-        
         # Generate a unique filename for this test run
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         test_filename = f"test_log_{timestamp}.blf"
-        
-        # Send start recording command with the specific filename
-        print(f"Sending 'startRecording' command with filename: {test_filename}")
-        start_command = {"command": "startRecording", "filename": test_filename}
-        await nats_client.publish("commands.can_bus_service", json.dumps(start_command, indent=None, separators=(',',':')).encode())
 
-        # Give the service a moment to initialize the logger
-        await asyncio.sleep(0.5)
+        if not args.no_nats:
+            nats_client = await nats.connect(nats_url)
+            print(f"Test script connected to NATS at {nats_url}.")
         
+            # Send start recording command with the specific filename
+            print(f"Sending 'startRecording' command with filename: {test_filename}")
+            start_command = {"command": "startRecording", "filename": test_filename}
+            await nats_client.publish("commands.can_bus_service", json.dumps(start_command, indent=None, separators=(',',':')).encode())
+
+            # Give the service a moment to initialize the logger
+            await asyncio.sleep(2)
+        else:
+            input("Press Enter to start sending CAN messages...")
+
         # Start sending CAN messages and wait for them to complete
-        num_messages_to_send = 20
+        num_messages_to_send = args.msg_nb
         sent_messages = await send_can_messages(args.interface, args.channel, num_messages_to_send)
         print("CAN message sending complete.")
         
         # Give a little extra time for the last message to be logged
         await asyncio.sleep(1)
         
-        # Send stop recording command
-        print("Sending 'stopRecording' command...")
-        stop_command = {"command": "stopRecording"}
-        await nats_client.publish("commands.can_bus_service", json.dumps(stop_command, indent=None, separators=(',',':')).encode())
-        
-        # Verify local log file
-        local_log_dir = can_bus_settings.get("log_dir", "can_logs")
-        local_log_path = os.path.join(local_log_dir, test_filename)
-        if os.path.exists(local_log_path):
-            verify_log_file(local_log_path, sent_messages)
+        if not args.no_nats:
+            # Send stop recording command
+            print("Sending 'stopRecording' command...")
+            stop_command = {"command": "stopRecording"}
+            await nats_client.publish("commands.can_bus_service", json.dumps(stop_command, indent=None, separators=(',',':')).encode())
         else:
-            print(f"  [FAIL] Local log file not found at '{local_log_path}'.")
+            test_filename = input("Enter test filename to continue with verification:")
+
+        if not args.no_local:
+            # Verify local log file
+            await asyncio.sleep(1)
+            local_log_dir = can_bus_settings.get("log_dir", "can_logs")
+            local_log_path = os.path.join(local_log_dir, test_filename)
+            if os.path.exists(local_log_path):
+                verify_log_file(local_log_path, sent_messages)
+            else:
+                print(f"  [FAIL] Local log file not found at '{local_log_path}'.")
 
         # Wait for S3 upload to complete
         print("Waiting for S3 upload...")
@@ -103,8 +112,10 @@ async def main(args):
             print(f"  [FAIL] Could not download '{test_filename}' from S3.")
 
         # Clean up local and downloaded files
-        if os.path.exists(local_log_path):
-            os.remove(local_log_path)
+        if not args.no_local:
+            if os.path.exists(local_log_path):
+                os.remove(local_log_path)
+
         if downloaded_log_path and os.path.exists(downloaded_log_path):
             os.remove(downloaded_log_path)
         else:
@@ -174,7 +185,10 @@ def verify_log_file(log_path: str, sent_messages: list[can.Message]):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CAN recorder test script.")
-    parser.add_argument("--interface", type=str, default="virtual", help="CAN interface type (e.g., 'virtual', 'pcan')")
+    parser.add_argument("--interface", type=str, default="socketcan", help="CAN interface type (e.g., 'virtual', 'socketcan, 'pcan')")
     parser.add_argument("--channel", type=str, default="vcan0", help="CAN channel name (e.g., 'vcan0', 'PCAN_USBBUS1')")
+    parser.add_argument("--msg-nb", type=int, default=20000, help="Number of messages to be sent")
+    parser.add_argument("--no-nats", action="store_true", help="Disable NATS connection and wait for user confirmation")
+    parser.add_argument("--no-local", action="store_true", help="Disable local log file verification")
     args = parser.parse_args()
     asyncio.run(main(args))
