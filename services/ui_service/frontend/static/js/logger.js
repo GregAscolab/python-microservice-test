@@ -23,24 +23,69 @@ function formatFileSize(bytes) {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-async function openFile(file, folder) {
-    console.log(folder)
-
+async function openFile(file, folder, element) {
+    // Clear previous results and hide the plot
     document.getElementById("plotly-panel").style.display = "none";
+    document.getElementById("plotly-panel").innerHTML = '';
+
+    // Reset all status indicators
+    document.querySelectorAll('.file-status').forEach(span => span.textContent = '');
+
+    // Set status to "Queued" for the clicked file
+    const statusSpan = element.querySelector('.file-status');
+    statusSpan.textContent = 'Queued...';
+
     document.getElementById("loader").style.display = "block";
-    const response = await fetch("/convert", {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ type: "", name: file, folder:folder }),
-    });
-    console.log(JSON.stringify({ type: "", name: file, folder:folder }))
-    const jsonData = await response.json();
-    document.getElementById("loader").style.display = "none";
-    displayPlot(jsonData);
-    document.getElementById("plotly-panel").style.display = "block";
+
+    try {
+        const response = await fetch("/convert", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: file, folder: folder }),
+        });
+        const result = await response.json();
+        if (result.status !== "queued") {
+            statusSpan.textContent = 'Error queueing';
+            document.getElementById("loader").style.display = "none";
+        }
+    } catch (error) {
+        console.error("Error calling /convert endpoint:", error);
+        statusSpan.textContent = 'Error';
+        document.getElementById("loader").style.display = "none";
+    }
 }
+
+convertSocket.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    const filename = data.filename;
+
+    // Find the table row for the file
+    const rows = document.querySelectorAll('.file-row');
+    let targetRow = null;
+    rows.forEach(row => {
+        if (row.querySelector('td').textContent.trim() === filename) {
+            targetRow = row;
+        }
+    });
+
+    if (!targetRow) return;
+
+    const statusSpan = targetRow.querySelector('.file-status');
+
+    if (data.status === "started") {
+        statusSpan.textContent = 'Converting...';
+        document.getElementById("loader").style.display = "block";
+        document.getElementById("plotly-panel").style.display = "none";
+    } else if (data.status === "success") {
+        statusSpan.textContent = 'Done';
+        document.getElementById("loader").style.display = "none";
+        displayPlot(data.data);
+        document.getElementById("plotly-panel").style.display = "block";
+    } else if (data.status === "error") {
+        statusSpan.textContent = `Error: ${data.message}`;
+        document.getElementById("loader").style.display = "none";
+    }
+};
 
 function displayPlot(data) {
       const plotsContainer = document.getElementById('plotly-panel');
@@ -122,9 +167,13 @@ function displayPlot(data) {
     }
 
 
-    // Establish a WebSocket connection
-const url = "ws://" + window.location.host + "/ws_data";
-const socket = new WebSocket(url);
+    // Establish a WebSocket connection for data
+const dataUrl = "ws://" + window.location.host + "/ws_data";
+const dataSocket = new WebSocket(dataUrl);
+
+// Establish a WebSocket connection for conversion
+const convertUrl = "ws://" + window.location.host + "/ws_convert";
+const convertSocket = new WebSocket(convertUrl);
 
 // Get the buttons
 const toggleRecordingButton = document.getElementById('toggleRecording');
@@ -141,19 +190,19 @@ let isRecordingCandump = false;
 let isRecordingPythonCan = false;
 
 // Handle incoming messages
-socket.onmessage = function(event) {
+dataSocket.onmessage = function(event) {
     // Parse the incoming message
     const data = JSON.parse(event.data);
     // console.log('WebSocket onmessage:', data);
 };
 
 // Handle WebSocket errors
-socket.onerror = function(error) {
+dataSocket.onerror = function(error) {
     console.error('WebSocket error:', error);
 };
 
 // Handle WebSocket close
-socket.onclose = function(event) {
+dataSocket.onclose = function(event) {
     console.log('WebSocket connection closed:', event);
 };
 
@@ -161,7 +210,7 @@ socket.onclose = function(event) {
 toggleRecordingButton.addEventListener('click', function() {
     isRecording = !isRecording;
     const command = isRecording ? 'startRecording' : 'stopRecording';
-    socket.send(JSON.stringify({ command }));
+    dataSocket.send(JSON.stringify({ command }));
     toggleRecordingButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
     recorderSpin.style.display = isRecording ? "block" : "none";
     toggleRecordingButton.classList.toggle('recording', isRecording);
@@ -171,7 +220,7 @@ toggleRecordingButton.addEventListener('click', function() {
 toggleRecordingCandumpButton.addEventListener('click', function() {
     isRecordingCandump = !isRecordingCandump;
     const command = isRecordingCandump ? 'startCanDumpRecording' : 'stopCanDumpRecording';
-    socket.send(JSON.stringify({ command }));
+    dataSocket.send(JSON.stringify({ command }));
     toggleRecordingCandumpButton.textContent = isRecordingCandump ? 'Stop Recording Candump' : 'Start Recording Candump';
     recorderCanDumpSpin.style.display = isRecordingCandump ? "block" : "none";
     toggleRecordingCandumpButton.classList.toggle('recording', isRecordingCandump);
@@ -181,7 +230,7 @@ toggleRecordingCandumpButton.addEventListener('click', function() {
 toggleRecordingPythonCanButton.addEventListener('click', function() {
     isRecordingPythonCan = !isRecordingPythonCan;
     const command = isRecordingPythonCan ? 'startPythonCanRecording' : 'stopPythonCanRecording';
-    socket.send(JSON.stringify({ command }));
+    dataSocket.send(JSON.stringify({ command }));
     toggleRecordingPythonCanButton.textContent = isRecordingPythonCan ? 'Stop Recording PythonCan' : 'Start Recording PythonCan';
     recorderPythonCanSpin.style.display = isRecordingPythonCan ? "block" : "none";
     toggleRecordingPythonCanButton.classList.toggle('recording', isRecordingPythonCan);
@@ -189,5 +238,5 @@ toggleRecordingPythonCanButton.addEventListener('click', function() {
 
 // Quit button click event
 quitButton.addEventListener('click', function() {
-    socket.send(JSON.stringify({ command: 'quit' }));
+    dataSocket.send(JSON.stringify({ command: 'quit' }));
 });

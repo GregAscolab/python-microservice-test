@@ -40,6 +40,7 @@
                         <tr>
                             <th>Nom</th>
                             <th>Taille</th>
+                            <th>Status</th>
                             <th>Download</th>
                         </tr>
                     </thead>
@@ -50,6 +51,7 @@
                             <td><a href="/logger/{{ '/'.join(current_path.split('/')[:-1]) }}">..</a></td>
                             <td></td>
                             <td></td>
+                            <td></td>
                         </tr>
                         {% endif %}
 
@@ -58,13 +60,15 @@
                             <td><a href="/logger/{{ (current_path + '/' + dir) if current_path else dir }}">{{ dir }}</a></td>
                             <td></td>
                             <td></td>
+                            <td></td>
                         </tr>
                         {% endfor %}
 
                         {% for file, file_size in files.items() %}
-                        <tr class="file-row" data-ext="{{ file.split('.')[-1] if '.' in file else '' }}" onclick="openFile('{{ file }}', '{{current_path }}')">
+                        <tr class="file-row" data-ext="{{ file.split('.')[-1] if '.' in file else '' }}" onclick="openFile('{{ file }}', '{{current_path }}', this)">
                             <td>{{ file }}</td>
                             <td>{{ file_size }} octets</td>
+                            <td><span class="file-status"></span></td>
                             <td>
                                 <a href="/download/{{ (current_path + '/' + file) if current_path else file }}"
                                     class="download-btn">⬇️</a>

@@ -40,6 +40,11 @@ class ConvertService(Microservice):
         self.logger.info(f"Converting file: {filename} in folder {folder}")
 
         try:
+            await self.messaging_client.publish(
+                "conversion.results",
+                json.dumps({"status": "started", "filename": filename}).encode()
+            )
+
             db_path = os.path.abspath("config/db-full.dbc")
             db = cantools.database.load_file(db_path)
             file_path = os.path.join(CAN_LOGS_DIR, folder, filename)
@@ -62,11 +67,15 @@ class ConvertService(Microservice):
             for data in signals_cache.values():
                 time_series_data.append(data)
 
-            # Here you would typically send the result to another service or store it.
-            # For now, we'll just log it.
             self.logger.info(f"Conversion successful for {filename}. Found {len(time_series_data)} signals.")
-            # In a real scenario, you might publish this to a 'results' topic.
-            # await self.messaging_client.publish("conversion.results", json.dumps(time_series_data).encode())
+            await self.messaging_client.publish(
+                "conversion.results",
+                json.dumps({"status": "success", "filename": filename, "data": time_series_data}).encode()
+            )
 
         except Exception as e:
             self.logger.error(f"Error during file conversion: {e}", exc_info=True)
+            await self.messaging_client.publish(
+                "conversion.results",
+                json.dumps({"status": "error", "filename": filename, "message": str(e)}).encode()
+            )

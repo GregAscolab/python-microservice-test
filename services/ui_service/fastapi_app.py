@@ -155,6 +155,19 @@ async def websocket_settings_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket, "settings")
 
+
+@router.websocket("/ws_convert")
+async def websocket_convert_endpoint(websocket: WebSocket):
+    await manager.connect(websocket, "conversion")
+    try:
+        while True:
+            # This endpoint is for receiving data from the server, so we just wait.
+            # We can handle client-side messages here if needed in the future.
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, "conversion")
+
+
 # --- API Endpoints ---
 
 @router.get("/download/{file_path:path}")

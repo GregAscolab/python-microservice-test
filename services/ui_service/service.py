@@ -42,6 +42,10 @@ class UiService(Microservice):
         self.logger.info(f"Received settings update: {msg.data.decode()}")
         await connection_manager.broadcast(msg.data.decode(), "settings")
 
+    async def _conversion_results_handler(self, msg: Msg):
+        self.logger.info(f"Received conversion result: {msg.data.decode()}")
+        await connection_manager.broadcast(msg.data.decode(), "conversion")
+
     async def _handle_ping_command(self, message: str = "pong"):
         self.logger.info(f"Received ping command! Replying with: {message}")
         await asyncio.sleep(1)
@@ -61,6 +65,8 @@ class UiService(Microservice):
         self.logger.info("Subscribed to 'gps'")
         await self.messaging_client.subscribe("settings.updated", cb=self._settings_update_handler)
         self.logger.info("Subscribed to 'settings.updated'")
+        await self.messaging_client.subscribe("conversion.results", cb=self._conversion_results_handler)
+        self.logger.info("Subscribed to 'conversion.results'")
         await self._subscribe_to_commands()
 
         self.logger.info("Starting FastAPI server...")
