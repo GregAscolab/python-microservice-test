@@ -27,8 +27,8 @@ const socket = new WebSocket(getWebSocketURL('/ws_manager'));
 
 socket.onopen = function(event) {
     console.log("Manager WebSocket connection established.");
+    // Request initial status on connection
     sendCommand('get_status', {});
-    setInterval(() => sendCommand('get_status', {}), 3000); // Poll status every 3s
 };
 
 socket.onmessage = function(event) {
@@ -102,18 +102,41 @@ function updateStatusGrid(services) {
 restartAllBtn.addEventListener('click', () => sendCommand('restart_all'));
 stopAllBtn.addEventListener('click', () => {
     stopAllModal.style.display = 'block';
+    document.body.classList.add('modal-open');
 });
 
 // --- Modal Logic ---
-closeModalBtn.addEventListener('click', () => stopAllModal.style.display = 'none');
-cancelStopAllBtn.addEventListener('click', () => stopAllModal.style.display = 'none');
+function closeStopAllModal() {
+    stopAllModal.style.display = 'none';
+    document.body.classList.remove('modal-open');
+}
+
+closeModalBtn.addEventListener('click', closeStopAllModal);
+cancelStopAllBtn.addEventListener('click', closeStopAllModal);
 confirmStopAllBtn.addEventListener('click', () => {
     sendCommand('stop_all');
-    stopAllModal.style.display = 'none';
+    closeStopAllModal();
 });
 
 // --- Log Viewer Logic ---
-closeLogModalBtn.addEventListener('click', () => closeLogModal());
+function openLogModal(serviceName) {
+    logServiceName.textContent = serviceName;
+    logContent.textContent = 'Loading logs...';
+    logModal.style.display = 'block';
+    document.body.classList.add('modal-open');
+
+    fetchLogContent(serviceName);
+    logInterval = setInterval(() => fetchLogContent(serviceName), 2000);
+}
+
+function closeLogModal() {
+    logModal.style.display = 'none';
+    clearInterval(logInterval);
+    logContent.textContent = '';
+    document.body.classList.remove('modal-open');
+}
+
+closeLogModalBtn.addEventListener('click', closeLogModal);
 
 async function fetchLogContent(serviceName) {
     try {
@@ -131,25 +154,10 @@ async function fetchLogContent(serviceName) {
     }
 }
 
-function openLogModal(serviceName) {
-    logServiceName.textContent = serviceName;
-    logContent.textContent = 'Loading logs...';
-    logModal.style.display = 'block';
-
-    fetchLogContent(serviceName);
-    logInterval = setInterval(() => fetchLogContent(serviceName), 2000);
-}
-
-function closeLogModal() {
-    logModal.style.display = 'none';
-    clearInterval(logInterval);
-    logContent.textContent = '';
-}
-
 // Close modal if clicking outside of it
 window.onclick = function(event) {
     if (event.target == stopAllModal) {
-        stopAllModal.style.display = 'none';
+        closeStopAllModal();
     }
     if (event.target == logModal) {
         closeLogModal();

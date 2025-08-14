@@ -455,3 +455,12 @@ button.danger:hover {
     border-radius: 4px;
     white-space: pre-wrap;
 }
+
+body.modal-open {
+    overflow: hidden;
+}
+
+.log-modal-content {
+    max-width: 90vw;
+    margin: 5vh auto;
+}
