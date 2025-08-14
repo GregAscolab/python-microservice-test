@@ -67,8 +67,8 @@
                         {% endfor %}
 
                         {% for file, file_size in files.items() %}
-                        <tr class="file-row" data-ext="{{ file.split('.')[-1] if '.' in file else '' }}" onclick="openFile('{{ file }}', '{{current_path }}', this)">
-                            <td>{{ file }}</td>
+                        <tr class="file-row" data-ext="{{ file.split('.')[-1] if '.' in file else '' }}">
+                            <td onclick="openFile('{{ file }}', '{{current_path }}', this )">{{ file }}</td>
                             <td>{{ file_size }} octets</td>
                             <td><span class="file-status"></span></td>
                             <td>

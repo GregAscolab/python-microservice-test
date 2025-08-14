@@ -32,7 +32,7 @@ async function openFile(file, folder, element) {
     document.querySelectorAll('.file-status').forEach(span => span.textContent = '');
 
     // Set status to "Queued" for the clicked file
-    const statusSpan = element.querySelector('.file-status');
+    const statusSpan = element.parentElement.querySelector('.file-status');
     statusSpan.textContent = 'Queued...';
 
     document.getElementById("loader").style.display = "block";
