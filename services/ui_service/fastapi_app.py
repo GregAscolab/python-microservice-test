@@ -176,35 +176,22 @@ class TimeSeriesData(BaseModel):
     timestamps: List[str]
     values: List[float]
 
-@router.post("/convert", response_model=List[TimeSeriesData])
-def convert_file(file_content: FileToConvert, request: Request):
+@router.post("/convert")
+async def convert_file(file_content: FileToConvert, request: Request):
     service = get_service(request)
-    service.logger.info(f"Converting file: {file_content.name} in folder {file_content.folder}")
+    service.logger.info(f"Queueing conversion for file: {file_content.name} in folder {file_content.folder}")
 
     try:
-        db_path = os.path.abspath("config/db-full.dbc")
-        db = cantools.database.load_file(db_path)
-        file_path = os.path.join(CAN_LOGS_DIR, file_content.folder, file_content.name)
-
-        time_series_data = []
-        signals_cache = {}
-        with can.LogReader(file_path) as reader:
-            for msg in reader:
-                try:
-                    decoded = db.decode_message(msg.arbitration_id, msg.data, decode_choices=False)
-                    utc_time_str = datetime.fromtimestamp(msg.timestamp, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-                    for k, v in decoded.items():
-                        if k not in signals_cache:
-                            signals_cache[k] = {"name": k, 'timestamps': [], "values": []}
-                        signals_cache[k]['timestamps'].append(utc_time_str)
-                        signals_cache[k]['values'].append(v)
-                except Exception:
-                    continue
-
-        for data in signals_cache.values():
-            time_series_data.append(data)
-
-        return time_series_data
+        command = {
+            "command": "blfToTimeseries",
+            "filename": file_content.name,
+            "folder": file_content.folder
+        }
+        await service.messaging_client.publish(
+            "commands.convert_service",
+            json.dumps(command).encode()
+        )
+        return {"status": "queued", "filename": file_content.name}
     except Exception as e:
-        service.logger.error(f"Error during file conversion: {e}", exc_info=True)
-        return []
+        service.logger.error(f"Error queueing file conversion: {e}", exc_info=True)
+        return {"status": "error", "message": "Failed to queue conversion"}
