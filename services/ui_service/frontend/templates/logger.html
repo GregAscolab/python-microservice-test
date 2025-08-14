@@ -72,7 +72,7 @@
                             <td>{{ file_size }} octets</td>
                             <td><span class="file-status"></span></td>
                             <td>
-                                <a href="/download/{{ (current_path + '/' + file) if current_path else file }}"
+                                <a href="/download/{{ (current_path + '/' + file) if current_path else file | b64encode }}"
                                     class="download-btn">⬇️</a>
                             </td>
                         </tr>

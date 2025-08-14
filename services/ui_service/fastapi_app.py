@@ -11,6 +11,7 @@ import sys
 import cantools.database
 import can
 from datetime import datetime, timezone
+import base64
 
 # Add the project root to the Python path to allow for absolute imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -28,6 +29,9 @@ CAN_LOGS_DIR = os.path.abspath("can_logs")
 router = APIRouter()
 
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+def b64encode(input:str):
+    return base64.b64encode(input.encode("utf-8")).decode("utf-8")
+templates.env.filters["b64encode"] = b64encode
 
 
 class ConnectionManager:
@@ -83,6 +87,11 @@ async def read_logger_path(request: Request, path: str = ""):
         files, dirs, extensions = {}, [], []
 
     return templates.TemplateResponse("logger.html", {"request": request, "files": files, "dirs": dirs, "extensions": extensions, "current_path": path})
+
+@router.get("/manager", response_class=HTMLResponse)
+async def read_manager(request: Request):
+    """Serves the manager page."""
+    return templates.TemplateResponse("manager.html", {"request": request})
 
 @router.get("/{page}", response_class=HTMLResponse)
 async def read_page(request: Request, page: str):
@@ -159,6 +168,33 @@ async def websocket_settings_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket, "settings")
 
+@router.websocket("/ws_manager")
+async def websocket_manager_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for the manager page."""
+    service = get_service(websocket)
+    await manager.connect(websocket, "manager")
+    service.logger.info("Manager client connected to WebSocket.")
+    try:
+        while True:
+            # This is where we receive commands from the UI
+            data = await websocket.receive_text()
+            try:
+                command = json.loads(data)
+                # Forward the command to the manager service via NATS
+                await service.messaging_client.publish(
+                    "commands.manager",
+                    json.dumps(command).encode()
+                )
+                service.logger.info(f"Forwarded command to manager service: {command}")
+            except json.JSONDecodeError:
+                service.logger.error(f"Received invalid JSON from manager websocket: {data}")
+            except Exception as e:
+                service.logger.error(f"Error processing command from manager websocket: {e}")
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, "manager")
+        service.logger.info("Manager client disconnected from WebSocket.")
+
 
 @router.websocket("/ws_convert")
 async def websocket_convert_endpoint(websocket: WebSocket):
@@ -174,8 +210,49 @@ async def websocket_convert_endpoint(websocket: WebSocket):
 
 # --- API Endpoints ---
 
-@router.get("/download/{file_path:path}")
-async def download_file(file_path: str):
+LOGS_DIR = os.path.abspath("logs")
+
+@router.get("/api/logs/{service_name}", response_class=HTMLResponse)
+async def get_service_logs(service_name: str, request: Request):
+    """Reads and returns the last N lines of a service's log file."""
+    service = get_service(request)
+    try:
+        # Ensure the logs directory exists
+        os.makedirs(LOGS_DIR, exist_ok=True)
+
+        log_file_path = os.path.normpath(os.path.join(LOGS_DIR, f"{service_name}.log"))
+
+        # Security check to prevent path traversal
+        if not os.path.abspath(log_file_path).startswith(LOGS_DIR):
+            return HTMLResponse("Forbidden: Access to this path is not allowed.", status_code=403)
+
+        if not os.path.exists(log_file_path):
+            return HTMLResponse(f"Log file for '{service_name}' not found.", status_code=404)
+
+        # Read the last part of the file to avoid large transfers
+        file_size = os.path.getsize(log_file_path)
+        read_size = 16384 # Read last 16KB
+
+        with open(log_file_path, "r", encoding="utf-8", errors="ignore") as f:
+            if file_size > read_size:
+                f.seek(file_size - read_size)
+                # Read a bit more to ensure we start on a new line, then split
+                f.readline()
+
+            content = f.read()
+            return HTMLResponse(content, media_type="text/plain")
+
+    except Exception as e:
+        service.logger.error(f"Error reading log for service '{service_name}': {e}", exc_info=True)
+        return HTMLResponse(f"An error occurred while trying to read the log file.", status_code=500)
+
+
+@router.get("/download/{file_path_b64:path}")
+async def download_file(file_path_b64: str):
+    base64_bytes = file_path_b64.encode("utf-8")
+    file_path_bytes = base64.b64decode(base64_bytes)
+    file_path = file_path_bytes.decode("utf-8")
+
     full_path = os.path.normpath(os.path.join(CAN_LOGS_DIR, file_path))
     if not full_path.startswith(CAN_LOGS_DIR):
         return HTMLResponse("Forbidden", status_code=403)

@@ -42,6 +42,11 @@ class UiService(Microservice):
         self.logger.info(f"Received settings update: {msg.data.decode()}")
         await connection_manager.broadcast(msg.data.decode(), "settings")
 
+    async def _manager_status_handler(self, msg: Msg):
+        """Forwards manager status updates to the UI via WebSocket."""
+        self.logger.info(f"Received manager status update, broadcasting to WebSocket.")
+        await connection_manager.broadcast(msg.data.decode(), "manager")
+
     async def _conversion_results_handler(self, msg: Msg):
         self.logger.info(f"Received conversion result: {msg.data.decode()}")
         await connection_manager.broadcast(msg.data.decode(), "conversion")
@@ -65,6 +70,8 @@ class UiService(Microservice):
         self.logger.info("Subscribed to 'gps'")
         await self.messaging_client.subscribe("settings.updated", cb=self._settings_update_handler)
         self.logger.info("Subscribed to 'settings.updated'")
+        await self.messaging_client.subscribe("manager.status", cb=self._manager_status_handler)
+        self.logger.info("Subscribed to 'manager.status'")
         await self.messaging_client.subscribe("conversion.results", cb=self._conversion_results_handler)
         self.logger.info("Subscribed to 'conversion.results'")
         await self._subscribe_to_commands()
