@@ -74,10 +74,10 @@ async def read_logger_path(request: Request, path: str = ""):
         if not full_path.startswith(CAN_LOGS_DIR):
             return HTMLResponse("Forbidden", status_code=403)
 
-        items = os.listdir(full_path)
+        items = sorted(os.listdir(full_path))  # Sort items alphabetically
         files = {item: os.path.getsize(os.path.join(full_path, item)) for item in items if os.path.isfile(os.path.join(full_path, item))}
         dirs = [item for item in items if os.path.isdir(os.path.join(full_path, item))]
-        extensions = list(set(os.path.splitext(f)[1] for f in files))
+        extensions = sorted(list(set(os.path.splitext(f)[1] for f in files))) # Sort extensions alphabetically
     except Exception as e:
         service.logger.error(f"Error reading logger path '{path}': {e}")
         files, dirs, extensions = {}, [], []

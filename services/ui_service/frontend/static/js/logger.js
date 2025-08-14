@@ -129,11 +129,11 @@ const socket = new WebSocket(url);
 // Get the buttons
 const toggleRecordingButton = document.getElementById('toggleRecording');
 const recorderSpin = document.getElementById('recorderSpin');
-const toggleRecordingCandumpButton = document.getElementById('toggleRecordingCandump');
-const recorderCanDumpSpin = document.getElementById('recorderCanDumpSpin');
-const toggleRecordingPythonCanButton = document.getElementById('toggleRecordingPythonCan');
-const recorderPythonCanSpin = document.getElementById('recorderPythonCanSpin');
-const quitButton = document.getElementById('quitButton');
+// const toggleRecordingCandumpButton = document.getElementById('toggleRecordingCandump');
+// const recorderCanDumpSpin = document.getElementById('recorderCanDumpSpin');
+// const toggleRecordingPythonCanButton = document.getElementById('toggleRecordingPythonCan');
+// const recorderPythonCanSpin = document.getElementById('recorderPythonCanSpin');
+// const quitButton = document.getElementById('quitButton');
 
 // Variable to track recording state
 let isRecording = false;
@@ -165,29 +165,36 @@ toggleRecordingButton.addEventListener('click', function() {
     toggleRecordingButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
     recorderSpin.style.display = isRecording ? "block" : "none";
     toggleRecordingButton.classList.toggle('recording', isRecording);
+
+    // Refresh file list when stopping recording
+    if (!isRecording) {
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000); // Small delay to allow time for files to be written
+    }
 });
 
-// Toggle recording button click event
-toggleRecordingCandumpButton.addEventListener('click', function() {
-    isRecordingCandump = !isRecordingCandump;
-    const command = isRecordingCandump ? 'startCanDumpRecording' : 'stopCanDumpRecording';
-    socket.send(JSON.stringify({ command }));
-    toggleRecordingCandumpButton.textContent = isRecordingCandump ? 'Stop Recording Candump' : 'Start Recording Candump';
-    recorderCanDumpSpin.style.display = isRecordingCandump ? "block" : "none";
-    toggleRecordingCandumpButton.classList.toggle('recording', isRecordingCandump);
-});
+// // Toggle recording button click event
+// toggleRecordingCandumpButton.addEventListener('click', function() {
+//     isRecordingCandump = !isRecordingCandump;
+//     const command = isRecordingCandump ? 'startCanDumpRecording' : 'stopCanDumpRecording';
+//     socket.send(JSON.stringify({ command }));
+//     toggleRecordingCandumpButton.textContent = isRecordingCandump ? 'Stop Recording Candump' : 'Start Recording Candump';
+//     recorderCanDumpSpin.style.display = isRecordingCandump ? "block" : "none";
+//     toggleRecordingCandumpButton.classList.toggle('recording', isRecordingCandump);
+// });
 
-// Toggle recording button click event
-toggleRecordingPythonCanButton.addEventListener('click', function() {
-    isRecordingPythonCan = !isRecordingPythonCan;
-    const command = isRecordingPythonCan ? 'startPythonCanRecording' : 'stopPythonCanRecording';
-    socket.send(JSON.stringify({ command }));
-    toggleRecordingPythonCanButton.textContent = isRecordingPythonCan ? 'Stop Recording PythonCan' : 'Start Recording PythonCan';
-    recorderPythonCanSpin.style.display = isRecordingPythonCan ? "block" : "none";
-    toggleRecordingPythonCanButton.classList.toggle('recording', isRecordingPythonCan);
-});
+// // Toggle recording button click event
+// toggleRecordingPythonCanButton.addEventListener('click', function() {
+//     isRecordingPythonCan = !isRecordingPythonCan;
+//     const command = isRecordingPythonCan ? 'startPythonCanRecording' : 'stopPythonCanRecording';
+//     socket.send(JSON.stringify({ command }));
+//     toggleRecordingPythonCanButton.textContent = isRecordingPythonCan ? 'Stop Recording PythonCan' : 'Start Recording PythonCan';
+//     recorderPythonCanSpin.style.display = isRecordingPythonCan ? "block" : "none";
+//     toggleRecordingPythonCanButton.classList.toggle('recording', isRecordingPythonCan);
+// });
 
-// Quit button click event
-quitButton.addEventListener('click', function() {
-    socket.send(JSON.stringify({ command: 'quit' }));
-});
+// // Quit button click event
+// quitButton.addEventListener('click', function() {
+//     socket.send(JSON.stringify({ command: 'quit' }));
+// });
