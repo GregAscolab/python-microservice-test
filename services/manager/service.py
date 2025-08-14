@@ -128,22 +128,19 @@ class ManagerService(Microservice):
 
     # --- Command Handler Methods ---
 
-    async def start_service_command(self, payload: dict):
-        service_name = payload.get("service_name")
+    async def start_service_command(self, service_name: str):
         if service_name:
             await self.start_service(service_name)
 
-    async def stop_service_command(self, payload: dict):
-        service_name = payload.get("service_name")
+    async def stop_service_command(self, service_name: str):
         if service_name:
             await self.stop_service(service_name)
 
-    async def restart_service_command(self, payload: dict):
-        service_name = payload.get("service_name")
+    async def restart_service_command(self, service_name: str):
         if service_name:
             await self.restart_service(service_name)
 
-    async def start_all_command(self, payload: dict):
+    async def start_all_command(self):
         """Starts all discovered services, ensuring settings_service starts first."""
         self.logger.info("Executing start_all command...")
 
@@ -159,17 +156,17 @@ class ManagerService(Microservice):
                 self.logger.info("Waiting for settings_service to initialize...")
                 await asyncio.sleep(2) # Give it time to start and be available
 
-    async def stop_all_command(self, payload: dict):
+    async def stop_all_command(self):
         self.logger.info("Executing stop_all command...")
         await self._stop_logic()
 
-    async def restart_all_command(self, payload: dict):
+    async def restart_all_command(self):
         self.logger.info("Executing restart_all command...")
-        await self.stop_all_command({})
-        await self.start_all_command({})
+        await self.stop_all_command()
+        await self.start_all_command()
         self.logger.info("Finished restart_all command.")
 
-    async def get_status_command(self, payload: dict):
+    async def get_status_command(self):
         """Publishes the current status of all services."""
         current_status_payload = []
         for name, info in self.managed_services.items():
@@ -193,7 +190,7 @@ class ManagerService(Microservice):
 
         # Start all services automatically on manager startup.
         self.logger.info("Manager starting... auto-starting all services.")
-        await self.start_all_command({})
+        await self.start_all_command()
 
         # Start the monitoring loop as a background task
         asyncio.create_task(self.monitor_services())
