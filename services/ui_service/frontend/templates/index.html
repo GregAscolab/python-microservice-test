@@ -10,26 +10,16 @@
     {% include 'header.html' %}
     <div class="container">
         {% include 'sidebar.html' %}
-        <main>
-            <h2>Welcome to My Web App</h2>
+        <main id="content">
+            <!-- Content will be loaded here dynamically -->
         </main>
     </div>
-    {% include 'footer.html' %}
+    <footer>
+        <p style="font-size: x-small;">&copy; 2025 RockMeter Made by Ascolab</p>
+        <div id="connection-status"></div>
+    </footer>
 
-    <script>
-        // document.querySelector("body").requestFullscreen();
-        document.body.requestFullscreen();
-
-        // try {
-        // const primaryScreen = (await getScreenDetails()).screens.find(
-        //     (screen) => screen.isPrimary,
-        // );
-        // await document.body.requestFullscreen({ screen: primaryScreen });
-        // } catch (err) {
-        // console.error(err.name, err.message);
-        // }
-
-        console.log("fullscreen");
-    </script>
+    <script src="/static/js/connection.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>

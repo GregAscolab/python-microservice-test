@@ -1,4 +1,4 @@
-$(document).ready(function() {
+function initializeGpsPage() {
     // --- Leaflet Map Initialization ---
     var map = L.map('map').setView([45.525, 4.924], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -35,19 +35,9 @@ $(document).ready(function() {
     };
     Plotly.newPlot(skyviewDiv, [], layout);
 
-
-    // --- WebSocket Connection ---
-    const url_gps = "ws://" + window.location.host + "/ws_gps";
-    const ws_gps = new WebSocket(url_gps);
-
-    ws_gps.onopen = function(event) {
-        console.log("GPS WebSocket connection opened.");
-    };
-
-    ws_gps.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        // console.log("Received GPS data:", data);
-
+    // --- WebSocket Message Handling ---
+    const handleGpsMessage = (data) => {
+        // console.log("Received GPS data via ConnectionManager:", data);
         if (data && data.geometry && data.geometry.type === 'Point') {
             // Update Leaflet Map
             const coords = data.geometry.coordinates;
@@ -65,16 +55,10 @@ $(document).ready(function() {
         }
     };
 
-    ws_gps.onerror = function(error) {
-        console.error('GPS WebSocket error:', error);
-    };
-
-    ws_gps.onclose = function(event) {
-        console.log('GPS WebSocket connection closed:', event);
-    };
+    // Register the handler with the ConnectionManager
+    ConnectionManager.register('gps', handleGpsMessage);
 
     // --- Helper Functions ---
-
     function updateGpsTable(properties) {
         gpsTable.clear();
         const flattenObject = (obj, prefix = '') => {
@@ -133,4 +117,10 @@ $(document).ready(function() {
 
         Plotly.react(skyviewDiv, [trace], layout);
     }
-});
+}
+
+// Since app.js loads this script dynamically, we need to call the initialization function.
+// We'll check if the function exists to avoid errors if the script is loaded on a page that doesn't need it.
+if (typeof initializeGpsPage === 'function') {
+    initializeGpsPage();
+}

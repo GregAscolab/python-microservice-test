@@ -1,150 +1,88 @@
-// $(document).ready(function() {
-// });
+function initializeDashboardPage() {
+    // --- Leaflet Map Initialization ---
+    var map = L.map('map').setView([51.505, -0.09], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    var geoJSONLayer = L.geoJSON().addTo(map);
 
-// Initialize DataTable
-// var table = $('#dataTable').DataTable();
+    // --- WebSocket Message Handlers ---
+    const handleGpsMessage = (data) => {
+        // console.log("ws_gps onmessage =" + JSON.stringify(data));
+        if (data) {
+            geoJSONLayer.clearLayers();
+            geoJSONLayer.addData(data);
+            map.fitBounds(geoJSONLayer.getBounds());
+        }
+    };
 
-// Initialize Leaflet map
-var map = L.map('map').setView([51.505, -0.09], 13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-}).addTo(map);
-var geoJSONLayer = L.geoJSON().addTo(map);
+    const pressureTableBody = document.querySelector('#pressureTable tbody');
+    const angleTableBody = document.querySelector('#angleTable tbody');
+    const nameCache = new Map();
+    const suffToTypeMap = new Map([
+        ["_b", "pressure"],
+        ["_PFAng", "angle"],
+    ]);
+    const typeToUnitMap = new Map([
+        ["pressure", "bars"],
+        ["angle", "deg"],
+    ]);
 
-// WebSocket connection
-const url_gps = "ws://" + window.location.host + "/ws_gps";
-const ws_gps = new WebSocket(url_gps);
+    const handleDataMessage = (data) => {
+        if (!nameCache.has(data.name)) {
+            const newRow = document.createElement('tr');
+            newRow.id = data.name;
 
-ws_gps.onmessage = function(event) {
-    var data = JSON.parse(event.data);
-    // console.log("ws_gps onmessage =" + JSON.stringify(data));
+            const nameCell = document.createElement('td');
+            nameCell.textContent = data.name;
+            newRow.appendChild(nameCell);
 
-    // Update table
-    // table.row.add([data.column1, data.column2]).draw(false);
+            const valueCell = document.createElement('td');
+            valueCell.textContent = data.value;
+            valueCell.id = data.name + "_val";
+            valueCell.style.textAlign = "right";
+            newRow.appendChild(valueCell);
 
-    // Update map
-    if (data) {
-        geoJSONLayer.clearLayers();
-        geoJSONLayer.addData(data);
-        map.fitBounds(geoJSONLayer.getBounds());
-    }
-};
-
-// Establish a WebSocket connection
-const url_data = "ws://" + window.location.host + "/ws_data";
-const ws_data = new WebSocket(url_data);
-
-// Get the table body element
-const pressureTableBody = document.querySelector('#pressureTable tbody');
-const angleTableBody = document.querySelector('#angleTable tbody');
-
-// Cache to store received names/values
-const nameCache = new Map();
-
-// Get the buttons
-const toggleRecordingButton = document.getElementById('toggleRecording');
-const quitButton = document.getElementById('quitButton');
-
-// Variable to track recording state
-let isRecording = false;
-
-// Suffix to unit map
-const suffToTypeMap = new Map([
-  ["_b", "pressure"],
-  ["_PFAng","angle"],
-]);
-
-const typeToUnitMap = new Map([
-  ["pressure", "bars"],
-  ["angle","deg"],
-]);
-
-// Update display according nameCache values
-function updateDisplay() {
-    // Loop on cache data
-    for (const [name, val] of nameCache) {
-        // Update the value of data in table
-        const cell = document.getElementById(name + "_val");
-        cell.textContent = val;
-    }
-}
-
-// Period refresh of the display, based on value received and store in cache
-const intervalID = setInterval(updateDisplay, 200);
-
-// Handle incoming messages
-ws_data.onmessage = function(event) {
-    // Parse the incoming message
-    const data = JSON.parse(event.data);
-    // console.log("buf="+ws_data.bufferedAmount)
-    // console.log(JSON.stringify(data))
-
-
-    // Check if the name already exists in the cache
-    if (! nameCache.has(data.name)) {
-        // Create a new row
-        const newRow = document.createElement('tr');
-        newRow.id = data.name; // Set the id attribute based on the name
-
-        // Create and append the Name cell
-        const nameCell = document.createElement('td');
-        nameCell.textContent = data.name;
-        newRow.appendChild(nameCell);
-
-        // Create and append the Value cell
-        const valueCell = document.createElement('td');
-        valueCell.textContent = data.value;
-        valueCell.id = data.name + "_val";  // Set the id attribute based on the name
-        valueCell.style.textAlign = "right";
-        newRow.appendChild(valueCell);
-
-        // look for data type
-        let unit = "";
-        let tableBody;
-         for (let [key, value] of suffToTypeMap) {
-            if (data.name.includes(key)) {
-                tableBody = document.querySelector('#'+value+'Table tbody');
-                unit = typeToUnitMap.get(value);
-                break;
+            let unit = "";
+            let tableBody;
+            for (let [key, value] of suffToTypeMap) {
+                if (data.name.includes(key)) {
+                    tableBody = document.querySelector('#' + value + 'Table tbody');
+                    unit = typeToUnitMap.get(value);
+                    break;
+                } else {
+                    tableBody = angleTableBody;
+                    unit = "";
+                }
             }
-            else {
-                // Default table, just in case...
-                tableBody = angleTableBody;
-                unit = "";
+            const unitCell = document.createElement('td');
+            unitCell.textContent = unit;
+            unitCell.id = data.name + "_unit";
+            newRow.appendChild(unitCell);
+
+            if (tableBody) {
+                tableBody.appendChild(newRow);
             }
         }
-        // Create and append the Unit cell
-        const unitCell = document.createElement('td');
-        unitCell.textContent = unit;
-        unitCell.id = data.name + "_unit"  // Set the id attribute based on the name
-        newRow.appendChild(unitCell);
+        nameCache.set(data.name, data.value);
+    };
 
-        // Append the new row to the table body
-        tableBody.appendChild(newRow);
-    }
-    else {
-        // Nothing to add in table
-    }
+    const updateDisplay = () => {
+        for (const [name, val] of nameCache) {
+            const cell = document.getElementById(name + "_val");
+            if (cell) {
+                cell.textContent = val;
+            }
+        }
+    };
 
-    // Always store data value in cache
-    nameCache.set(data.name, data.value);
+    setInterval(updateDisplay, 200);
 
-    // Will be displayed by periodic function.
-    // updateDisplay();
-};
+    // --- Register handlers with ConnectionManager ---
+    ConnectionManager.register('gps', handleGpsMessage);
+    ConnectionManager.register('can_data', handleDataMessage);
+}
 
-// Handle WebSocket errors
-ws_data.onerror = function(error) {
-    console.error('ws_data error:', error);
-};
-
-// Handle WebSocket close
-ws_data.onclose = function(event) {
-    console.log('ws_data connection closed:', event);
-};
-
-ws_data.onopen = function(event) {
-    console.log('ws_data opened');
-    console.log("ws_data ext="+ws_data.extensions)
-    console.log("ws_data protocol="+ws_data.protocol)
-};
+if (typeof initializeDashboardPage === 'function') {
+    initializeDashboardPage();
+}
