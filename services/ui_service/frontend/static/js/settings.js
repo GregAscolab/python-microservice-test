@@ -127,6 +127,4 @@ function initializeSettingsPage() {
     }
 }
 
-if (typeof initializeSettingsPage === 'function') {
-    initializeSettingsPage();
-}
+// The initializeSettingsPage function will be called by app.js when the page is loaded.

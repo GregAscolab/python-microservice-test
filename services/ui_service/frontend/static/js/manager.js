@@ -188,6 +188,4 @@ function initializeManagerPage() {
     }
 }
 
-if (typeof initializeManagerPage === 'function') {
-    initializeManagerPage();
-}
+// The initializeManagerPage function will be called by app.js when the page is loaded.

@@ -6,6 +6,7 @@
  * handles incoming GPS data from the WebSocket to update the UI.
  */
 function initializeGpsPage() {
+    console.log("initializeGpsPage defined");
     // --- Leaflet Map Initialization ---
     var map = L.map('map').setView([45.525, 4.924], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -142,7 +143,4 @@ function initializeGpsPage() {
     }
 }
 
-// Since app.js loads this script dynamically, this ensures the initialization function is called.
-if (typeof initializeGpsPage === 'function') {
-    initializeGpsPage();
-}
+// The initializeGpsPage function will be called by app.js when the page is loaded.

@@ -172,6 +172,4 @@ function initializeLoggerPage() {
     }
 }
 
-if (typeof initializeLoggerPage === 'function') {
-    initializeLoggerPage();
-}
+// The initializeLoggerPage function will be called by app.js when the page is loaded.

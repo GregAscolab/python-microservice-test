@@ -55,6 +55,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     const script = document.createElement('script');
                     script.src = scriptPath;
                     script.setAttribute('data-page-script', 'true'); // Mark it for easy removal later.
+                    script.onload = () => {
+                        // Once the script is loaded, call the initialization function for the page.
+                        const initFunctionName = `initialize${pageName.charAt(0).toUpperCase() + pageName.slice(1)}Page`;
+                        console.log(`Calling ${initFunctionName}`);
+                        if (typeof window[initFunctionName] === 'function') {
+                            window[initFunctionName]();
+                        } else {
+                            console.log(`${initFunctionName} not found`);
+                        }
+                    };
                     document.body.appendChild(script);
                 }
             })

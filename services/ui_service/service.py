@@ -36,20 +36,32 @@ class UiService(Microservice):
         channel = msg.subject
         data = msg.data.decode()
         self.logger.debug(f"Received message on '{channel}', broadcasting to WebSocket.")
-        await connection_manager.broadcast(data, channel)
+        try:
+            await connection_manager.broadcast_channel(channel, json.loads(data))
+        except json.JSONDecodeError:
+            self.logger.error(f"Failed to decode JSON for channel '{channel}': {data}")
 
     async def _settings_update_handler(self, msg: Msg):
         self.logger.info(f"Received settings update: {msg.data.decode()}")
-        await connection_manager.broadcast(msg.data.decode(), "settings")
+        try:
+            await connection_manager.broadcast_channel("settings", json.loads(msg.data.decode()))
+        except json.JSONDecodeError:
+            self.logger.error(f"Failed to decode settings update JSON: {msg.data.decode()}")
 
     async def _manager_status_handler(self, msg: Msg):
         """Forwards manager status updates to the UI via WebSocket."""
         self.logger.info(f"Received manager status update, broadcasting to WebSocket.")
-        await connection_manager.broadcast(msg.data.decode(), "manager")
+        try:
+            await connection_manager.broadcast_channel("manager", json.loads(msg.data.decode()))
+        except json.JSONDecodeError:
+            self.logger.error(f"Failed to decode manager status JSON: {msg.data.decode()}")
 
     async def _conversion_results_handler(self, msg: Msg):
         self.logger.info(f"Received conversion result: {msg.data.decode()}")
-        await connection_manager.broadcast(msg.data.decode(), "conversion")
+        try:
+            await connection_manager.broadcast_channel("conversion", json.loads(msg.data.decode()))
+        except json.JSONDecodeError:
+            self.logger.error(f"Failed to decode conversion result JSON: {msg.data.decode()}")
 
     async def _handle_ping_command(self, message: str = "pong"):
         self.logger.info(f"Received ping command! Replying with: {message}")

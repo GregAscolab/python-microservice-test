@@ -108,7 +108,4 @@ function initializeDashboardPage() {
     ConnectionManager.register('can_data', handleDataMessage);
 }
 
-// Initialize the dashboard page when the script is loaded.
-if (typeof initializeDashboardPage === 'function') {
-    initializeDashboardPage();
-}
+// The initializeDashboardPage function will be called by app.js when the page is loaded.

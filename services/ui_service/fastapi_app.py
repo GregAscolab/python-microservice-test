@@ -7,6 +7,7 @@ import os
 import sys
 import base64
 from typing import List, Dict, Any
+from pydantic import BaseModel
 
 # Add project root to Python path for absolute imports.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
