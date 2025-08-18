@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logger</title>
+    <title>CAN Bus Logger</title>
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="container">
         {% include 'sidebar.html' %}
         <main>
-        <h2>Logger</h2>
+        <h2>CAN Bus Logger</h2>
         <!-- Logger content will go here -->
         <div id="controls">
            <button id="toggleRecording">Start Recording</button>
@@ -50,7 +50,7 @@
                         <!-- Lien pour remonter au dossier parent -->
                         {% if current_path %}
                         <tr>
-                            <td><a href="/logger/{{ '/'.join(current_path.split('/')[:-1]) }}">..</a></td>
+                            <td><a href="/can_bus_logger/{{ '/'.join(current_path.split('/')[:-1]) }}">..</a></td>
                             <td></td>
                             <td></td>
                             <td></td>
@@ -59,7 +59,7 @@
 
                         {% for dir in dirs %}
                         <tr>
-                            <td><a href="/logger/{{ (current_path + '/' + dir) if current_path else dir }}">{{ dir }}</a></td>
+                            <td><a href="/can_bus_logger/{{ (current_path + '/' + dir) if current_path else dir }}">{{ dir }}</a></td>
                             <td></td>
                             <td></td>
                             <td></td>
@@ -91,6 +91,6 @@
     </div>
     {% include 'footer.html' %}
     <script src={{ url_for('static', path='/libs/plotly/plotly.min.js') }} type="text/javascript"></script>
-    <script src="/static/js/logger.js"></script>
+    <script src="/static/js/can_bus_logger.js"></script>
 </body>
 </html>

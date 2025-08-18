@@ -66,9 +66,9 @@ def get_service(request: Request) -> Microservice:
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-@router.get("/logger", response_class=HTMLResponse)
-@router.get("/logger/{path:path}", response_class=HTMLResponse)
-async def read_logger_path(request: Request, path: str = ""):
+@router.get("/can_bus_logger", response_class=HTMLResponse)
+@router.get("/can_bus_logger/{path:path}", response_class=HTMLResponse)
+async def read_can_bus_logger_path(request: Request, path: str = ""):
     service = get_service(request)
     try:
         os.makedirs(CAN_LOGS_DIR, exist_ok=True)
@@ -86,7 +86,7 @@ async def read_logger_path(request: Request, path: str = ""):
         service.logger.error(f"Error reading logger path '{path}': {e}")
         files, dirs, extensions = {}, [], []
 
-    return templates.TemplateResponse("logger.html", {"request": request, "files": files, "dirs": dirs, "extensions": extensions, "current_path": path})
+    return templates.TemplateResponse("can_bus_logger.html", {"request": request, "files": files, "dirs": dirs, "extensions": extensions, "current_path": path})
 
 @router.get("/manager", response_class=HTMLResponse)
 async def read_manager(request: Request):
@@ -255,6 +255,80 @@ async def download_file(file_path_b64: str):
 
     full_path = os.path.normpath(os.path.join(CAN_LOGS_DIR, file_path))
     if not full_path.startswith(CAN_LOGS_DIR):
+        return HTMLResponse("Forbidden", status_code=403)
+
+    if os.path.exists(full_path):
+        return FileResponse(full_path, filename=os.path.basename(full_path))
+    return HTMLResponse("File not found", status_code=404)
+
+APP_LOGS_DIR = os.path.abspath("app_logs")
+
+@router.get("/app_logger", response_class=HTMLResponse)
+async def read_app_logger(request: Request):
+    service = get_service(request)
+    try:
+        os.makedirs(APP_LOGS_DIR, exist_ok=True)
+        items = sorted(os.listdir(APP_LOGS_DIR))
+        files = {item: os.path.getsize(os.path.join(APP_LOGS_DIR, item)) for item in items if os.path.isfile(os.path.join(APP_LOGS_DIR, item))}
+    except Exception as e:
+        service.logger.error(f"Error reading app_logs directory: {e}")
+        files = {}
+
+    return templates.TemplateResponse("app_logger.html", {"request": request, "files": files})
+
+@router.websocket("/ws_app_logger")
+async def websocket_app_logger_endpoint(websocket: WebSocket):
+    service = get_service(websocket)
+    await manager.connect(websocket, "app_logger.status")
+    service.logger.info("App logger client connected to WebSocket.")
+    try:
+        # Initial status push
+        status_payload = await service.messaging_client.request("app_logger.get_status", b'', timeout=1.0)
+        await websocket.send_text(status_payload.data.decode())
+
+        while True:
+            data = await websocket.receive_text()
+            try:
+                command = json.loads(data)
+                await service.messaging_client.publish(
+                    "commands.app_logger_service",
+                    json.dumps(command).encode()
+                )
+                service.logger.info(f"Forwarded command to app_logger_service: {command}")
+            except json.JSONDecodeError:
+                service.logger.error(f"Received invalid JSON from app_logger websocket: {data}")
+            except Exception as e:
+                service.logger.error(f"Error processing command from app_logger websocket: {e}")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, "app_logger.status")
+        service.logger.info("App logger client disconnected from WebSocket.")
+
+@router.get("/api/app_logs/{filename}")
+async def get_app_log_content(filename: str, request: Request):
+    service = get_service(request)
+    try:
+        log_file_path = os.path.normpath(os.path.join(APP_LOGS_DIR, filename))
+        if not os.path.abspath(log_file_path).startswith(APP_LOGS_DIR):
+            return HTMLResponse("Forbidden", status_code=403)
+
+        if not os.path.exists(log_file_path):
+            return HTMLResponse("File not found", status_code=404)
+
+        with open(log_file_path, "r", encoding="utf-8") as f:
+            content = json.load(f)
+            return content
+    except Exception as e:
+        service.logger.error(f"Error reading app log file '{filename}': {e}", exc_info=True)
+        return HTMLResponse("Error reading file", status_code=500)
+
+@router.get("/download_app_log/{file_path_b64:path}")
+async def download_app_log_file(file_path_b64: str):
+    base64_bytes = file_path_b64.encode("utf-8")
+    file_path_bytes = base64.b64decode(base64_bytes)
+    file_path = file_path_bytes.decode("utf-8")
+
+    full_path = os.path.normpath(os.path.join(APP_LOGS_DIR, file_path))
+    if not full_path.startswith(APP_LOGS_DIR):
         return HTMLResponse("Forbidden", status_code=403)
 
     if os.path.exists(full_path):

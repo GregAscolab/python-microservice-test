@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Logger</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    {% include 'header.html' %}
+    <div class="container">
+        {% include 'sidebar.html' %}
+        <main>
+            <h2>App Logger</h2>
+            <div id="controls">
+                <button id="toggleAppRecording">Start Recording</button>
+                <div id="recorderSpin" class="recorderSpin" style="display: none;"></div>
+            </div>
+            <div id="status-display">
+                <h3>Status</h3>
+                <p><strong>State:</strong> <span id="logger-state">Stopped</span></p>
+                <p><strong>Start Time:</strong> <span id="start-time">N/A</span></p>
+                <p><strong>Start Position:</strong> <span id="start-position">N/A</span></p>
+            </div>
+            <div class="log_container">
+                <div id="files-panel">
+                    <h3>App Logs</h3>
+                    <table id="filenameTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Size</th>
+                                <th>Download</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for file, file_size in files.items() %}
+                            <tr class="file-row">
+                                <td onclick="openAppLogFile('{{ file }}', this)">{{ file }}</td>
+                                <td>{{ file_size }} octets</td>
+                                <td>
+                                    <a href="/download_app_log/{{ file | b64encode }}"
+                                        class="download-btn">⬇️</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div id="log-content-panel" style="display: none;">
+                    <h3>Log Content</h3>
+                    <pre id="log-content"></pre>
+                </div>
+            </div>
+        </main>
+    </div>
+    {% include 'footer.html' %}
+    <script src="/static/js/app_logger.js"></script>
+</body>
+</html>
