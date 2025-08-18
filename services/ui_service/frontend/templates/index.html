@@ -16,7 +16,6 @@
     <div class="container">
         <nav class="sidebar">
             <ul>
-                <!-- The 'active' class will now be managed by app.js -->
                 <li><a href="/dashboard">Dashboard</a></li>
                 <li><a href="/gps">GPS</a></li>
                 <li><a href="/logger">Logger</a></li>
@@ -27,7 +26,169 @@
             </ul>
         </nav>
         <main id="content">
-            <!-- Content will be loaded here by app.js -->
+            <!-- Page content will be shown here -->
+
+            <div id="page-dashboard" class="page-content" style="display: none;">
+                <h2>Dashboard</h2>
+                <div id="dashboard-container">
+                    <div id="dashboard-map">
+                        <h3>Map</h3>
+                        <div id="map-dashboard"></div>
+                    </div>
+                    <div id="dashboard-data">
+                        <h3>Sensors</h3>
+                        <table id="pressureTable" class="display">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Value</th>
+                                    <th>Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <table id="angleTable" class="display">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Value</th>
+                                    <th>Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-gps" class="page-content" style="display: none;">
+                <h2>GPS Status</h2>
+                <div id="gps-container">
+                    <div class="gps-row">
+                        <div id="gps-map-container">
+                            <h3>Map</h3>
+                            <div id="map-gps"></div>
+                        </div>
+                        <div id="gps-skyview-container">
+                            <h3>Satellite Skyview</h3>
+                            <div id="skyviewChart"></div>
+                        </div>
+                    </div>
+                    <div class="gps-row">
+                        <div id="gps-data-container">
+                            <h3>GPS Data</h3>
+                            <table id="gpsDataTable" class="display" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th>Property</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-logger" class="page-content" style="display: none;">
+                <h2>Logger</h2>
+                <div class="controls">
+                   <button id="toggleRecording-logger">Start Recording</button>
+                   <div id="recorderSpin-logger" class="recorderSpin" style="display: none;"></div>
+                </div>
+                <div class="log_container">
+                    <div id="files-panel">
+                        <h3 id="logger-current-path">Contenu du dossier : /</h3>
+                        <!-- Extension filter can be added back later if needed -->
+                        <table id="filenameTable">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Taille</th>
+                                    <th>Status</th>
+                                    <th>Download</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- File list will be populated by logger.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="loader-container">
+                        <div id="loader" class="loader" style="display: none;"></div>
+                    </div>
+                    <div id="plotly-panel"></div>
+                </div>
+            </div>
+
+            <div id="page-map" class="page-content" style="display: none;">
+                <h2>Map</h2>
+                <div class="controls">
+                    <label><input type="checkbox" id="toggleHardness-map"> Afficher la dureté</label>
+                    <label>
+                        Fond de carte:
+                        <select id="mapType-map">
+                            <option value="plan">Plan</option>
+                            <option value="satellite">Satellite</option>
+                        </select>
+                    </label>
+                    <button id="resetMapView-map">Reset zoom carte</button>
+                </div>
+                <div class="row-container">
+                    <div id="map-main"></div>
+                    <div id="plotly-3Dgraph" class="plotly-container"></div>
+                </div>
+            </div>
+
+            <div id="page-sensors" class="page-content" style="display: none;">
+                <h2>Sensors</h2>
+                <!-- Sensors content will go here -->
+            </div>
+
+            <div id="page-settings" class="page-content" style="display: none;">
+                <h2>Settings</h2>
+                <div class="tabs">
+                    <div class="tab-buttons"></div>
+                    <div class="tab-content"></div>
+                </div>
+            </div>
+
+            <div id="page-manager" class="page-content" style="display: none;">
+                <div class="manager-header">
+                    <h1>Service Manager</h1>
+                    <div id="global-actions" class="global-actions">
+                        <button id="restart-all-btn">Restart All</button>
+                        <button id="stop-all-btn" class="danger">Stop All</button>
+                    </div>
+                </div>
+                <div id="status-grid" class="status-grid"></div>
+                <!-- Modals for Manager page -->
+                <div id="stop-all-modal" class="modal" style="display: none;">
+                    <div class="modal-content danger-theme">
+                        <div class="modal-header">
+                            <span class="modal-icon warning-icon">⚠️</span>
+                            <h2>Confirm Stop All</h2>
+                            <span class="close-button" id="close-modal-btn">&times;</span>
+                        </div>
+                        <div class="modal-body"><p>Are you sure you want to stop all services? This will shut down the entire application. You will not be able to restart it from this UI.</p></div>
+                        <div class="modal-footer">
+                            <button id="cancel-stop-all-btn" class="button">Cancel</button>
+                            <button id="confirm-stop-all-btn" class="button danger">Confirm Stop</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="log-modal" class="modal" style="display: none;">
+                  <div class="modal-content log-modal-content">
+                    <div class="modal-header">
+                      <h2>Log Viewer: <span id="log-service-name"></span></h2>
+                      <span class="close-button" id="close-log-modal-btn">&times;</span>
+                    </div>
+                    <div class="modal-body"><pre id="log-content" class="log-viewer"></pre></div>
+                  </div>
+                </div>
+            </div>
+
         </main>
     </div>
     <footer>
@@ -45,7 +206,6 @@
     <script src="/static/js/connection_manager.js"></script>
     <script src="/static/js/app.js"></script>
     <script>
-        // --- UI handler for connection status ---
         $(document).on('connectionStatusChange', function(event, data) {
             const $statusDiv = $('#connection-status');
             if (data.isOnline) {

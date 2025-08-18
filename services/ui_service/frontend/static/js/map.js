@@ -2,7 +2,7 @@
 
 
 // Initialiser la carte Leaflet
-        var map = L.map('map');
+        var map = L.map('map-main');
         let userInteractedWithMap = false;
         let currentUirevision = 1;
 
@@ -329,7 +329,7 @@
         }
 
         // Initialiser les contrôles pour la carte Leaflet
-        document.getElementById('toggleHardness').addEventListener('change', function(e) {
+        document.getElementById('toggleHardness-map').addEventListener('change', function(e) {
             var showHardness = e.target.checked;
             markers.forEach(function(marker) {
                 if (marker.label) {
@@ -348,7 +348,7 @@
             });
         });
 
-        document.getElementById('mapType').addEventListener('change', function(e) {
+        document.getElementById('mapType-map').addEventListener('change', function(e) {
             var mapType = e.target.value;
             if (mapType === 'plan') {
                 map.removeLayer(satelliteLayer);
@@ -364,7 +364,7 @@
             console.log("Map move");
         });
 
-        document.getElementById('resetMapView').addEventListener('click', function() {
+        document.getElementById('resetMapView-map').addEventListener('click', function() {
             fitMapToMarkers();
             userInteractedWithMap = false;
         });

@@ -1,58 +1,56 @@
 $(document).ready(function() {
-    const $mainContent = $('#content');
-    // Keep track of the current page's specific logic and cleanup function
     let currentPage = {
         name: null,
         cleanup: function() {}
     };
 
     function getPageName(path) {
-        // Extracts 'gps' from '/gps'
         return path.substring(1);
     }
 
-    // --- Helper function to load content and scripts ---
-    function loadPage(path) {
+    function showPage(path) {
         // 1. Run cleanup for the previous page
         if (typeof currentPage.cleanup === 'function') {
             console.log(`Cleaning up page: ${currentPage.name}`);
             currentPage.cleanup();
         }
-        $mainContent.empty(); // Clear content immediately
 
-        // 2. Load the new HTML content from the root path
-        $mainContent.load(path, function(response, status, xhr) {
-            if (status === "error") {
-                console.error("Error loading page:", xhr.status, xhr.statusText);
-                $mainContent.html('<h2>Page not found</h2><p>Could not load the requested content.</p>');
-                return;
-            }
+        // 2. Hide all page content divs
+        $('.page-content').hide();
 
-            // 3. Load the corresponding script for the new page
-            const pageName = getPageName(path);
-            currentPage.name = pageName;
-            currentPage.cleanup = function() {}; // Reset cleanup
+        // 3. Show the requested page content div
+        const pageName = getPageName(path);
+        const $page = $(`#page-${pageName}`);
+        if ($page.length) {
+            $page.show();
+        } else {
+            // If page not found, maybe show a default or a 404 div
+            $('#page-dashboard').show(); // Default to dashboard
+        }
 
-            if (pageName && pageName !== 'dashboard' && pageName !== 'sensors') {
-                 $.getScript(`/static/js/${pageName}.js`)
-                    .done(function(script, textStatus) {
-                        console.log(`Script for ${pageName} loaded successfully.`);
-                    })
-                    .fail(function(jqxhr, settings, exception) {
-                        console.error(`Error loading script for ${pageName}:`, exception);
-                    });
-            }
-        });
+        // 4. Load the corresponding script for the new page
+        currentPage.name = pageName;
+        currentPage.cleanup = function() {}; // Reset cleanup
+
+        if (pageName && pageName !== 'dashboard' && pageName !== 'sensors') {
+             $.getScript(`/static/js/${pageName}.js`)
+                .done(function(script, textStatus) {
+                    console.log(`Script for ${pageName} loaded successfully.`);
+                })
+                .fail(function(jqxhr, settings, exception) {
+                    console.error(`Error loading script for ${pageName}:`, exception);
+                });
+        }
     }
 
     // --- Handle navigation clicks ---
     $('.sidebar a').on('click', function(e) {
         e.preventDefault();
         const path = $(this).attr('href');
-        if (path === window.location.pathname) return; // Don't reload same page
+        if (path === window.location.pathname) return;
 
         history.pushState({path: path}, '', path);
-        loadPage(path);
+        showPage(path);
         $('.sidebar a').removeClass('active');
         $(this).addClass('active');
     });
@@ -61,18 +59,16 @@ $(document).ready(function() {
     window.onpopstate = function(event) {
         if (event.state && event.state.path) {
             const path = event.state.path;
-            loadPage(path);
+            showPage(path);
             $('.sidebar a').removeClass('active');
             $(`.sidebar a[href="${path}"]`).addClass('active');
         }
     };
 
     // --- Initial page load ---
-    const initialPath = window.location.pathname;
-    const pathToLoad = (initialPath === '/' || initialPath === '') ? '/dashboard' : initialPath;
-
-    loadPage(pathToLoad);
+    const initialPath = window.location.pathname === '/' ? '/dashboard' : window.location.pathname;
+    showPage(initialPath);
     $('.sidebar a').removeClass('active');
-    $(`.sidebar a[href="${pathToLoad}"]`).addClass('active');
-    history.replaceState({path: pathToLoad}, '', pathToLoad);
+    $(`.sidebar a[href="${initialPath}"]`).addClass('active');
+    history.replaceState({path: initialPath}, '', initialPath);
 });

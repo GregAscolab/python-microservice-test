@@ -1,7 +1,7 @@
 // This script is loaded dynamically by app.js when the gps page is loaded
 (function() {
     // --- Leaflet Map Initialization ---
-    var map = L.map('map').setView([45.525, 4.924], 13);
+    var map = L.map('map-gps').setView([45.525, 4.924], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
