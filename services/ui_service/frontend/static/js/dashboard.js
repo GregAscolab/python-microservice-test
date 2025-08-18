@@ -1,3 +1,9 @@
+/**
+ * dashboard.js
+ *
+ * This script manages the dashboard page, which displays a map and real-time sensor data.
+ * It registers handlers with the ConnectionManager to receive GPS and CAN data.
+ */
 function initializeDashboardPage() {
     // --- Leaflet Map Initialization ---
     var map = L.map('map').setView([51.505, -0.09], 13);
@@ -7,8 +13,12 @@ function initializeDashboardPage() {
     var geoJSONLayer = L.geoJSON().addTo(map);
 
     // --- WebSocket Message Handlers ---
+
+    /**
+     * Handles incoming GPS data to update the map.
+     * @param {object} data - GeoJSON data for the map.
+     */
     const handleGpsMessage = (data) => {
-        // console.log("ws_gps onmessage =" + JSON.stringify(data));
         if (data) {
             geoJSONLayer.clearLayers();
             geoJSONLayer.addData(data);
@@ -16,9 +26,12 @@ function initializeDashboardPage() {
         }
     };
 
+    // --- Sensor Data Table Management ---
     const pressureTableBody = document.querySelector('#pressureTable tbody');
     const angleTableBody = document.querySelector('#angleTable tbody');
-    const nameCache = new Map();
+    const nameCache = new Map(); // Cache for sensor values to optimize DOM updates.
+
+    // Mappings to determine sensor type and unit from its name.
     const suffToTypeMap = new Map([
         ["_b", "pressure"],
         ["_PFAng", "angle"],
@@ -28,7 +41,12 @@ function initializeDashboardPage() {
         ["angle", "deg"],
     ]);
 
+    /**
+     * Handles incoming CAN data to update the sensor tables.
+     * @param {object} data - The sensor data message.
+     */
     const handleDataMessage = (data) => {
+        // If the sensor is not yet in the table, create a new row for it.
         if (!nameCache.has(data.name)) {
             const newRow = document.createElement('tr');
             newRow.id = data.name;
@@ -43,6 +61,7 @@ function initializeDashboardPage() {
             valueCell.style.textAlign = "right";
             newRow.appendChild(valueCell);
 
+            // Determine which table (pressure or angle) the sensor belongs to.
             let unit = "";
             let tableBody;
             for (let [key, value] of suffToTypeMap) {
@@ -51,7 +70,7 @@ function initializeDashboardPage() {
                     unit = typeToUnitMap.get(value);
                     break;
                 } else {
-                    tableBody = angleTableBody;
+                    tableBody = angleTableBody; // Default table.
                     unit = "";
                 }
             }
@@ -64,9 +83,14 @@ function initializeDashboardPage() {
                 tableBody.appendChild(newRow);
             }
         }
+        // Always update the cache with the latest value.
         nameCache.set(data.name, data.value);
     };
 
+    /**
+     * Periodically updates the sensor values in the table from the cache.
+     * This is more performant than updating the DOM on every single message.
+     */
     const updateDisplay = () => {
         for (const [name, val] of nameCache) {
             const cell = document.getElementById(name + "_val");
@@ -76,6 +100,7 @@ function initializeDashboardPage() {
         }
     };
 
+    // Set up the periodic display update.
     setInterval(updateDisplay, 200);
 
     // --- Register handlers with ConnectionManager ---
@@ -83,6 +108,7 @@ function initializeDashboardPage() {
     ConnectionManager.register('can_data', handleDataMessage);
 }
 
+// Initialize the dashboard page when the script is loaded.
 if (typeof initializeDashboardPage === 'function') {
     initializeDashboardPage();
 }

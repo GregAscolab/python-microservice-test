@@ -1,20 +1,32 @@
+/**
+ * connection.js
+ *
+ * This script provides a centralized manager for the WebSocket connection.
+ * It handles establishing the connection, automatic reconnection with
+ * exponential backoff, message dispatching, and keep-alive heartbeats.
+ */
 const ConnectionManager = {
     // --- Properties ---
-    ws: null,
-    url: `ws://${window.location.host}/ws`,
-    connected: false,
-    reconnectInterval: 1000, // Start with 1 second
-    maxReconnectInterval: 30000, // Cap at 30 seconds
-    messageHandlers: {}, // Handlers for different message types, e.g., { 'gps': [handler1, handler2] }
+    ws: null, // Holds the WebSocket object.
+    url: `ws://${window.location.host}/ws`, // The URL for the single WebSocket endpoint.
+    connected: false, // Flag to track connection status.
+    reconnectInterval: 1000, // Initial reconnect interval in ms.
+    maxReconnectInterval: 30000, // Maximum reconnect interval.
+    messageHandlers: {}, // An object to store message handlers keyed by channel.
 
-    // --- Initialization ---
+    /**
+     * Initializes the ConnectionManager.
+     */
     init: function() {
         this.connect();
         this.setupHeartbeat();
     },
 
-    // --- WebSocket Connection ---
+    /**
+     * Establishes the WebSocket connection.
+     */
     connect: function() {
+        // Prevent creating a new connection if one already exists or is in progress.
         if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
             console.log("WebSocket is already connected or connecting.");
             return;
@@ -22,12 +34,14 @@ const ConnectionManager = {
 
         this.ws = new WebSocket(this.url);
 
+        // --- WebSocket Event Handlers ---
+
         this.ws.onopen = () => {
             console.log("WebSocket connection established.");
             this.connected = true;
             this.updateStatus();
-            this.reconnectInterval = 1000; // Reset reconnect interval on successful connection
-            // If there's a handler for 'open', call it.
+            this.reconnectInterval = 1000; // Reset interval on a successful connection.
+            // Notify any registered 'open' handlers.
             if (this.messageHandlers['open']) {
                 this.messageHandlers['open'].forEach(handler => handler());
             }
@@ -36,10 +50,11 @@ const ConnectionManager = {
         this.ws.onmessage = (event) => {
             try {
                 const message = JSON.parse(event.data);
+                // Dispatch the message to the appropriate handlers based on its channel.
                 if (message.channel && this.messageHandlers[message.channel]) {
                     this.messageHandlers[message.channel].forEach(handler => handler(message.data));
                 } else if (message.type === 'heartbeat' && message.status === 'alive') {
-                    // Respond to server's heartbeat to keep connection alive
+                    // Respond to server heartbeats to keep the connection alive.
                     this.send({ type: 'heartbeat', status: 'client_ack' });
                 }
             } catch (e) {
@@ -61,17 +76,20 @@ const ConnectionManager = {
         };
     },
 
-    // --- Reconnection Logic ---
+    /**
+     * Schedules a reconnect attempt with exponential backoff.
+     */
     scheduleReconnect: function() {
         setTimeout(() => {
             this.connect();
         }, this.reconnectInterval);
-
-        // Exponential backoff
+        // Increase the interval for the next attempt.
         this.reconnectInterval = Math.min(this.reconnectInterval * 2, this.maxReconnectInterval);
     },
 
-    // --- UI and Status ---
+    /**
+     * Updates the connection status indicator in the UI.
+     */
     updateStatus: function() {
         const statusDiv = document.getElementById('connection-status');
         if (statusDiv) {
@@ -85,7 +103,11 @@ const ConnectionManager = {
         }
     },
 
-    // --- Message Handling ---
+    /**
+     * Registers a handler function for a specific message channel.
+     * @param {string} channel - The channel to subscribe to.
+     * @param {function} handler - The function to call when a message for this channel is received.
+     */
     register: function(channel, handler) {
         if (!this.messageHandlers[channel]) {
             this.messageHandlers[channel] = [];
@@ -94,6 +116,10 @@ const ConnectionManager = {
         console.log(`Handler registered for channel: ${channel}`);
     },
 
+    /**
+     * Sends data to the server via the WebSocket.
+     * @param {object} data - The data to send (will be JSON.stringified).
+     */
     send: function(data) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify(data));
@@ -102,18 +128,19 @@ const ConnectionManager = {
         }
     },
 
-    // --- Keep-Alive ---
+    /**
+     * Sets up a client-side heartbeat to keep the connection alive.
+     */
     setupHeartbeat: function() {
         setInterval(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                // Send a ping to the server to keep the connection alive
                 this.send({ type: 'heartbeat', status: 'ping' });
             }
-        }, 20000); // Send a ping every 20 seconds
+        }, 20000); // Send a ping every 20 seconds.
     }
 };
 
-// Initialize the connection manager when the script loads
+// Initialize the ConnectionManager when the DOM is ready.
 document.addEventListener('DOMContentLoaded', () => {
     ConnectionManager.init();
 });

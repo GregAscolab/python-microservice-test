@@ -1,3 +1,10 @@
+/**
+ * gps.js
+ *
+ * This script manages the functionality of the GPS page.
+ * It initializes the map, data table, and skyview chart, and it
+ * handles incoming GPS data from the WebSocket to update the UI.
+ */
 function initializeGpsPage() {
     // --- Leaflet Map Initialization ---
     var map = L.map('map').setView([45.525, 4.924], 13);
@@ -35,32 +42,38 @@ function initializeGpsPage() {
     };
     Plotly.newPlot(skyviewDiv, [], layout);
 
-    // --- WebSocket Message Handling ---
+    /**
+     * Handles incoming GPS data from the WebSocket.
+     * @param {object} data - The GPS data received from the server.
+     */
     const handleGpsMessage = (data) => {
-        // console.log("Received GPS data via ConnectionManager:", data);
         if (data && data.geometry && data.geometry.type === 'Point') {
-            // Update Leaflet Map
+            // Update the Leaflet map with the new coordinates.
             const coords = data.geometry.coordinates;
             const latLng = [coords[1], coords[0]];
             marker.setLatLng(latLng);
             map.setView(latLng, map.getZoom());
 
-            // Update Data Table
+            // Update the data table with GPS properties.
             updateGpsTable(data.properties);
 
-            // Update Skyview Chart
+            // Update the skyview chart with satellite data.
             if (data.properties && data.properties.SV) {
                 updateSkyviewChart(data.properties.SV);
             }
         }
     };
 
-    // Register the handler with the ConnectionManager
+    // Register the GPS message handler with the central ConnectionManager.
     ConnectionManager.register('gps', handleGpsMessage);
 
-    // --- Helper Functions ---
+    /**
+     * Updates the GPS data table with new properties.
+     * @param {object} properties - The properties object from the GPS data.
+     */
     function updateGpsTable(properties) {
         gpsTable.clear();
+        // Flatten the nested properties object for display.
         const flattenObject = (obj, prefix = '') => {
             const result = {};
             for (const key in obj) {
@@ -68,7 +81,7 @@ function initializeGpsPage() {
                     const newKey = prefix ? `${prefix}.${key}` : key;
                     if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
                         Object.assign(result, flattenObject(obj[key], newKey));
-                    } else if (key !== 'SV') {
+                    } else if (key !== 'SV') { // Exclude the raw satellite vehicle data from the table.
                         result[newKey] = obj[key];
                     }
                 }
@@ -79,6 +92,7 @@ function initializeGpsPage() {
         const flatProps = flattenObject(properties);
         for (const [key, value] of Object.entries(flatProps)) {
             let displayValue = value;
+            // Handle special data types for display.
             if (typeof value === 'object' && value !== null && value.type === 'Buffer') {
                 displayValue = String.fromCharCode.apply(null, value.data);
             } else if (Array.isArray(value)) {
@@ -89,6 +103,11 @@ function initializeGpsPage() {
         gpsTable.draw();
     }
 
+    /**
+     * Determines the color for a satellite based on its signal-to-noise ratio (SNR).
+     * @param {number} snr - The SNR value.
+     * @returns {string} The color name.
+     */
     function getSnrColor(snr) {
         if (snr >= 40) return 'green';
         if (snr >= 30) return 'yellow';
@@ -96,6 +115,10 @@ function initializeGpsPage() {
         return 'grey';
     }
 
+    /**
+     * Updates the skyview chart with satellite data.
+     * @param {object} svData - The satellite vehicle data.
+     */
     function updateSkyviewChart(svData) {
         const satellites = svData.SV.filter(s => s.SV_Id > 0 && s.SV_Elevation > 0);
 
@@ -119,8 +142,7 @@ function initializeGpsPage() {
     }
 }
 
-// Since app.js loads this script dynamically, we need to call the initialization function.
-// We'll check if the function exists to avoid errors if the script is loaded on a page that doesn't need it.
+// Since app.js loads this script dynamically, this ensures the initialization function is called.
 if (typeof initializeGpsPage === 'function') {
     initializeGpsPage();
 }

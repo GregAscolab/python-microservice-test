@@ -7,19 +7,32 @@
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
+    <!-- The main header, included on every page. -->
     {% include 'header.html' %}
+
     <div class="container">
+        <!-- The sidebar for navigation, included on every page. -->
         {% include 'sidebar.html' %}
+
+        <!-- App Shell Content Area -->
+        <!-- The content for each page will be dynamically loaded into this <main> element by app.js. -->
         <main id="content">
-            <!-- Content will be loaded here dynamically -->
+            <!-- This block is the target for dynamic content injection. -->
+            {% block content %}{% endblock %}
         </main>
     </div>
+
+    <!-- The main footer for the application. -->
     <footer>
         <p style="font-size: x-small;">&copy; 2025 RockMeter Made by Ascolab</p>
+        <!-- This div displays the WebSocket connection status (e.g., "online" or "offline"). -->
         <div id="connection-status"></div>
     </footer>
 
+    <!-- Core application scripts -->
+    <!-- connection.js manages the WebSocket connection and message handling. -->
     <script src="/static/js/connection.js"></script>
+    <!-- app.js handles the SPA navigation and dynamic content loading. -->
     <script src="/static/js/app.js"></script>
 </body>
 </html>

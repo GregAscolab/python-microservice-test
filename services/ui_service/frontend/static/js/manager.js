@@ -1,3 +1,9 @@
+/**
+ * manager.js
+ *
+ * This script handles the service manager page, which allows users to view
+ * the status of all microservices, start, stop, and restart them, and view their logs.
+ */
 function initializeManagerPage() {
     // --- DOM Elements ---
     const statusGrid = document.getElementById('status-grid');
@@ -15,36 +21,54 @@ function initializeManagerPage() {
     const logServiceName = document.getElementById('log-service-name');
     const logContent = document.getElementById('log-content');
     const closeLogModalBtn = document.getElementById('close-log-modal-btn');
-    let logInterval;
+    let logInterval; // To hold the interval for log fetching
 
     // --- WebSocket Logic ---
+
+    /**
+     * Handles incoming messages from the 'manager' channel.
+     * @param {object} data - The service status data from the backend.
+     */
     const handleManagerMessage = (data) => {
         updateStatusGrid(data);
     };
 
+    /**
+     * Sends a command to the backend manager service.
+     * @param {string} command - The command to send (e.g., 'start_service').
+     * @param {object} payload - Additional data for the command.
+     */
     const sendCommand = (command, payload = {}) => {
         const message = {
             channel: 'manager',
             data: { command, ...payload }
         };
-        console.log("Sending command:", message);
         ConnectionManager.send(message);
     };
 
-    // Request initial status when WebSocket connection opens
+    /**
+     * Requests the initial status of all services when the WebSocket connects.
+     */
     const onWsOpen = () => {
         sendCommand('get_status', {});
     };
 
+    // Register WebSocket handlers.
     ConnectionManager.register('manager', handleManagerMessage);
     ConnectionManager.register('open', onWsOpen);
-    // If already connected, get status immediately
+
+    // If the connection is already open, request status immediately.
     if (ConnectionManager.connected) {
         onWsOpen();
     }
 
-
     // --- UI Rendering ---
+
+    /**
+     * Returns the appropriate CSS class for a given service status.
+     * @param {string} status - The status of the service.
+     * @returns {string} The CSS class name.
+     */
     function getStatusClass(status) {
         switch (status) {
             case 'running': return 'status-running';
@@ -57,8 +81,12 @@ function initializeManagerPage() {
         }
     }
 
+    /**
+     * Renders the service status cards in the grid.
+     * @param {Array} services - An array of service objects.
+     */
     function updateStatusGrid(services) {
-        if (!statusGrid) return; // In case the page is not visible
+        if (!statusGrid) return; // Don't try to render if the element isn't on the page.
         statusGrid.innerHTML = '';
         if (!services || services.length === 0) {
             statusGrid.innerHTML = '<p>No services found or status not yet available.</p>';
@@ -83,6 +111,7 @@ function initializeManagerPage() {
                     <button class="logs-btn">Logs</button>
                 </div>
             `;
+            // Add event listeners for the service action buttons.
             card.querySelector('.start-btn').addEventListener('click', () => sendCommand('start_service', { service_name: service.name }));
             card.querySelector('.stop-btn').addEventListener('click', () => sendCommand('stop_service', { service_name: service.name }));
             card.querySelector('.restart-btn').addEventListener('click', () => sendCommand('restart_service', { service_name: service.name }));
@@ -92,7 +121,7 @@ function initializeManagerPage() {
         });
     }
 
-    // --- Event Listeners ---
+    // --- Global Action Event Listeners ---
     if (restartAllBtn) restartAllBtn.addEventListener('click', () => sendCommand('restart_all'));
     if (stopAllBtn) stopAllBtn.addEventListener('click', () => {
         stopAllModal.style.display = 'block';
@@ -121,6 +150,7 @@ function initializeManagerPage() {
         document.body.classList.add('modal-open');
 
         fetchLogContent(serviceName);
+        // Refresh logs periodically.
         logInterval = setInterval(() => fetchLogContent(serviceName), 2000);
     }
 
@@ -143,6 +173,7 @@ function initializeManagerPage() {
             }
             const logs = await response.text();
             logContent.textContent = logs || 'Log file is empty or does not exist.';
+            // Auto-scroll to the bottom.
             logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight;
         } catch (error) {
             console.error('Error fetching logs:', error);
@@ -150,13 +181,10 @@ function initializeManagerPage() {
         }
     }
 
+    // Close modals if the user clicks outside of them.
     window.onclick = function(event) {
-        if (event.target == stopAllModal) {
-            closeStopAllModal();
-        }
-        if (event.target == logModal) {
-            closeLogModal();
-        }
+        if (event.target == stopAllModal) closeStopAllModal();
+        if (event.target == logModal) closeLogModal();
     }
 }
 
