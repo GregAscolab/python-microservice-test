@@ -68,15 +68,9 @@ $(document).ready(function() {
     };
 
     // --- Initial page load ---
-    // On first load, load the content for the current path
     const initialPath = window.location.pathname;
     const pathToLoad = (initialPath === '/' || initialPath === '') ? '/dashboard' : initialPath;
 
-    // We don't load content on initial page load anymore,
-    // because the server should render the initial content (if any).
-    // Instead, we just set the active link.
-    // If the server renders the full page, this script will re-load the content,
-    // which is not ideal, but it's the trade-off for this routing model.
     loadPage(pathToLoad);
     $('.sidebar a').removeClass('active');
     $(`.sidebar a[href="${pathToLoad}"]`).addClass('active');

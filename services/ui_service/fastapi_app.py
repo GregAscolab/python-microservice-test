@@ -69,16 +69,17 @@ async def read_root(request: Request):
 
 @router.get("/{page}", response_class=HTMLResponse)
 async def read_page(request: Request, page: str):
-    """Serves an HTML page fragment, or the full index page."""
-    # If the root is requested, or any other top-level page,
-    # serve the main index.html which is the SPA shell.
-    # The client-side routing will handle loading the correct content.
-    if page in ["dashboard", "gps", "logger", "map", "sensors", "settings", "manager"]:
-         return templates.TemplateResponse(f"{page}.html", {"request": request})
-
-    # For any other path, assume it's a request for the SPA shell
-    # This handles deep links.
-    return templates.TemplateResponse("index.html", {"request": request})
+    """
+    Serves an HTML page fragment.
+    NOTE: This setup does not handle deep linking correctly. Navigating
+    directly to /gps will serve the fragment, not the full page.
+    """
+    try:
+        return templates.TemplateResponse(f"{page}.html", {"request": request})
+    except JinjaExceptions.TemplateNotFound:
+        # On error, serve the main page, which will show a "not found"
+        # message in its content area.
+        return templates.TemplateResponse("index.html", {"request": request})
 
 
 # --- WebSocket Endpoints ---
@@ -191,35 +192,28 @@ async def websocket_convert_endpoint(websocket: WebSocket):
 
 # --- API Endpoints ---
 
-LOGS_DIR = os.path.abspath("logs")
-
 @router.get("/api/logs/{service_name}", response_class=HTMLResponse)
 async def get_service_logs(service_name: str, request: Request):
     """Reads and returns the last N lines of a service's log file."""
     service = get_service(request)
     try:
         # Ensure the logs directory exists
-        os.makedirs(LOGS_DIR, exist_ok=True)
+        os.makedirs(os.path.abspath("logs"), exist_ok=True)
+        log_file_path = os.path.normpath(os.path.join(os.path.abspath("logs"), f"{service_name}.log"))
 
-        log_file_path = os.path.normpath(os.path.join(LOGS_DIR, f"{service_name}.log"))
-
-        # Security check to prevent path traversal
-        if not os.path.abspath(log_file_path).startswith(LOGS_DIR):
+        # Security check
+        if not os.path.abspath(log_file_path).startswith(os.path.abspath("logs")):
             return HTMLResponse("Forbidden: Access to this path is not allowed.", status_code=403)
-
         if not os.path.exists(log_file_path):
             return HTMLResponse(f"Log file for '{service_name}' not found.", status_code=404)
 
-        # Read the last part of the file to avoid large transfers
         file_size = os.path.getsize(log_file_path)
         read_size = 16384 # Read last 16KB
 
         with open(log_file_path, "r", encoding="utf-8", errors="ignore") as f:
             if file_size > read_size:
                 f.seek(file_size - read_size)
-                # Read a bit more to ensure we start on a new line, then split
                 f.readline()
-
             content = f.read()
             return HTMLResponse(content, media_type="text/plain")
 
@@ -246,16 +240,10 @@ class FileToConvert(BaseModel):
     name: str
     folder: str
 
-class TimeSeriesData(BaseModel):
-    name: str
-    timestamps: List[str]
-    values: List[float]
-
 @router.post("/convert")
 async def convert_file(file_content: FileToConvert, request: Request):
     service = get_service(request)
     service.logger.info(f"Queueing conversion for file: {file_content.name} in folder {file_content.folder}")
-
     try:
         command = {
             "command": "blfToTimeseries",
