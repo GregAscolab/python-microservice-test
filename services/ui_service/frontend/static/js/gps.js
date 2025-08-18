@@ -1,4 +1,5 @@
-$(document).ready(function() {
+// This script is loaded dynamically by app.js when the gps page is loaded
+(function() {
     // --- Leaflet Map Initialization ---
     var map = L.map('map').setView([45.525, 4.924], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -18,36 +19,19 @@ $(document).ready(function() {
     const skyviewDiv = document.getElementById('skyviewChart');
     const layout = {
         polar: {
-            radialaxis: {
-                tickfont: { size: 8 },
-                angle: 90,
-                tickangle: 90,
-                range: [90, 0]
-            },
-            angularaxis: {
-                tickfont: { size: 10 },
-                rotation: 90,
-                direction: "clockwise"
-            }
+            radialaxis: { tickfont: { size: 8 }, angle: 90, tickangle: 90, range: [90, 0] },
+            angularaxis: { tickfont: { size: 10 }, rotation: 90, direction: "clockwise" }
         },
         showlegend: false,
         margin: { l: 40, r: 40, t: 40, b: 40 }
     };
     Plotly.newPlot(skyviewDiv, [], layout);
 
-
-    // --- WebSocket Connection ---
-    const url_gps = "ws://" + window.location.host + "/ws_gps";
-    const ws_gps = new WebSocket(url_gps);
-
-    ws_gps.onopen = function(event) {
-        console.log("GPS WebSocket connection opened.");
-    };
+    // --- WebSocket Connection via ConnectionManager ---
+    const ws_gps = ConnectionManager.getSocket('/ws_gps');
 
     ws_gps.onmessage = function(event) {
         const data = JSON.parse(event.data);
-        // console.log("Received GPS data:", data);
-
         if (data && data.geometry && data.geometry.type === 'Point') {
             // Update Leaflet Map
             const coords = data.geometry.coordinates;
@@ -65,16 +49,7 @@ $(document).ready(function() {
         }
     };
 
-    ws_gps.onerror = function(error) {
-        console.error('GPS WebSocket error:', error);
-    };
-
-    ws_gps.onclose = function(event) {
-        console.log('GPS WebSocket connection closed:', event);
-    };
-
     // --- Helper Functions ---
-
     function updateGpsTable(properties) {
         gpsTable.clear();
         const flattenObject = (obj, prefix = '') => {
@@ -114,7 +89,6 @@ $(document).ready(function() {
 
     function updateSkyviewChart(svData) {
         const satellites = svData.SV.filter(s => s.SV_Id > 0 && s.SV_Elevation > 0);
-
         const trace = {
             r: satellites.map(s => 90 - s.SV_Elevation),
             theta: satellites.map(s => s.SV_Azimuth),
@@ -130,7 +104,27 @@ $(document).ready(function() {
             hovertemplate: "r=%{r} t=%{theta} snr=%{customdata}",
             type: 'scatterpolar'
         };
-
         Plotly.react(skyviewDiv, [trace], layout);
     }
-});
+
+    // --- Page Cleanup ---
+    //currentPage is a global defined in app.js
+    currentPage.cleanup = function() {
+        console.log("Cleaning up GPS page...");
+        // Close the WebSocket connection for this page
+        ConnectionManager.closeSocket('/ws_gps');
+        // Destroy the DataTable instance to prevent memory leaks
+        if (gpsTable) {
+            gpsTable.destroy();
+        }
+        // Clean up Plotly chart
+        if (skyviewDiv) {
+            Plotly.purge(skyviewDiv);
+        }
+        // Clean up Leaflet map
+        if (map) {
+            map.remove();
+        }
+        console.log("GPS page cleanup complete.");
+    };
+})();

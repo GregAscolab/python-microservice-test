@@ -3,33 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Web App</title>
+    <title>RockMeter Project</title>
     <link rel="stylesheet" href="/static/css/styles.css">
+    <!-- Libs CSS -->
+    <link rel="stylesheet" href="/static/libs/leaflet/leaflet.css">
+    <link rel="stylesheet" href="/static/libs/datatables/datatables.min.css">
 </head>
 <body>
-    {% include 'header.html' %}
+    <header>
+        <h1>RockMeter Project</h1>
+    </header>
     <div class="container">
-        {% include 'sidebar.html' %}
-        <main>
-            <h2>Welcome to My Web App</h2>
+        <nav class="sidebar">
+            <ul>
+                <!-- The 'active' class will now be managed by app.js -->
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/gps">GPS</a></li>
+                <li><a href="/logger">Logger</a></li>
+                <li><a href="/map">Map</a></li>
+                <li><a href="/sensors">Sensors</a></li>
+                <li><a href="/settings">Settings</a></li>
+                <li><a href="/manager">Manager</a></li>
+            </ul>
+        </nav>
+        <main id="content">
+            <!-- Content will be loaded here by app.js -->
         </main>
     </div>
-    {% include 'footer.html' %}
+    <footer>
+        <div id="connection-status" class="status-offline">Offline</div>
+        <p style="font-size: x-small;">&copy; 2025 RockMeter Made by Ascolab</p>
+    </footer>
 
+    <!-- Libs JS -->
+    <script src="/static/libs/jquery/jquery-3.7.1.min.js"></script>
+    <script src="/static/libs/datatables/datatables.min.js"></script>
+    <script src="/static/libs/leaflet/leaflet.js"></script>
+    <script src="/static/libs/plotly/plotly.min.js"></script>
+
+    <!-- Core App JS -->
+    <script src="/static/js/connection_manager.js"></script>
+    <script src="/static/js/app.js"></script>
     <script>
-        // document.querySelector("body").requestFullscreen();
-        document.body.requestFullscreen();
-
-        // try {
-        // const primaryScreen = (await getScreenDetails()).screens.find(
-        //     (screen) => screen.isPrimary,
-        // );
-        // await document.body.requestFullscreen({ screen: primaryScreen });
-        // } catch (err) {
-        // console.error(err.name, err.message);
-        // }
-
-        console.log("fullscreen");
+        // --- UI handler for connection status ---
+        $(document).on('connectionStatusChange', function(event, data) {
+            const $statusDiv = $('#connection-status');
+            if (data.isOnline) {
+                $statusDiv.text('Online').removeClass('status-offline').addClass('status-online');
+            } else {
+                $statusDiv.text('Offline').removeClass('status-online').addClass('status-offline');
+            }
+        });
     </script>
 </body>
 </html>

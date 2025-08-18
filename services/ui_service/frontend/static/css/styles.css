@@ -464,3 +464,28 @@ body.modal-open {
     max-width: 90vw;
     margin: 5vh auto;
 }
+
+footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 5px 0;
+}
+
+#connection-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.status-online {
+    background-color: #28a745;
+    color: white;
+}
+
+.status-offline {
+    background-color: #dc3545;
+    color: white;
+}

@@ -1,125 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Map</title>
-    <link rel="stylesheet" href="/static/libs/leaflet/leaflet.css">
-    <link rel="stylesheet" href="/static/libs/datatables/datatables.min.css">
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <style>
+<h2>Map</h2>
+<!-- Logger content will go here -->
 
-    </style>
-</head>
-<body>
-    {% include 'header.html' %}
-    <div class="container">
-        {% include 'sidebar.html' %}
-        <main>
-            <h2>Map</h2>
-            <!-- Logger content will go here -->
-
-            <div id="controls">
-                <!-- <label><input type="checkbox" id="toggleHardness" checked> Afficher la dureté</label> -->
-                <label><input type="checkbox" id="toggleHardness"> Afficher la dureté</label>
-                <label>
-                    Fond de carte:
-                    <select id="mapType">
-                        <option value="plan">Plan</option>
-                        <option value="satellite">Satellite</option>
-                    </select>
-                </label>
-                <button id="resetMapView">Reset zoom carte</button>
-                <!-- <button id="resetPlotView">Recalculer la vue du 3D</button> -->
-            </div>
-            <div class="row-container">
-                <!-- Conteneur pour la carte -->
-                <div id="map"></div>
-                <!-- Conteneur pour le graphique Plotly -->
-                <div id="plotly-3Dgraph" class="plotly-container"></div>
-            </div>
-        </main>
-    </div>
-    {% include 'footer.html' %}
-    <script src="/static/libs/jquery/jquery-3.7.1.min.js"></script>
-    <script src="/static/libs/leaflet/leaflet.js"></script>
-    <script src="/static/libs/plotly/plotly.min.js"></script>
-    <script src="/static/js/map.js"></script>
-    <!-- <script>
-
-        // Rafraîchir le graphique Plotly avec les nouvelles données
-        function refreshPlotlyPlot() {
-            let centerGeo = calculateCenter(markers);
-            let centerECEF = convertToECEF(centerGeo.lat, centerGeo.lon, centerGeo.alt);
-
-            var traceData = {
-                x: [],
-                y: [],
-                z: [],
-                mode: 'markers',
-                marker: {
-                    size: 6,
-                    color: []
-                },
-                opacity: 0.8,
-                type: 'scatter3d',
-                text: []
-            };
-
-            markers.forEach(function(marker) {
-                let ecef = convertToECEF(marker.coordinates[1], marker.coordinates[0], marker.altitude);
-                let enu = convertECEFtoENU(ecef.x, ecef.y, ecef.z, centerECEF.x, centerECEF.y, centerECEF.z, centerGeo.lat, centerGeo.lon);
-
-                traceData.x.push(enu.east);
-                traceData.y.push(enu.north);
-                traceData.z.push(enu.up);
-
-                var colorString = getColor(marker.hardness);
-                var rgbValues = colorString.match(/\d+/g).map(Number);
-                traceData.marker.color.push(`rgb(${rgbValues[0]}, ${rgbValues[1]}, ${rgbValues[2]})`);
-                traceData.text.push(marker.circle.options.hardnessValue);
-            });
-
-            var layout = {
-                title: 'Visualisation 3D des Points d\'Intérêt (ENU)',
-                scene: {
-                    aspectmode:'manual',
-		            aspectratio: {x:1, y:1, z:1},
-                    xaxis: { title: {text:'East (m)'}, autorange: true },
-                    yaxis: { title: {text:'North (m)'}, autorange: true },
-                    zaxis: { title: {text:'Up (m)'}, autorange: true },
-                    camera: {
-                        eye: {x: 0.1, y: -2, z: 0.1}
-                    }
-                },
-                uirevision:'true',
-                margin: {
-                    l: 0,
-                    r: 0,
-                    b: 10,
-                    t: 10
-                }
-            };
-
-            var config = {responsive: true}
-
-            Plotly.react('plotly-container', [traceData], layout, config);
-        }
-
-
-
-        // function waitPlotlyRendering() {
-        //     console.log("waitPlotlyRendering");
-        //     // To be done at the end, after Plotly init
-        //     document.getElementById('plotly-container').on('plotly-click', function(arg1,arg2) {
-        //         userInteractedWithPlot = true;
-        //         console.log("plotly-relayout");
-        //     });
-        // }
-        // setTimeout(waitPlotlyRendering, 10000)
-
-        // Rafraîchir les données toutes les 2 secondes
-        setInterval(addRandomPointToGeoJson, 2000);
-    </script> -->
-</body>
-</html>
+<div id="controls">
+    <!-- <label><input type="checkbox" id="toggleHardness" checked> Afficher la dureté</label> -->
+    <label><input type="checkbox" id="toggleHardness"> Afficher la dureté</label>
+    <label>
+        Fond de carte:
+        <select id="mapType">
+            <option value="plan">Plan</option>
+            <option value="satellite">Satellite</option>
+        </select>
+    </label>
+    <button id="resetMapView">Reset zoom carte</button>
+    <!-- <button id="resetPlotView">Recalculer la vue du 3D</button> -->
+</div>
+<div class="row-container">
+    <!-- Conteneur pour la carte -->
+    <div id="map"></div>
+    <!-- Conteneur pour le graphique Plotly -->
+    <div id="plotly-3Dgraph" class="plotly-container"></div>
+</div>

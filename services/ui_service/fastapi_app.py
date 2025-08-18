@@ -64,41 +64,22 @@ def get_service(request: Request) -> Microservice:
 
 @router.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
+    """Serves the main single-page application shell."""
     return templates.TemplateResponse("index.html", {"request": request})
-
-@router.get("/logger", response_class=HTMLResponse)
-@router.get("/logger/{path:path}", response_class=HTMLResponse)
-async def read_logger_path(request: Request, path: str = ""):
-    service = get_service(request)
-    try:
-        os.makedirs(CAN_LOGS_DIR, exist_ok=True)
-        full_path = os.path.normpath(os.path.join(CAN_LOGS_DIR, path))
-
-        # Security check to prevent path traversal
-        if not full_path.startswith(CAN_LOGS_DIR):
-            return HTMLResponse("Forbidden", status_code=403)
-
-        items = sorted(os.listdir(full_path))  # Sort items alphabetically
-        files = {item: os.path.getsize(os.path.join(full_path, item)) for item in items if os.path.isfile(os.path.join(full_path, item))}
-        dirs = [item for item in items if os.path.isdir(os.path.join(full_path, item))]
-        extensions = sorted(list(set(os.path.splitext(f)[1] for f in files))) # Sort extensions alphabetically
-    except Exception as e:
-        service.logger.error(f"Error reading logger path '{path}': {e}")
-        files, dirs, extensions = {}, [], []
-
-    return templates.TemplateResponse("logger.html", {"request": request, "files": files, "dirs": dirs, "extensions": extensions, "current_path": path})
-
-@router.get("/manager", response_class=HTMLResponse)
-async def read_manager(request: Request):
-    """Serves the manager page."""
-    return templates.TemplateResponse("manager.html", {"request": request})
 
 @router.get("/{page}", response_class=HTMLResponse)
 async def read_page(request: Request, page: str):
-    try:
-        return templates.TemplateResponse(f"{page}.html", {"request": request})
-    except JinjaExceptions.TemplateNotFound:
-        return HTMLResponse("Page not found", status_code=404)
+    """Serves an HTML page fragment, or the full index page."""
+    # If the root is requested, or any other top-level page,
+    # serve the main index.html which is the SPA shell.
+    # The client-side routing will handle loading the correct content.
+    if page in ["dashboard", "gps", "logger", "map", "sensors", "settings", "manager"]:
+         return templates.TemplateResponse(f"{page}.html", {"request": request})
+
+    # For any other path, assume it's a request for the SPA shell
+    # This handles deep links.
+    return templates.TemplateResponse("index.html", {"request": request})
+
 
 # --- WebSocket Endpoints ---
 
