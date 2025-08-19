@@ -1,8 +1,10 @@
+// Make currentPage globally accessible for page-specific scripts
+let currentPage = {
+    name: null,
+    cleanup: function() {}
+};
+
 $(document).ready(function() {
-    let currentPage = {
-        name: null,
-        cleanup: function() {}
-    };
 
     function getPageName(path) {
         return path.substring(1);
