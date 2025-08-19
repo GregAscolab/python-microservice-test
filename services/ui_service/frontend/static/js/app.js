@@ -34,7 +34,7 @@ $(document).ready(function() {
         currentPage.name = pageName;
         currentPage.cleanup = function() {}; // Reset cleanup
 
-        if (pageName && pageName !== 'dashboard' && pageName !== 'sensors') {
+        if (pageName) {
              $.getScript(`/static/js/${pageName}.js`)
                 .done(function(script, textStatus) {
                     console.log(`Script for ${pageName} loaded successfully.`);

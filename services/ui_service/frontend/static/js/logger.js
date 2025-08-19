@@ -8,6 +8,7 @@
     const recorderSpin = document.getElementById('recorderSpin-logger');
     const plotlyPanel = document.getElementById('plotly-panel');
     const loader = document.getElementById('loader');
+    const logStatus = document.getElementById('log-status');
     const fileTableBody = document.querySelector('#filenameTable tbody');
     const currentPathHeader = document.getElementById('logger-current-path');
 
@@ -94,9 +95,9 @@
         plotlyPanel.innerHTML = '';
         document.querySelectorAll('.file-status').forEach(span => span.textContent = '');
 
-        // Find the correct row to update status
+        // TODO: Find the correct row to update status
         // This is complex, a better way would be to have unique IDs per row
-        loader.style.display = "block";
+        loader.style.display = "flex";
 
         try {
             const response = await fetch("/convert", {
@@ -115,8 +116,8 @@
     }
 
     function displayPlot(data) {
-        const plotsContainer = document.getElementById('plotly-panel');
-        plotsContainer.innerHTML = '';
+        // const plotsContainer = document.getElementById('plotly-panel');
+        plotlyPanel.innerHTML = '';
         const plots = {};
 
         data.forEach((series) => {
@@ -136,7 +137,7 @@
         Object.keys(plots).forEach((sig) => {
             const plotDiv = document.createElement('div');
             plotDiv.className = 'plotly-log-graph';
-            plotsContainer.appendChild(plotDiv);
+            plotlyPanel.appendChild(plotDiv);
             const layout = {
                 title: { text: plots[sig].title },
                 autosize: true, automargin: true,
@@ -155,7 +156,7 @@
         const command = isRecording ? 'startRecording' : 'stopRecording';
         dataSocket.send(JSON.stringify({ command }));
         toggleRecordingButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
-        recorderSpin.style.display = isRecording ? "block" : "none";
+        recorderSpin.style.display = isRecording ? "flex" : "none";
         if (!isRecording) {
             setTimeout(() => fetchAndDisplayFiles(currentPath), 1000);
         }
@@ -177,14 +178,23 @@
     convertSocket.onmessage = function(event) {
         const data = JSON.parse(event.data);
         if (data.status === "started") {
-            loader.style.display = "block";
+            loader.style.display = "flex";
             plotlyPanel.style.display = "none";
+            logStatus.innerHTML = data.filename + ' : ' + data.status;
         } else if (data.status === "success") {
             loader.style.display = "none";
-            displayPlot(data.data);
-            plotlyPanel.style.display = "block";
+            console.log("data=" + Object.keys(data))
+            if (Object.keys(data.data).length > 0) {
+                logStatus.innerHTML = data.filename;
+                displayPlot(data.data);
+                plotlyPanel.style.display = "flex";   
+            }
+            else {
+                logStatus.innerHTML = "NO DATA in " + data.filename;
+            }
         } else if (data.status === "error") {
             loader.style.display = "none";
+            logStatus.innerHTML = data.filename + ' : ' + data.status;
         }
     };
 

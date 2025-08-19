@@ -31,13 +31,14 @@ footer {
     padding: 5px 0;
     flex-shrink: 0;
     display: flex;
+    flex-direction: row;
     justify-content: center;
     align-items: center;
     gap: 20px;
 }
 
 .sidebar {
-    width: 200px;
+    /* width: 200px; */
     flex-shrink: 0;
     background-color: #f8f9fa;
     padding: 1em;
@@ -46,7 +47,7 @@ footer {
 }
 
 main {
-    flex-grow: 1;
+    flex: 1 0 0;
     padding: 1em;
     overflow-y: auto; /* This makes the main content scrollable */
     display: flex;
@@ -127,13 +128,15 @@ button:hover {
 
 /* Ensure map divs take up full space of their container */
 #map-dashboard, #map-gps, #map-main, #skyviewChart {
-    flex-grow: 1;
+    flex: 1 0 0;
     width: 100%;
     border-radius: 4px;
+    min-height: 300px;
 }
 
 .plotly-container {
-    flex: 1;
+    flex: 1 0 0;
+    border-radius: 4px;
     min-height: 300px;
 }
 
@@ -144,20 +147,40 @@ button:hover {
     gap: 1em;
 }
 
+#gps-container {
+    display: flex;
+    flex-direction: column;
+}
+
 #dashboard-container, .gps-row, .row-container, .log_container {
     display: flex;
-    flex: 1; /* Allow these containers to grow */
+    flex-direction: row;
+    flex-grow: 1; /* Allow these containers to grow */
     gap: 1em;
     min-height: 0; /* Fix for flexbox overflow issue in some browsers */
 }
 
 #dashboard-map, #gps-map-container, #gps-skyview-container, #gps-data-container, #files-panel, .loader-container, #plotly-panel {
-    flex: 1;
+    flex: 1 0 0;
     display: flex;
     flex-direction: column;
-    min-width: 0; /* Fix for flexbox overflow issue */
+    min-width: 50px; /* Fix for flexbox overflow issue */
 }
-#dashboard-map { flex: 2; } /* Make dashboard map wider */
+#dashboard-map { flex: 2 0 0; } /* Make dashboard map wider */
+
+#dashboard-data {
+    flex: 1 0 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+ }
+
+ .loader-container {
+    align-items: center;
+ }
+
+ #logStatus {
+    display: flex;
+ }
 
 
 /* --- Connection Status --- */

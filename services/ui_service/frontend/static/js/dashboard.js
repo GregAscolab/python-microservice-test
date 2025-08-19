@@ -11,6 +11,7 @@
         "searching": false,
         "info": false,
         "order": [],
+        data:[],
         "createdRow": function(row, data, dataIndex) {
             $(row).attr('id', data[0]); // Set row id to the sensor name
         }
@@ -20,10 +21,17 @@
         "searching": false,
         "info": false,
         "order": [],
+        data:[],
         "createdRow": function(row, data, dataIndex) {
             $(row).attr('id', data[0]); // Set row id to the sensor name
         }
     });
+
+    // Period refresh of the display, based on value received and store in cache
+    // const intervalID = setInterval(function() {
+    //         angleTable.draw(false);
+    //         pressureTable.draw(false);
+    // }, 200);
 
 
     // --- WebSocket for GPS Data ---
@@ -74,7 +82,7 @@
                     data.name,
                     data.value,
                     unit
-                ]).draw(false); // Draw without resetting paging
+                ]).draw(false);
             }
 
         } else {
@@ -91,9 +99,7 @@
                     }
                 }
                 if(targetTable) {
-                    const rowData = targetTable.row(row).data();
-                    rowData[1] = data.value; // Update value
-                    targetTable.row(row).data(rowData).draw();
+                    targetTable.cell(`#${data.name}`,1).data(data.value);
                 }
             }
         }
