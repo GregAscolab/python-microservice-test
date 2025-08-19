@@ -6,19 +6,23 @@
     }).addTo(map);
     var geoJSONLayer = L.geoJSON().addTo(map);
 
-    // Note: The original file did not initialize these tables.
-    // Assuming they are simple DataTables like in other pages.
     var pressureTable = $('#pressureTable').DataTable({
         "paging": false,
         "searching": false,
         "info": false,
-        "order": []
+        "order": [],
+        "createdRow": function(row, data, dataIndex) {
+            $(row).attr('id', data[0]); // Set row id to the sensor name
+        }
     });
     var angleTable = $('#angleTable').DataTable({
         "paging": false,
         "searching": false,
         "info": false,
-        "order": []
+        "order": [],
+        "createdRow": function(row, data, dataIndex) {
+            $(row).attr('id', data[0]); // Set row id to the sensor name
+        }
     });
 
 
@@ -70,8 +74,7 @@
                     data.name,
                     data.value,
                     unit
-                ]).node().id = data.name; // Add ID to the <tr>
-                targetTable.draw();
+                ]).draw(false); // Draw without resetting paging
             }
 
         } else {
