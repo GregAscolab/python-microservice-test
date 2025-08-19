@@ -61,6 +61,7 @@ def get_service(request: Request) -> Microservice:
     return request.app.state.service
 
 # --- HTML Page Routes ---
+@router.get("/{page}", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
