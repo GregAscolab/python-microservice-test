@@ -300,19 +300,102 @@ button:hover {
     height: 100%;
     overflow: auto;
     background-color: rgba(0,0,0,0.5);
-    display: flex;
+    /* Changed to flex for centering */
     align-items: center;
     justify-content: center;
 }
+
 .modal-content {
     background-color: #fefefe;
+    margin: auto; /* Margin is handled by flexbox centering */
     padding: 20px;
     border: 1px solid #888;
     width: 80%;
     max-width: 500px;
     border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
-/* Other modal styles */
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.modal-header h2 {
+    margin: 0;
+}
+
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: black;
+}
+
+.modal-body {
+    padding: 15px 0;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+    gap: 10px;
+}
+
+.modal-footer .button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+}
+
+.modal.danger-theme .modal-content {
+    border-top: 5px solid #dc3545;
+}
+.modal.danger-theme .modal-header h2 {
+    color: #dc3545;
+}
+.warning-icon {
+    font-size: 24px;
+    margin-right: 10px;
+}
+button.danger {
+    background-color: #dc3545;
+    color: white;
+}
+button.danger:hover {
+    background-color: #c82333;
+}
+
+.log-viewer {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Courier New', Courier, monospace;
+    padding: 10px;
+    height: 400px;
+    overflow-y: scroll;
+    border-radius: 4px;
+    white-space: pre-wrap;
+}
+
+body.modal-open {
+    overflow: hidden;
+}
+
+.log-modal-content {
+    max-width: 90vw;
+    margin: 5vh auto;
+}
 
 /* --- Settings Page Tabs --- */
 .tabs {
