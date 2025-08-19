@@ -24,10 +24,10 @@ $(document).ready(function() {
         const pageName = getPageName(path);
         const $page = $(`#page-${pageName}`);
         if ($page.length) {
-            $page.show();
+            $page.css( "display", "flex" );
         } else {
             // If page not found, maybe show a default or a 404 div
-            $('#page-dashboard').show(); // Default to dashboard
+            $('#page-dashboard').css( "display", "flex" ); // Default to dashboard
         }
 
         // 4. Load the corresponding script for the new page

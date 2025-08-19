@@ -69,7 +69,6 @@
                         <tr class="file-row" data-ext="${item.name.split('.').pop()}">
                             <td class="file-link" data-path="${path}" data-file="${item.name}">${item.name}</td>
                             <td>${formatFileSize(item.size)}</td>
-                            <td><span class="file-status"></span></td>
                             <td><a href="/download/${b64path}" class="download-btn">⬇️</a></td>
                         </tr>`;
                     fileTableBody.insertAdjacentHTML('beforeend', fileRow);
@@ -183,11 +182,10 @@
             logStatus.innerHTML = data.filename + ' : ' + data.status;
         } else if (data.status === "success") {
             loader.style.display = "none";
-            console.log("data=" + Object.keys(data))
             if (Object.keys(data.data).length > 0) {
                 logStatus.innerHTML = data.filename;
                 displayPlot(data.data);
-                plotlyPanel.style.display = "flex";   
+                plotlyPanel.style.display = "flex";
             }
             else {
                 logStatus.innerHTML = "NO DATA in " + data.filename;

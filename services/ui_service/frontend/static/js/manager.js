@@ -20,11 +20,11 @@
     // --- WebSocket Logic ---
     const socket = ConnectionManager.getSocket('/ws_manager');
 
-    socket.onopen = function(event) {
+    socket.addEventListener('open', function(event) {
         console.log("Manager WebSocket connection established.");
         // Request initial status on connection
         sendCommand('get_status', {});
-    };
+    });
 
     socket.onmessage = function(event) {
         const services = JSON.parse(event.data);
