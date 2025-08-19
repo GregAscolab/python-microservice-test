@@ -42,12 +42,18 @@ class ConnectionManager:
 
     def disconnect(self, websocket: WebSocket, channel: str):
         if channel in self.active_connections:
-            self.active_connections[channel].remove(websocket)
+            try:
+                self.active_connections[channel].remove(websocket)
+            except ValueError:
+                pass
 
     async def broadcast(self, message: str, channel: str):
         if channel in self.active_connections:
             for connection in self.active_connections[channel]:
-                await connection.send_text(message)
+                try:
+                    await connection.send_text(message)
+                except WebSocketDisconnect:
+                    self.disconnect(connection, channel)
 
 manager = ConnectionManager()
 
