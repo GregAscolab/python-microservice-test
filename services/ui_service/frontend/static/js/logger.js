@@ -115,7 +115,38 @@
     }
 
     function displayPlot(data) {
-        // This function remains the same as before
+        const plotsContainer = document.getElementById('plotly-panel');
+        plotsContainer.innerHTML = '';
+        const plots = {};
+
+        data.forEach((series) => {
+            let [prefix, part, sig] = series.name.split('_');
+            if (!sig) { sig = "Others"; }
+            if (!plots[sig]) {
+                plots[sig] = { traces: [], title: sig, idx: 1 };
+            }
+            const trace = {
+                x: series.timestamps, y: series.values, type: 'scatter', mode: 'lines',
+                name: series.name, yaxis: 'y' + plots[sig].idx
+            };
+            plots[sig].idx++;
+            plots[sig].traces.push(trace);
+        });
+
+        Object.keys(plots).forEach((sig) => {
+            const plotDiv = document.createElement('div');
+            plotDiv.className = 'plotly-log-graph';
+            plotsContainer.appendChild(plotDiv);
+            const layout = {
+                title: { text: plots[sig].title },
+                autosize: true, automargin: true,
+                xaxis: { rangeslider: { visible: false }, type: 'date', hovermode:'closest', showspikes : true, spikemode  : 'across', spikesnap : 'cursor', spikethickness:1, showline:true, showgrid:true },
+                yaxis: { fixedrange: false },
+                grid: { rows: plots[sig].traces.length, columns: 1 },
+                showlegend : true, hovermode  : 'x'
+            };
+            Plotly.react(plotDiv, plots[sig].traces, layout, {responsive: true});
+        });
     }
 
     // --- Event Listeners ---
