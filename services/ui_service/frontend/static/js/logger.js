@@ -185,7 +185,7 @@
             if (Object.keys(data.data).length > 0) {
                 logStatus.innerHTML = data.filename;
                 displayPlot(data.data);
-                plotlyPanel.style.display = "flex";   
+                plotlyPanel.style.display = "flex";
             }
             else {
                 logStatus.innerHTML = "NO DATA in " + data.filename;
