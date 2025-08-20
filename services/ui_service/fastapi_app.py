@@ -93,13 +93,6 @@ async def read_manager(request: Request):
     """Serves the manager page."""
     return templates.TemplateResponse("manager.html", {"request": request})
 
-@router.get("/{page}", response_class=HTMLResponse)
-async def read_page(request: Request, page: str):
-    try:
-        return templates.TemplateResponse(f"{page}.html", {"request": request})
-    except JinjaExceptions.TemplateNotFound:
-        return HTMLResponse("Page not found", status_code=404)
-
 # --- WebSocket Endpoints ---
 
 @router.websocket("/ws_data")
@@ -363,3 +356,11 @@ async def convert_file(file_content: FileToConvert, request: Request):
     except Exception as e:
         service.logger.error(f"Error queueing file conversion: {e}", exc_info=True)
         return {"status": "error", "message": "Failed to queue conversion"}
+
+
+@router.get("/{page}", response_class=HTMLResponse)
+async def read_page(request: Request, page: str):
+    try:
+        return templates.TemplateResponse(f"{page}.html", {"request": request})
+    except JinjaExceptions.TemplateNotFound:
+        return HTMLResponse("Page not found", status_code=404)
