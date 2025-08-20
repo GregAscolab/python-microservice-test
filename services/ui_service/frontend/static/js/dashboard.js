@@ -28,12 +28,13 @@
     });
 
     // Period refresh of the display, based on value received and store in cache
-    // const intervalID = setInterval(function() {
-    //         angleTable.draw(false);
-    //         pressureTable.draw(false);
-    // }, 200);
-
-
+    const intervalID = setInterval(function () {
+        nameCache.forEach(function (dataValue, dataName, map) {
+            const cell = $(`#${dataName}_val`);
+            cell.text(dataValue);
+        });
+    }, 200);
+            
     // --- WebSocket for GPS Data ---
     const ws_gps = ConnectionManager.getSocket('/ws_gps');
     ws_gps.onmessage = function(event) {
@@ -78,30 +79,18 @@
             }
 
             if (targetTable) {
-                 targetTable.row.add([
+                 var rowNode = targetTable.row.add([
                     data.name,
                     data.value,
                     unit
-                ]).draw(false);
+                ]).draw(false).node();
+
+                $(rowNode).find("td:eq(1)").attr('id', data.name+'_val');
             }
 
         } else {
             // Update existing row
             nameCache.set(data.name, data.value);
-            const row = $(`#${data.name}`);
-            if (row.length) {
-                // Find the correct table to update its data
-                 let targetTable;
-                 for (let [key, value] of suffToTypeMap) {
-                    if (data.name.includes(key)) {
-                        targetTable = (value === 'pressure') ? pressureTable : angleTable;
-                        break;
-                    }
-                }
-                if(targetTable) {
-                    targetTable.cell(`#${data.name}`,1).data(data.value);
-                }
-            }
         }
     };
 
