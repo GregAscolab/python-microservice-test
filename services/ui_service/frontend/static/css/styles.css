@@ -164,9 +164,9 @@ button:hover {
     flex: 1 0 0;
     display: flex;
     flex-direction: column;
-    min-width: 50px; /* Fix for flexbox overflow issue */
+    min-width: 0px; /* Fix for flexbox overflow issue */
 }
-#dashboard-map { flex: 2 0 0; } /* Make dashboard map wider */
+#dashboard-map { flex: 1 0 0; } /* Make dashboard map wider */
 
 #dashboard-data {
     flex: 1 0 0;
