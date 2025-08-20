@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
             startTime.textContent = 'N/A';
             startPosition.textContent = 'N/A';
             // Refresh file list
-            window.location.reload();
+            // window.location.reload();
         }
     };
 
