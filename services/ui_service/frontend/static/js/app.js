@@ -9,36 +9,27 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// Make currentPage globally accessible for page-specific scripts
+// --- Global Page State ---
 let currentPage = {
     name: null,
-    cleanup: function() {}
+    path: null
 };
 
+// --- Helper Functions ---
 function getPageName(path) {
-    return path.substring(1);
-}
-
-function loadScript(src) {
-    return new Promise(function (resolve, reject) {
-        // Check if script already exists
-        if (document.querySelector(`script[src="${src}"]`)) {
-            resolve();
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error(`Script load error for ${src}`));
-        document.head.appendChild(script);
-    });
+    // Converts '/dashboard' -> 'Dashboard'
+    const name = path.substring(1);
+    return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 function showPage(path) {
-    // 1. Run cleanup for the previous page
-    if (typeof currentPage.cleanup === 'function') {
-        console.log(`Cleaning up page: ${currentPage.name}`);
-        currentPage.cleanup();
+    // 1. Run cleanup for the previous page if it exists
+    if (currentPage.name) {
+        const cleanupFunctionName = `cleanup${currentPage.name}Page`;
+        if (typeof window[cleanupFunctionName] === 'function') {
+            console.log(`Cleaning up page: ${currentPage.name}`);
+            window[cleanupFunctionName]();
+        }
     }
 
     // 2. Hide all page content divs
@@ -47,36 +38,35 @@ function showPage(path) {
     });
 
     // 3. Show the requested page content div
-    const pageName = getPageName(path);
-    const pageDiv = document.getElementById(`page-${pageName}`);
+    const pageIdName = getPageName(path).toLowerCase();
+    const pageDiv = document.getElementById(`page-${pageIdName}`);
     if (pageDiv) {
         pageDiv.style.display = 'flex';
     } else {
         document.getElementById('page-dashboard').style.display = 'flex'; // Default to dashboard
     }
 
-    // 4. Load the corresponding script for the new page
-    currentPage.name = pageName;
-    currentPage.cleanup = function() {}; // Reset cleanup
-
-    if (pageName) {
-         loadScript(`/static/js/${pageName}.js`)
-            .then(() => {
-                console.log(`Script for ${pageName} loaded successfully.`);
-            })
-            .catch(error => {
-                console.error(error);
-            });
+    // 4. Call the init function for the new page
+    const newPageName = getPageName(path);
+    const initFunctionName = `init${newPageName}Page`;
+    if (typeof window[initFunctionName] === 'function') {
+        console.log(`Initializing page: ${newPageName}`);
+        window[initFunctionName]();
     }
+
+    // 5. Update global state
+    currentPage.name = newPageName;
+    currentPage.path = path;
 }
 
+// --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Handle navigation clicks ---
+    // Handle navigation clicks
     document.querySelectorAll('.sidebar a').forEach(link => {
         link.addEventListener('click', e => {
             e.preventDefault();
             const path = link.getAttribute('href');
-            if (path === window.location.pathname) return;
+            if (path === currentPage.path) return;
 
             history.pushState({path: path}, '', path);
             showPage(path);
@@ -86,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- Handle browser back/forward buttons ---
+    // Handle browser back/forward buttons
     window.addEventListener('popstate', event => {
         if (event.state && event.state.path) {
             const path = event.state.path;
@@ -96,15 +86,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Initial page load ---
+    // Initial page load
     const initialPath = window.location.pathname === '/' ? '/dashboard' : window.location.pathname;
     showPage(initialPath);
     document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
-    document.querySelector(`.sidebar a[href="${initialPath}"]`).classList.add('active');
+    const activeLink = document.querySelector(`.sidebar a[href="${initialPath}"]`);
+    if(activeLink) activeLink.classList.add('active');
     history.replaceState({path: initialPath}, '', initialPath);
 });
 
-// --- UI handler for connection status ---
+// Handle connection status changes
 document.addEventListener('connectionStatusChange', event => {
     const statusDiv = document.getElementById('connection-status');
     if (event.detail.isOnline) {

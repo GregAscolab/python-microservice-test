@@ -1,15 +1,26 @@
-(function() {
-    let settings = {};
+// --- Settings Page ---
+(function(window) {
+    let ws;
     let activeTab = null;
+    let settings = {};
+    let tabButtonsContainer;
+    let tabContentContainer;
 
-    const tabButtonsContainer = document.querySelector('#page-settings .tab-buttons');
-    const tabContentContainer = document.querySelector('#page-settings .tab-content');
+    function initSettingsPage() {
+        console.log("Initializing Settings page...");
 
-    // --- WebSocket Connection ---
-    const ws = ConnectionManager.getSocket('/ws_settings');
+        tabButtonsContainer = document.querySelector('#page-settings .tab-buttons');
+        tabContentContainer = document.querySelector('#page-settings .tab-content');
 
-    // --- Handle WebSocket messages ---
-    ws.onmessage = function(event) {
+        if (!tabButtonsContainer || !tabContentContainer) return;
+
+        ws = ConnectionManager.getSocket('/ws_settings');
+        ws.onmessage = onSocketMessage;
+
+        tabButtonsContainer.addEventListener('click', onTabClick);
+    }
+
+    function onSocketMessage(event) {
         try {
             const data = JSON.parse(event.data);
             if (data.settings) {
@@ -21,16 +32,42 @@
         } catch (error) {
             console.error("Error parsing WebSocket message:", error);
         }
-    };
+    }
 
-    // --- Helper functions ---
+    function onTabClick(e) {
+        if (e.target.classList.contains('tab-button')) {
+            const groupName = e.target.dataset.group;
+            activeTab = groupName;
+
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.style.display = 'none');
+
+            e.target.classList.add('active');
+            document.getElementById(`tab-${groupName}`).style.display = 'block';
+        }
+    }
+
+    function onSettingChange(e) {
+        const input = e.target;
+        const settingName = input.id;
+        const newValue = input.value;
+        const groupName = input.closest('.tab-pane').id.replace('tab-', '');
+
+        const updateData = {
+            [settingName]: {
+                group: groupName,
+                key: settingName,
+                value: newValue
+            }
+        };
+        ws.send(JSON.stringify(updateData));
+    }
+
     function updateSettings(data) {
         Object.keys(data).forEach(settingName => {
             const settingData = data[settingName];
-            const groupName = settingData.group;
-
-            if (settings[groupName] && settings[groupName][settingName] !== undefined) {
-                settings[groupName][settingName] = settingData.value;
+            if (settings[settingData.group] && settings[settingData.group][settingName] !== undefined) {
+                settings[settingData.group][settingName] = settingData.value;
                 const inputField = document.getElementById(settingName);
                 if (inputField) {
                     inputField.value = settingData.value;
@@ -54,14 +91,17 @@
             const isActive = activeTab === groupName;
 
             const tabButton = document.createElement('button');
-            tabButton.className = `tab-button ${isActive ? 'active' : ''}`;
+            tabButton.className = 'tab-button';
+            if(isActive) tabButton.classList.add('active');
             tabButton.textContent = groupName;
             tabButton.dataset.group = groupName;
             tabButtonsContainer.appendChild(tabButton);
 
             const tabContent = document.createElement('div');
-            tabContent.className = `tab-pane ${isActive ? 'active' : ''}`;
+            tabContent.className = 'tab-pane';
+            if(isActive) tabContent.classList.add('active');
             tabContent.id = `tab-${groupName}`;
+            tabContent.style.display = isActive ? 'block' : 'none';
 
             Object.keys(group).forEach(settingName => {
                 const settingValue = group[settingName];
@@ -76,18 +116,7 @@
                 input.type = 'text';
                 input.id = settingName;
                 input.value = settingValue;
-
-                input.addEventListener('change', () => {
-                    const newValue = input.value;
-                    const updateData = {
-                        [settingName]: {
-                            group: groupName,
-                            key: settingName,
-                            value: newValue
-                        }
-                    };
-                    ws.send(JSON.stringify(updateData));
-                });
+                input.addEventListener('change', onSettingChange);
 
                 fieldDiv.appendChild(label);
                 fieldDiv.appendChild(input);
@@ -97,25 +126,17 @@
         });
     }
 
-    // --- Event Delegation for Tab Clicks ---
-    tabButtonsContainer.addEventListener('click', e => {
-        if (e.target.classList.contains('tab-button')) {
-            const groupName = e.target.dataset.group;
-            activeTab = groupName;
-
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-
-            e.target.classList.add('active');
-            document.getElementById(`tab-${groupName}`).classList.add('active');
-        }
-    });
-
-    // --- Page Cleanup ---
-    currentPage.cleanup = function() {
+    function cleanupSettingsPage() {
         console.log("Cleaning up Settings page...");
         ConnectionManager.closeSocket('/ws_settings');
-        console.log("Settings page cleanup complete.");
-    };
+        if (tabButtonsContainer) {
+            tabButtonsContainer.removeEventListener('click', onTabClick);
+        }
+        // Input event listeners are attached to elements that get destroyed,
+        // so we don't need to remove them manually.
+    }
 
-})();
+    window.initSettingsPage = initSettingsPage;
+    window.cleanupSettingsPage = cleanupSettingsPage;
+
+})(window);
