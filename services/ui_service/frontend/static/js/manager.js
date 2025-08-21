@@ -1,46 +1,70 @@
 (function() {
-    // --- DOM Elements ---
-    const statusGrid = document.getElementById('status-grid');
-    const stopAllBtn = document.getElementById('stop-all-btn');
-    const restartAllBtn = document.getElementById('restart-all-btn');
+    let isInitialized = false;
+    let socket;
+    let statusGrid, stopAllBtn, restartAllBtn, stopAllModal, closeModalBtn, cancelStopAllBtn, confirmStopAllBtn;
+    let logModal, logServiceName, logContent, closeLogModalBtn, logInterval;
 
-    // --- Modal Elements ---
-    const stopAllModal = document.getElementById('stop-all-modal');
-    const closeModalBtn = document.getElementById('close-modal-btn');
-    const cancelStopAllBtn = document.getElementById('cancel-stop-all-btn');
-    const confirmStopAllBtn = document.getElementById('confirm-stop-all-btn');
+    function initManagerPage() {
+        if (isInitialized) return;
+        console.log("Initializing Manager page...");
 
-    // --- Log Viewer Elements ---
-    const logModal = document.getElementById('log-modal');
-    const logServiceName = document.getElementById('log-service-name');
-    const logContent = document.getElementById('log-content');
-    const closeLogModalBtn = document.getElementById('close-log-modal-btn');
-    let logInterval;
+        // --- DOM Elements ---
+        statusGrid = document.getElementById('status-grid');
+        stopAllBtn = document.getElementById('stop-all-btn');
+        restartAllBtn = document.getElementById('restart-all-btn');
 
-    // --- WebSocket Logic ---
-    const socket = ConnectionManager.getSocket('/ws_manager');
+        // --- Modal Elements ---
+        stopAllModal = document.getElementById('stop-all-modal');
+        closeModalBtn = document.getElementById('close-modal-btn');
+        cancelStopAllBtn = document.getElementById('cancel-stop-all-btn');
+        confirmStopAllBtn = document.getElementById('confirm-stop-all-btn');
 
-    socket.addEventListener('open', function(event) {
+        // --- Log Viewer Elements ---
+        logModal = document.getElementById('log-modal');
+        logServiceName = document.getElementById('log-service-name');
+        logContent = document.getElementById('log-content');
+        closeLogModalBtn = document.getElementById('close-log-modal-btn');
+
+        // --- Event Listeners ---
+        restartAllBtn.addEventListener('click', () => sendCommand('restart_all'));
+        stopAllBtn.addEventListener('click', () => {
+            stopAllModal.style.display = 'block';
+            document.body.classList.add('modal-open');
+        });
+        closeModalBtn.addEventListener('click', closeStopAllModal);
+        cancelStopAllBtn.addEventListener('click', closeStopAllModal);
+        confirmStopAllBtn.addEventListener('click', () => {
+            sendCommand('stop_all');
+            closeStopAllModal();
+        });
+        closeLogModalBtn.addEventListener('click', closeLogModal);
+        window.addEventListener('click', outsideClickListener);
+
+        isInitialized = true;
+        console.log("Manager page initialization complete.");
+    }
+
+    function onWsOpen(event) {
         console.log("Manager WebSocket connection established.");
+        initManagerPage();
         // Request initial status on connection
         sendCommand('get_status', {});
-    });
+    }
 
-    socket.onmessage = function(event) {
+    function onWsMessage(event) {
         const services = JSON.parse(event.data);
         updateStatusGrid(services);
-    };
+    }
 
     function sendCommand(command, payload = {}) {
         const message = { command, ...payload };
-        if (socket.readyState === WebSocket.OPEN) {
+        if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify(message));
         } else {
             console.error("Manager WebSocket is not open. Cannot send command.");
         }
     }
 
-    // --- UI Rendering ---
     function getStatusClass(status) {
         switch (status) {
             case 'running': return 'status-running';
@@ -54,6 +78,7 @@
     }
 
     function updateStatusGrid(services) {
+        if (!statusGrid) return;
         statusGrid.innerHTML = '';
         if (!services || services.length === 0) {
             statusGrid.innerHTML = '<p>No services found or status not yet available.</p>';
@@ -78,7 +103,6 @@
                     <button class="logs-btn">Logs</button>
                 </div>
             `;
-            // Add event listeners directly to the buttons
             card.querySelector('.start-btn').addEventListener('click', () => sendCommand('start_service', { service_name: service.name }));
             card.querySelector('.stop-btn').addEventListener('click', () => sendCommand('stop_service', { service_name: service.name }));
             card.querySelector('.restart-btn').addEventListener('click', () => sendCommand('restart_service', { service_name: service.name }));
@@ -88,27 +112,11 @@
         });
     }
 
-    // --- Event Listeners ---
-    restartAllBtn.addEventListener('click', () => sendCommand('restart_all'));
-    stopAllBtn.addEventListener('click', () => {
-        stopAllModal.style.display = 'block';
-        document.body.classList.add('modal-open');
-    });
-
-    // --- Modal Logic ---
     function closeStopAllModal() {
         stopAllModal.style.display = 'none';
         document.body.classList.remove('modal-open');
     }
 
-    closeModalBtn.addEventListener('click', closeStopAllModal);
-    cancelStopAllBtn.addEventListener('click', closeStopAllModal);
-    confirmStopAllBtn.addEventListener('click', () => {
-        sendCommand('stop_all');
-        closeStopAllModal();
-    });
-
-    // --- Log Viewer Logic ---
     function openLogModal(serviceName) {
         logServiceName.textContent = serviceName;
         logContent.textContent = 'Loading logs...';
@@ -126,25 +134,24 @@
         document.body.classList.remove('modal-open');
     }
 
-    closeLogModalBtn.addEventListener('click', closeLogModal);
-
     async function fetchLogContent(serviceName) {
         try {
             const response = await fetch(`/api/logs/${serviceName}`);
             if (!response.ok) {
-                logContent.textContent = `Error fetching logs: ${response.statusText}`;
+                if (logContent) logContent.textContent = `Error fetching logs: ${response.statusText}`;
                 return;
             }
             const logs = await response.text();
-            logContent.textContent = logs || 'Log file is empty or does not exist.';
-            logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight;
+            if (logContent) {
+                logContent.textContent = logs || 'Log file is empty or does not exist.';
+                logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight;
+            }
         } catch (error) {
             console.error('Error fetching logs:', error);
-            logContent.textContent = 'Could not connect to server to fetch logs.';
+            if (logContent) logContent.textContent = 'Could not connect to server to fetch logs.';
         }
     }
 
-    // Close modal if clicking outside of it
     const outsideClickListener = function(event) {
         if (event.target == stopAllModal) {
             closeStopAllModal();
@@ -153,7 +160,9 @@
             closeLogModal();
         }
     };
-    window.addEventListener('click', outsideClickListener);
+
+    // --- WebSocket Connection ---
+    socket = ConnectionManager.getSocket('/ws_manager', onWsOpen, onWsMessage);
 
     // --- Page Cleanup ---
     currentPage.cleanup = function() {
@@ -161,6 +170,16 @@
         ConnectionManager.closeSocket('/ws_manager');
         if (logInterval) clearInterval(logInterval);
         window.removeEventListener('click', outsideClickListener);
+
+        // Remove other event listeners to prevent memory leaks
+        if (restartAllBtn) restartAllBtn.removeEventListener('click', () => sendCommand('restart_all'));
+        if (stopAllBtn) stopAllBtn.removeEventListener('click', () => { stopAllModal.style.display = 'block'; });
+        if (closeModalBtn) closeModalBtn.removeEventListener('click', closeStopAllModal);
+        if (cancelStopAllBtn) cancelStopAllBtn.removeEventListener('click', closeStopAllModal);
+        if (confirmStopAllBtn) confirmStopAllBtn.removeEventListener('click', () => { sendCommand('stop_all'); closeStopAllModal(); });
+        if (closeLogModalBtn) closeLogModalBtn.removeEventListener('click', closeLogModal);
+
+        isInitialized = false;
         console.log("Manager page cleanup complete.");
     };
 

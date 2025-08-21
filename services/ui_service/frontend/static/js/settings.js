@@ -1,12 +1,25 @@
 (function() {
     let settings = {};
     let activeTab = null;
+    let isInitialized = false;
+    let ws;
 
-    // --- WebSocket Connection ---
-    const ws = ConnectionManager.getSocket('/ws_settings');
+    function initSettingsPage() {
+        if (isInitialized) {
+            return;
+        }
+        console.log("Initializing Settings page...");
+        isInitialized = true;
+        // The rest of the initialization is driven by websocket messages
+    }
 
-    // --- Handle WebSocket messages ---
-    ws.onmessage = function(event) {
+    function onWsOpen() {
+        console.log("Settings WebSocket opened.");
+        initSettingsPage();
+        // Maybe request settings on open? For now, we wait for the server to send them.
+    }
+
+    function onWsMessage(event) {
         try {
             const data = JSON.parse(event.data);
             console.log("Received settings data:", data);
@@ -20,7 +33,10 @@
         } catch (error) {
             console.error("Error parsing WebSocket message:", error);
         }
-    };
+    }
+
+    // --- WebSocket Connection ---
+    ws = ConnectionManager.getSocket('/ws_settings', onWsOpen, onWsMessage);
 
     // --- Helper functions ---
     function updateSettings(data) {
@@ -101,6 +117,9 @@
     currentPage.cleanup = function() {
         console.log("Cleaning up Settings page...");
         ConnectionManager.closeSocket('/ws_settings');
+        isInitialized = false;
+        activeTab = null;
+        settings = {};
         console.log("Settings page cleanup complete.");
     };
 

@@ -1,36 +1,52 @@
 // This script is loaded dynamically by app.js when the gps page is loaded
 (function() {
-    // --- Leaflet Map Initialization ---
-    var map = L.map('map-gps').setView([45.525, 4.924], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-    var marker = L.marker([45.525, 4.924]).addTo(map);
+    let map, gpsTable, skyviewDiv, marker, layout;
+    let isInitialized = false;
 
-    // --- DataTable Initialization ---
-    var gpsTable = $('#gpsDataTable').DataTable({
-        "paging": false,
-        "searching": false,
-        "info": false,
-        "order": []
-    });
+    function initGpsPage() {
+        if (isInitialized) {
+            console.log("GPS page already initialized. Skipping re-initialization.");
+            return;
+        }
+        console.log("Initializing GPS page...");
 
-    // --- Plotly Skyview Initialization ---
-    const skyviewDiv = document.getElementById('skyviewChart');
-    const layout = {
-        polar: {
-            radialaxis: { tickfont: { size: 8 }, angle: 90, tickangle: 90, range: [90, 0] },
-            angularaxis: { tickfont: { size: 10 }, rotation: 90, direction: "clockwise" }
-        },
-        showlegend: false,
-        margin: { l: 40, r: 40, t: 40, b: 40 }
-    };
-    Plotly.newPlot(skyviewDiv, [], layout);
+        // --- Leaflet Map Initialization ---
+        map = L.map('map-gps').setView([45.525, 4.924], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        marker = L.marker([45.525, 4.924]).addTo(map);
 
-    // --- WebSocket Connection via ConnectionManager ---
-    const ws_gps = ConnectionManager.getSocket('/ws_gps');
+        // --- DataTable Initialization ---
+        gpsTable = $('#gpsDataTable').DataTable({
+            "paging": false,
+            "searching": false,
+            "info": false,
+            "order": []
+        });
 
-    ws_gps.onmessage = function(event) {
+        // --- Plotly Skyview Initialization ---
+        skyviewDiv = document.getElementById('skyviewChart');
+        layout = {
+            polar: {
+                radialaxis: { tickfont: { size: 8 }, angle: 90, tickangle: 90, range: [90, 0] },
+                angularaxis: { tickfont: { size: 10 }, rotation: 90, direction: "clockwise" }
+            },
+            showlegend: false,
+            margin: { l: 40, r: 40, t: 40, b: 40 }
+        };
+        Plotly.newPlot(skyviewDiv, [], layout);
+
+        isInitialized = true;
+        console.log("GPS page initialization complete.");
+    }
+
+    function onWsOpen() {
+        console.log("GPS WebSocket opened.");
+        initGpsPage();
+    }
+
+    function onWsMessage(event) {
         const data = JSON.parse(event.data);
         if (data && data.geometry && data.geometry.type === 'Point') {
             // Update Leaflet Map
@@ -47,7 +63,10 @@
                 updateSkyviewChart(data.properties.SV);
             }
         }
-    };
+    }
+
+    // --- WebSocket Connection via ConnectionManager ---
+    ConnectionManager.getSocket('/ws_gps', onWsOpen, onWsMessage);
 
     // --- Helper Functions ---
     function updateGpsTable(properties) {
@@ -125,6 +144,7 @@
         if (map) {
             map.remove();
         }
+        isInitialized = false; // Reset for next time page is loaded
         console.log("GPS page cleanup complete.");
     };
 })();

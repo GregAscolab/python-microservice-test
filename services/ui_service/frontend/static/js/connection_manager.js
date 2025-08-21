@@ -4,21 +4,40 @@ const ConnectionManager = {
     reconnectInterval: 1000, // Initial reconnect interval
     maxReconnectInterval: 30000, // Max reconnect interval
 
-    getSocket: function(path) {
+    getSocket: function(path, onOpenCallback, onMessageCallback) {
         const url = `ws://${window.location.host}${path}`;
-        if (!this.sockets[url]) {
-            this.sockets[url] = this.createSocket(url, path);
+        let socketWrapper = this.sockets[url];
+
+        if (!socketWrapper) {
+            socketWrapper = this.createSocket(url, path, onOpenCallback, onMessageCallback);
+            this.sockets[url] = socketWrapper;
+        } else {
+            console.log(`Attaching new callbacks to existing socket for ${path}`);
+            socketWrapper.onOpenCallback = onOpenCallback;
+            socketWrapper.onMessageCallback = onMessageCallback;
+            socketWrapper.instance.onmessage = socketWrapper.onMessageCallback;
+
+            // If the socket is already open, we need to trigger the 'open' logic
+            // for the new page that is taking it over.
+            if (socketWrapper.instance && socketWrapper.instance.readyState === WebSocket.OPEN) {
+                console.log(`Socket for ${path} is already open. Triggering onOpen callback manually.`);
+                if (socketWrapper.onOpenCallback) {
+                    socketWrapper.onOpenCallback();
+                }
+            }
         }
-        return this.sockets[url].instance;
+        return socketWrapper.instance;
     },
 
-    createSocket: function(url, path) {
+    createSocket: function(url, path, onOpenCallback, onMessageCallback) {
         const socketWrapper = {
             instance: null,
             path: path,
             reconnectTimer: null,
             manualClose: false,
-            attempts: 0
+            attempts: 0,
+            onOpenCallback: onOpenCallback,
+            onMessageCallback: onMessageCallback
         };
 
         const connect = () => {
@@ -26,11 +45,19 @@ const ConnectionManager = {
             const ws = new WebSocket(url);
             socketWrapper.instance = ws;
 
+            // Assign the onmessage handler
+            ws.onmessage = socketWrapper.onMessageCallback;
+
             ws.addEventListener('open', () => {
                 console.log(`WebSocket connected to ${url}`);
                 socketWrapper.attempts = 0; // Reset reconnect attempts
                 this.reconnectInterval = 1000; // Reset reconnect interval
                 this.updateGlobalStatus();
+
+                // Trigger the onOpen callback
+                if (socketWrapper.onOpenCallback) {
+                    socketWrapper.onOpenCallback();
+                }
             });
 
             ws.addEventListener('close', (event) => {
