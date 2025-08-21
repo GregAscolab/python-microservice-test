@@ -5,35 +5,27 @@
 
     function initGpsPage() {
         if (isInitialized) {
-            console.log("GPS page already initialized. Skipping re-initialization.");
             return;
         }
         console.log("Initializing GPS page...");
 
-        // --- Leaflet Map Initialization ---
         map = L.map('map-gps').setView([45.525, 4.924], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
         marker = L.marker([45.525, 4.924]).addTo(map);
 
-        // --- DataTable Initialization ---
         gpsTable = $('#gpsDataTable').DataTable({
-            "paging": false,
-            "searching": false,
-            "info": false,
-            "order": []
+            "paging": false, "searching": false, "info": false, "order": []
         });
 
-        // --- Plotly Skyview Initialization ---
         skyviewDiv = document.getElementById('skyviewChart');
         layout = {
             polar: {
                 radialaxis: { tickfont: { size: 8 }, angle: 90, tickangle: 90, range: [90, 0] },
                 angularaxis: { tickfont: { size: 10 }, rotation: 90, direction: "clockwise" }
             },
-            showlegend: false,
-            margin: { l: 40, r: 40, t: 40, b: 40 }
+            showlegend: false, margin: { l: 40, r: 40, t: 40, b: 40 }
         };
         Plotly.newPlot(skyviewDiv, [], layout);
 
@@ -41,34 +33,29 @@
         console.log("GPS page initialization complete.");
     }
 
-    function onWsOpen() {
-        console.log("GPS WebSocket opened.");
-        initGpsPage();
-    }
-
     function onWsMessage(event) {
+        if (!isInitialized) return;
         const data = JSON.parse(event.data);
         if (data && data.geometry && data.geometry.type === 'Point') {
-            // Update Leaflet Map
             const coords = data.geometry.coordinates;
             const latLng = [coords[1], coords[0]];
             marker.setLatLng(latLng);
             map.setView(latLng, map.getZoom());
-
-            // Update Data Table
             updateGpsTable(data.properties);
-
-            // Update Skyview Chart
             if (data.properties && data.properties.SV) {
                 updateSkyviewChart(data.properties.SV);
             }
         }
     }
 
-    // --- WebSocket Connection via ConnectionManager ---
-    ConnectionManager.getSocket('/ws_gps', onWsOpen, onWsMessage);
+    function onSocketReconnected(event, data) {
+        if (data.path === '/ws_gps') {
+            console.log("GPS page detected a reconnection for its socket. Data flow should resume.");
+            // For a simple data stream like GPS, we might not need to do anything else.
+            // If we needed to request initial data, we would do it here.
+        }
+    }
 
-    // --- Helper Functions ---
     function updateGpsTable(properties) {
         gpsTable.clear();
         const flattenObject = (obj, prefix = '') => {
@@ -85,7 +72,6 @@
             }
             return result;
         };
-
         const flatProps = flattenObject(properties);
         for (const [key, value] of Object.entries(flatProps)) {
             let displayValue = value;
@@ -115,36 +101,27 @@
             mode: 'markers+text',
             text: satellites.map(s => s.SV_Id),
             textposition: 'top center',
-            marker: {
-                color: satellites.map(s => getSnrColor(s.SV_SNR)),
-                size: 15,
-                symbol: 'circle'
-            },
+            marker: { color: satellites.map(s => getSnrColor(s.SV_SNR)), size: 15, symbol: 'circle' },
             hovertemplate: "r=%{r} t=%{theta} snr=%{customdata}",
             type: 'scatterpolar'
         };
         Plotly.react(skyviewDiv, [trace], layout);
     }
 
+    // --- Main Execution ---
+    initGpsPage();
+    ConnectionManager.getSocket('/ws_gps', onWsMessage);
+    $(document).on('socketReconnected.gps', onSocketReconnected);
+
     // --- Page Cleanup ---
-    //currentPage is a global defined in app.js
     currentPage.cleanup = function() {
         console.log("Cleaning up GPS page...");
-        // Close the WebSocket connection for this page
         ConnectionManager.closeSocket('/ws_gps');
-        // Destroy the DataTable instance to prevent memory leaks
-        if (gpsTable) {
-            gpsTable.destroy();
-        }
-        // Clean up Plotly chart
-        if (skyviewDiv) {
-            Plotly.purge(skyviewDiv);
-        }
-        // Clean up Leaflet map
-        if (map) {
-            map.remove();
-        }
-        isInitialized = false; // Reset for next time page is loaded
+        $(document).off('socketReconnected.gps');
+        if (gpsTable) gpsTable.destroy();
+        if (skyviewDiv) Plotly.purge(skyviewDiv);
+        if (map) map.remove();
+        isInitialized = false;
         console.log("GPS page cleanup complete.");
     };
 })();

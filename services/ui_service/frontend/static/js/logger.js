@@ -9,7 +9,6 @@
         if (isInitialized) return;
         console.log("Initializing Logger page...");
 
-        // --- DOM Elements ---
         toggleRecordingButton = document.getElementById('toggleRecording-logger');
         recorderSpin = document.getElementById('recorderSpin-logger');
         plotlyPanel = document.getElementById('plotly-panel');
@@ -18,29 +17,17 @@
         fileTableBody = document.querySelector('#filenameTable tbody');
         currentPathHeader = document.getElementById('logger-current-path');
 
-        // --- Event Listeners ---
         toggleRecordingButton.addEventListener('click', handleToggleRecording);
         fileTableBody.addEventListener('click', handleFileTableClick);
 
-        // --- Initial Load ---
         fetchAndDisplayFiles("");
 
         isInitialized = true;
         console.log("Logger page initialization complete.");
     }
 
-    // --- WebSocket Callbacks ---
-    function onWsDataOpen() {
-        console.log("Logger Data WebSocket opened.");
-        initLoggerPage();
-    }
-
-    function onWsConvertOpen() {
-        console.log("Logger Convert WebSocket opened.");
-        initLoggerPage();
-    }
-
     function onWsConvertMessage(event) {
+        if (!isInitialized) return;
         const data = JSON.parse(event.data);
         if (data.status === "started") {
             loader.style.display = "flex";
@@ -61,7 +48,12 @@
         }
     }
 
-    // --- Event Handlers ---
+    function onSocketReconnected(event, data) {
+        if (data.path === '/ws_data' || data.path === '/ws_convert') {
+            console.log(`Logger page detected a reconnection for socket: ${data.path}.`);
+        }
+    }
+
     function handleToggleRecording() {
         isRecording = !isRecording;
         const command = isRecording ? 'startRecording' : 'stopRecording';
@@ -77,71 +69,49 @@
 
     function handleFileTableClick(e) {
         if (e.target.classList.contains('dir-link')) {
-            const path = e.target.dataset.path;
-            fetchAndDisplayFiles(path);
+            fetchAndDisplayFiles(e.target.dataset.path);
         }
         if (e.target.classList.contains('file-link')) {
-            const path = e.target.dataset.path;
-            const file = e.target.dataset.file;
-            openFile(file, path);
+            openFile(e.target.dataset.file, e.target.dataset.path);
         }
     }
 
-    // --- Functions ---
     async function fetchAndDisplayFiles(path) {
         currentPath = path;
-        currentPathHeader.textContent = `Contenu du dossier : /${path}`;
+        currentPathHeader.textContent = `Contenu du dossier : /${path || ''}`;
         fileTableBody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-
         try {
             const response = await fetch(`/api/logger/files/${path}`);
             const data = await response.json();
-
             if (data.error) {
                 fileTableBody.innerHTML = `<tr><td colspan="4">Error: ${data.error}</td></tr>`;
                 return;
             }
-
-            fileTableBody.innerHTML = ''; // Clear loading message
-
+            fileTableBody.innerHTML = '';
             if (path) {
                 const parentPath = path.substring(0, path.lastIndexOf('/'));
-                const upRow = `
-                    <tr>
-                        <td class="dir-link" data-path="${parentPath}">..</td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>`;
-                fileTableBody.insertAdjacentHTML('beforeend', upRow);
+                fileTableBody.insertAdjacentHTML('beforeend', `
+                    <tr><td class="dir-link" data-path="${parentPath}">..</td><td></td><td></td><td></td></tr>`);
             }
-
             data.contents.forEach(item => {
+                const itemPath = (path ? path + '/' : '') + item.name;
                 if (item.type === 'dir') {
-                    const dirRow = `
-                        <tr>
-                            <td class="dir-link" data-path="${path ? path + '/' : ''}${item.name}">${item.name}/</td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                        </tr>`;
-                    fileTableBody.insertAdjacentHTML('beforeend', dirRow);
+                    fileTableBody.insertAdjacentHTML('beforeend', `
+                        <tr><td class="dir-link" data-path="${itemPath}">${item.name}/</td><td></td><td></td><td></td></tr>`);
                 }
             });
-
             data.contents.forEach(item => {
+                const itemPath = (path ? path + '/' : '') + item.name;
                 if (item.type === 'file') {
-                    const b64path = btoa((path ? path + '/' : '') + item.name);
-                    const fileRow = `
+                    const b64path = btoa(itemPath);
+                    fileTableBody.insertAdjacentHTML('beforeend', `
                         <tr class="file-row" data-ext="${item.name.split('.').pop()}">
                             <td class="file-link" data-path="${path}" data-file="${item.name}">${item.name}</td>
                             <td>${formatFileSize(item.size)}</td>
                             <td><a href="/download/${b64path}" class="download-btn">⬇️</a></td>
-                        </tr>`;
-                    fileTableBody.insertAdjacentHTML('beforeend', fileRow);
+                        </tr>`);
                 }
             });
-
         } catch (error) {
             console.error("Error fetching file list:", error);
             fileTableBody.innerHTML = `<tr><td colspan="4">Error fetching file list.</td></tr>`;
@@ -161,7 +131,6 @@
         plotlyPanel.innerHTML = '';
         document.querySelectorAll('.file-status').forEach(span => span.textContent = '');
         loader.style.display = "flex";
-
         try {
             const response = await fetch("/convert", {
                 method: 'POST',
@@ -181,13 +150,10 @@
     function displayPlot(data) {
         plotlyPanel.innerHTML = '';
         const plots = {};
-
         data.forEach((series) => {
             let [prefix, part, sig] = series.name.split('_');
             if (!sig) { sig = "Others"; }
-            if (!plots[sig]) {
-                plots[sig] = { traces: [], title: sig, idx: 1 };
-            }
+            if (!plots[sig]) plots[sig] = { traces: [], title: sig, idx: 1 };
             const trace = {
                 x: series.timestamps, y: series.values, type: 'scatter', mode: 'lines',
                 name: series.name, yaxis: 'y' + plots[sig].idx
@@ -195,40 +161,35 @@
             plots[sig].idx++;
             plots[sig].traces.push(trace);
         });
-
         Object.keys(plots).forEach((sig) => {
             const plotDiv = document.createElement('div');
             plotDiv.className = 'plotly-log-graph';
             plotlyPanel.appendChild(plotDiv);
-            const layout = {
+            Plotly.react(plotDiv, plots[sig].traces, {
                 title: { text: plots[sig].title },
                 autosize: true, automargin: true,
                 xaxis: { rangeslider: { visible: false }, type: 'date', hovermode:'closest', showspikes : true, spikemode  : 'across', spikesnap : 'cursor', spikethickness:1, showline:true, showgrid:true },
                 yaxis: { fixedrange: false },
                 grid: { rows: plots[sig].traces.length, columns: 1 },
                 showlegend : true, hovermode  : 'x'
-            };
-            Plotly.react(plotDiv, plots[sig].traces, layout, {responsive: true});
+            }, {responsive: true});
         });
     }
 
-    // --- WebSocket Connections ---
-    dataSocket = ConnectionManager.getSocket('/ws_data', onWsDataOpen, null); // No onmessage for data socket
-    convertSocket = ConnectionManager.getSocket('/ws_convert', onWsConvertOpen, onWsConvertMessage);
+    // --- Main Execution ---
+    initLoggerPage();
+    dataSocket = ConnectionManager.getSocket('/ws_data', null); // No onmessage for data socket
+    convertSocket = ConnectionManager.getSocket('/ws_convert', onWsConvertMessage);
+    $(document).on('socketReconnected.logger', onSocketReconnected);
 
     // --- Page Cleanup ---
     currentPage.cleanup = function() {
         console.log("Cleaning up Logger page...");
         ConnectionManager.closeSocket('/ws_data');
         ConnectionManager.closeSocket('/ws_convert');
-
-        if (toggleRecordingButton) {
-            toggleRecordingButton.removeEventListener('click', handleToggleRecording);
-        }
-        if (fileTableBody) {
-            fileTableBody.removeEventListener('click', handleFileTableClick);
-        }
-
+        $(document).off('socketReconnected.logger');
+        if (toggleRecordingButton) toggleRecordingButton.removeEventListener('click', handleToggleRecording);
+        if (fileTableBody) fileTableBody.removeEventListener('click', handleFileTableClick);
         isInitialized = false;
         isRecording = false;
         currentPath = "";

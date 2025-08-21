@@ -4,39 +4,30 @@ const ConnectionManager = {
     reconnectInterval: 1000, // Initial reconnect interval
     maxReconnectInterval: 30000, // Max reconnect interval
 
-    getSocket: function(path, onOpenCallback, onMessageCallback) {
+    getSocket: function(path, onMessageCallback) {
         const url = `ws://${window.location.host}${path}`;
         let socketWrapper = this.sockets[url];
 
         if (!socketWrapper) {
-            socketWrapper = this.createSocket(url, path, onOpenCallback, onMessageCallback);
+            socketWrapper = this.createSocket(url, path, onMessageCallback);
             this.sockets[url] = socketWrapper;
         } else {
-            console.log(`Attaching new callbacks to existing socket for ${path}`);
-            socketWrapper.onOpenCallback = onOpenCallback;
+            console.log(`Updating onMessage callback for existing socket: ${path}`);
             socketWrapper.onMessageCallback = onMessageCallback;
-            socketWrapper.instance.onmessage = socketWrapper.onMessageCallback;
-
-            // If the socket is already open, we need to trigger the 'open' logic
-            // for the new page that is taking it over.
-            if (socketWrapper.instance && socketWrapper.instance.readyState === WebSocket.OPEN) {
-                console.log(`Socket for ${path} is already open. Triggering onOpen callback manually.`);
-                if (socketWrapper.onOpenCallback) {
-                    socketWrapper.onOpenCallback();
-                }
+            if (socketWrapper.instance) {
+                socketWrapper.instance.onmessage = onMessageCallback;
             }
         }
         return socketWrapper.instance;
     },
 
-    createSocket: function(url, path, onOpenCallback, onMessageCallback) {
+    createSocket: function(url, path, onMessageCallback) {
         const socketWrapper = {
             instance: null,
             path: path,
             reconnectTimer: null,
             manualClose: false,
             attempts: 0,
-            onOpenCallback: onOpenCallback,
             onMessageCallback: onMessageCallback
         };
 
@@ -45,25 +36,23 @@ const ConnectionManager = {
             const ws = new WebSocket(url);
             socketWrapper.instance = ws;
 
-            // Assign the onmessage handler
             ws.onmessage = socketWrapper.onMessageCallback;
 
             ws.addEventListener('open', () => {
                 console.log(`WebSocket connected to ${url}`);
-                socketWrapper.attempts = 0; // Reset reconnect attempts
                 this.reconnectInterval = 1000; // Reset reconnect interval
                 this.updateGlobalStatus();
 
-                // Trigger the onOpen callback
-                if (socketWrapper.onOpenCallback) {
-                    socketWrapper.onOpenCallback();
+                if (socketWrapper.attempts > 0) {
+                    console.log(`Socket for ${path} reconnected. Triggering event.`);
+                    $(document).trigger('socketReconnected', { path: path });
                 }
+                socketWrapper.attempts = 0; // Reset reconnect attempts after checking
             });
 
             ws.addEventListener('close', (event) => {
                 console.log(`WebSocket disconnected from ${url}. Code: ${event.code}`);
                 if (!socketWrapper.manualClose) {
-                    // Reconnect logic
                     socketWrapper.attempts++;
                     const timeout = Math.min(this.maxReconnectInterval, this.reconnectInterval * Math.pow(2, socketWrapper.attempts));
                     console.log(`Will try to reconnect to ${url} in ${timeout} ms`);
@@ -92,8 +81,12 @@ const ConnectionManager = {
                 clearTimeout(socketWrapper.reconnectTimer);
             }
             if (socketWrapper.instance) {
+                // Remove the onmessage handler to prevent any stray messages
+                socketWrapper.instance.onmessage = null;
                 socketWrapper.instance.close();
             }
+            // Clear callbacks to prevent memory leaks
+            socketWrapper.onMessageCallback = null;
             delete this.sockets[url];
             this.updateGlobalStatus();
         }

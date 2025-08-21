@@ -5,18 +5,19 @@
     let ws;
 
     function initSettingsPage() {
-        if (isInitialized) {
-            return;
-        }
+        if (isInitialized) return;
         console.log("Initializing Settings page...");
+        // Request initial settings from server
+        sendCommand({ command: 'get_settings' });
         isInitialized = true;
-        // The rest of the initialization is driven by websocket messages
     }
 
-    function onWsOpen() {
-        console.log("Settings WebSocket opened.");
-        initSettingsPage();
-        // Maybe request settings on open? For now, we wait for the server to send them.
+    function sendCommand(data) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(data));
+        } else {
+            console.error("Settings WebSocket is not open. Cannot send command.");
+        }
     }
 
     function onWsMessage(event) {
@@ -35,10 +36,13 @@
         }
     }
 
-    // --- WebSocket Connection ---
-    ws = ConnectionManager.getSocket('/ws_settings', onWsOpen, onWsMessage);
+    function onSocketReconnected(event, data) {
+        if (data.path === '/ws_settings') {
+            console.log("Settings page detected a reconnection. Re-fetching settings.");
+            sendCommand({ command: 'get_settings' });
+        }
+    }
 
-    // --- Helper functions ---
     function updateSettings(data) {
         console.log('Updating settings with data:', data);
         Object.keys(data).forEach(settingName => {
@@ -47,7 +51,6 @@
 
             if (settings[groupName] && settings[groupName][settingName] !== undefined) {
                 settings[groupName][settingName] = settingData.value;
-                // Update the input field if it's visible
                 const inputField = $(`#${settingName}`);
                 if (inputField.length) {
                     inputField.val(settingData.value);
@@ -59,13 +62,11 @@
     function generateTabs(settingsData) {
         const tabButtonsContainer = $('.tab-buttons');
         const tabContentContainer = $('.tab-content');
-
         tabButtonsContainer.empty();
         tabContentContainer.empty();
 
         if (Object.keys(settingsData).length === 0) return;
 
-        // Set the initial active tab if not already set
         if (activeTab === null || !settingsData[activeTab]) {
             activeTab = Object.keys(settingsData)[0];
         }
@@ -93,18 +94,18 @@
                     const updateData = {
                         [settingName]: {
                             group: groupName,
-                            key: settingName, // Pass the key back
+                            key: settingName,
                             value: newValue
                         }
                     };
-                    ws.send(JSON.stringify(updateData));
+                    sendCommand(updateData);
                 });
                 tabContent.append(inputField);
             });
             tabContentContainer.append(tabContent);
 
             tabButton.on('click', function() {
-                activeTab = groupName; // Store the active tab name
+                activeTab = groupName;
                 $('.tab-button').removeClass('active');
                 $('.tab-pane').removeClass('active');
                 $(this).addClass('active');
@@ -113,14 +114,19 @@
         });
     }
 
+    // --- Main Execution ---
+    initSettingsPage();
+    ws = ConnectionManager.getSocket('/ws_settings', onWsMessage);
+    $(document).on('socketReconnected.settings', onSocketReconnected);
+
     // --- Page Cleanup ---
     currentPage.cleanup = function() {
         console.log("Cleaning up Settings page...");
         ConnectionManager.closeSocket('/ws_settings');
+        $(document).off('socketReconnected.settings');
         isInitialized = false;
         activeTab = null;
         settings = {};
         console.log("Settings page cleanup complete.");
     };
-
 })();

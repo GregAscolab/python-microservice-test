@@ -1,22 +1,13 @@
 (function() {
     let map, geoJSONLayer, pressureTable, angleTable, intervalID;
     let isInitialized = false;
-    const nameCache = new Map(); // Cache to store received names/values
+    const nameCache = new Map();
 
-    const suffToTypeMap = new Map([
-        ["_b", "pressure"],
-        ["_PFAng", "angle"],
-    ]);
-
-    const typeToUnitMap = new Map([
-        ["pressure", "bars"],
-        ["angle", "deg"],
-    ]);
+    const suffToTypeMap = new Map([["_b", "pressure"], ["_PFAng", "angle"]]);
+    const typeToUnitMap = new Map([["pressure", "bars"], ["angle", "deg"]]);
 
     function initDashboardPage() {
-        if (isInitialized) {
-            return;
-        }
+        if (isInitialized) return;
         console.log("Initializing Dashboard page...");
 
         map = L.map('map-dashboard').setView([51.505, -0.09], 13);
@@ -26,25 +17,13 @@
         geoJSONLayer = L.geoJSON().addTo(map);
 
         pressureTable = $('#pressureTable').DataTable({
-            "paging": false,
-            "searching": false,
-            "info": false,
-            "order": [],
-            data: [],
-            "createdRow": function(row, data, dataIndex) {
-                $(row).attr('id', data[0]);
-            }
+            paging: false, searching: false, info: false, order: [], data: [],
+            createdRow: function(row, data) { $(row).attr('id', data[0]); }
         });
 
         angleTable = $('#angleTable').DataTable({
-            "paging": false,
-            "searching": false,
-            "info": false,
-            "order": [],
-            data: [],
-            "createdRow": function(row, data, dataIndex) {
-                $(row).attr('id', data[0]);
-            }
+            paging: false, searching: false, info: false, order: [], data: [],
+            createdRow: function(row, data) { $(row).attr('id', data[0]); }
         });
 
         intervalID = setInterval(function() {
@@ -58,12 +37,8 @@
         console.log("Dashboard page initialization complete.");
     }
 
-    function onWsGpsOpen() {
-        console.log("Dashboard GPS WebSocket opened.");
-        initDashboardPage();
-    }
-
     function onWsGpsMessage(event) {
+        if (!isInitialized) return;
         const data = JSON.parse(event.data);
         if (data && geoJSONLayer) {
             geoJSONLayer.clearLayers();
@@ -72,17 +47,11 @@
         }
     }
 
-    function onWsDataOpen() {
-        console.log("Dashboard Data WebSocket opened.");
-        initDashboardPage();
-    }
-
     function onWsDataMessage(event) {
+        if (!isInitialized) return;
         const data = JSON.parse(event.data);
-
         if (!nameCache.has(data.name)) {
             nameCache.set(data.name, data.value);
-
             let unit = "";
             let targetTable;
             for (let [key, value] of suffToTypeMap) {
@@ -92,13 +61,8 @@
                     break;
                 }
             }
-
             if (targetTable) {
-                const rowNode = targetTable.row.add([
-                    data.name,
-                    data.value,
-                    unit
-                ]).draw(false).node();
+                const rowNode = targetTable.row.add([data.name, data.value, unit]).draw(false).node();
                 $(rowNode).find("td:eq(1)").attr('id', data.name + '_val');
             }
         } else {
@@ -106,18 +70,26 @@
         }
     }
 
-    // --- WebSocket Connections ---
-    ConnectionManager.getSocket('/ws_gps', onWsGpsOpen, onWsGpsMessage);
-    ConnectionManager.getSocket('/ws_data', onWsDataOpen, onWsDataMessage);
+    function onSocketReconnected(event, data) {
+        if (data.path === '/ws_gps' || data.path === '/ws_data') {
+            console.log(`Dashboard detected a reconnection for socket: ${data.path}.`);
+            // Data streams will just resume. If we needed to fetch initial state, we'd do it here.
+        }
+    }
+
+    // --- Main Execution ---
+    initDashboardPage();
+    ConnectionManager.getSocket('/ws_gps', onWsGpsMessage);
+    ConnectionManager.getSocket('/ws_data', onWsDataMessage);
+    $(document).on('socketReconnected.dashboard', onSocketReconnected);
 
     // --- Page Cleanup ---
     currentPage.cleanup = function() {
         console.log("Cleaning up Dashboard page...");
-        if (intervalID) {
-            clearInterval(intervalID);
-        }
+        if (intervalID) clearInterval(intervalID);
         ConnectionManager.closeSocket('/ws_gps');
         ConnectionManager.closeSocket('/ws_data');
+        $(document).off('socketReconnected.dashboard');
 
         if (pressureTable) pressureTable.destroy();
         if (angleTable) angleTable.destroy();
