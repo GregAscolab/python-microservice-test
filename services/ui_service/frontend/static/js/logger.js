@@ -1,63 +1,47 @@
-// --- Logger Page ---
-(function(window) {
-    let dataSocket;
-    let convertSocket;
+(function() {
+    let isInitialized = false;
+    let dataSocket, convertSocket;
+    let toggleRecordingButton, recorderSpin, plotlyPanel, loader, logStatus, fileTableBody, currentPathHeader;
     let isRecording = false;
     let currentPath = "";
 
     function initLoggerPage() {
+        if (isInitialized) return;
         console.log("Initializing Logger page...");
 
-        // --- WebSocket Connections ---
-        dataSocket = ConnectionManager.getSocket('/ws_data');
-        convertSocket = ConnectionManager.getSocket('/ws_convert');
-        convertSocket.onmessage = onConvertMessage;
+        // --- DOM Elements ---
+        toggleRecordingButton = document.getElementById('toggleRecording-logger');
+        recorderSpin = document.getElementById('recorderSpin-logger');
+        plotlyPanel = document.getElementById('plotly-panel');
+        loader = document.getElementById('loader');
+        logStatus = document.getElementById('log-status');
+        fileTableBody = document.querySelector('#filenameTable tbody');
+        currentPathHeader = document.getElementById('logger-current-path');
 
-        // --- DOM Elements & Listeners ---
-        const toggleRecordingButton = document.getElementById('toggleRecording-logger');
-        const fileTableBody = document.querySelector('#filenameTable tbody');
-
-        toggleRecordingButton.addEventListener('click', onToggleRecording);
-        fileTableBody.addEventListener('click', onFileTableClick);
+        // --- Event Listeners ---
+        toggleRecordingButton.addEventListener('click', handleToggleRecording);
+        fileTableBody.addEventListener('click', handleFileTableClick);
 
         // --- Initial Load ---
         fetchAndDisplayFiles("");
+
+        isInitialized = true;
+        console.log("Logger page initialization complete.");
     }
 
-    // --- Event Handlers ---
-    function onToggleRecording() {
-        isRecording = !isRecording;
-        const command = isRecording ? 'startRecording' : 'stopRecording';
-        dataSocket.send(JSON.stringify({ command }));
-
-        const button = document.getElementById('toggleRecording-logger');
-        const spinner = document.getElementById('recorderSpin-logger');
-        button.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
-        spinner.style.display = isRecording ? "flex" : "none";
-
-        if (!isRecording) {
-            setTimeout(() => fetchAndDisplayFiles(currentPath), 1000);
-        }
+    // --- WebSocket Callbacks ---
+    function onWsDataOpen() {
+        console.log("Logger Data WebSocket opened.");
+        initLoggerPage();
     }
 
-    function onFileTableClick(e) {
-        if (e.target.classList.contains('dir-link')) {
-            const path = e.target.dataset.path;
-            fetchAndDisplayFiles(path);
-        }
-        if (e.target.classList.contains('file-link')) {
-            const path = e.target.dataset.path;
-            const file = e.target.dataset.file;
-            openFile(file, path);
-        }
+    function onWsConvertOpen() {
+        console.log("Logger Convert WebSocket opened.");
+        initLoggerPage();
     }
 
-    function onConvertMessage(event) {
+    function onWsConvertMessage(event) {
         const data = JSON.parse(event.data);
-        const loader = document.getElementById('loader');
-        const plotlyPanel = document.getElementById('plotly-panel');
-        const logStatus = document.getElementById('log-status');
-
         if (data.status === "started") {
             loader.style.display = "flex";
             plotlyPanel.style.display = "none";
@@ -77,7 +61,33 @@
         }
     }
 
-    // --- API and Display Functions ---
+    // --- Event Handlers ---
+    function handleToggleRecording() {
+        isRecording = !isRecording;
+        const command = isRecording ? 'startRecording' : 'stopRecording';
+        if (dataSocket && dataSocket.readyState === WebSocket.OPEN) {
+            dataSocket.send(JSON.stringify({ command }));
+        }
+        toggleRecordingButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
+        recorderSpin.style.display = isRecording ? "flex" : "none";
+        if (!isRecording) {
+            setTimeout(() => fetchAndDisplayFiles(currentPath), 1000);
+        }
+    }
+
+    function handleFileTableClick(e) {
+        if (e.target.classList.contains('dir-link')) {
+            const path = e.target.dataset.path;
+            fetchAndDisplayFiles(path);
+        }
+        if (e.target.classList.contains('file-link')) {
+            const path = e.target.dataset.path;
+            const file = e.target.dataset.file;
+            openFile(file, path);
+        }
+    }
+
+    // --- Functions ---
     async function fetchAndDisplayFiles(path) {
         currentPath = path;
         const currentPathHeader = document.getElementById('logger-current-path');
@@ -89,7 +99,13 @@
         try {
             const response = await fetch(`/api/logger/files/${path}`);
             const data = await response.json();
-            fileTableBody.innerHTML = '';
+
+            if (data.error) {
+                fileTableBody.innerHTML = `<tr><td colspan="4">Error: ${data.error}</td></tr>`;
+                return;
+            }
+
+            fileTableBody.innerHTML = ''; // Clear loading message
 
             if (path) {
                 const parentPath = path.substring(0, path.lastIndexOf('/'));
@@ -98,8 +114,19 @@
 
             data.contents.forEach(item => {
                 if (item.type === 'dir') {
-                    fileTableBody.insertAdjacentHTML('beforeend', `<tr><td class="dir-link" data-path="${path ? path + '/' : ''}${item.name}">${item.name}/</td><td></td><td></td></tr>`);
-                } else {
+                    const dirRow = `
+                        <tr>
+                            <td class="dir-link" data-path="${path ? path + '/' : ''}${item.name}">${item.name}/</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>`;
+                    fileTableBody.insertAdjacentHTML('beforeend', dirRow);
+                }
+            });
+
+            data.contents.forEach(item => {
+                if (item.type === 'file') {
                     const b64path = btoa((path ? path + '/' : '') + item.name);
                     fileTableBody.insertAdjacentHTML('beforeend', `<tr class="file-row" data-ext="${item.name.split('.').pop()}"><td class="file-link" data-path="${path}" data-file="${item.name}">${item.name}</td><td>${formatFileSize(item.size)}</td><td><a href="/download/${b64path}" class="download-btn">⬇️</a></td></tr>`);
                 }
@@ -123,6 +150,7 @@
         const loader = document.getElementById('loader');
         plotlyPanel.style.display = "none";
         plotlyPanel.innerHTML = '';
+        document.querySelectorAll('.file-status').forEach(span => span.textContent = '');
         loader.style.display = "flex";
 
         try {
@@ -142,7 +170,6 @@
     }
 
     function displayPlot(data) {
-        const plotlyPanel = document.getElementById('plotly-panel');
         plotlyPanel.innerHTML = '';
         const plots = {};
         data.forEach((series) => {
@@ -164,18 +191,26 @@
         });
     }
 
-    function cleanupLoggerPage() {
+    // --- WebSocket Connections ---
+    dataSocket = ConnectionManager.getSocket('/ws_data', onWsDataOpen, null); // No onmessage for data socket
+    convertSocket = ConnectionManager.getSocket('/ws_convert', onWsConvertOpen, onWsConvertMessage);
+
+    // --- Page Cleanup ---
+    currentPage.cleanup = function() {
         console.log("Cleaning up Logger page...");
         ConnectionManager.closeSocket('/ws_data');
         ConnectionManager.closeSocket('/ws_convert');
 
-        const toggleRecordingButton = document.getElementById('toggleRecording-logger');
-        const fileTableBody = document.querySelector('#filenameTable tbody');
-        if (toggleRecordingButton) toggleRecordingButton.removeEventListener('click', onToggleRecording);
-        if (fileTableBody) fileTableBody.removeEventListener('click', onFileTableClick);
-    }
+        if (toggleRecordingButton) {
+            toggleRecordingButton.removeEventListener('click', handleToggleRecording);
+        }
+        if (fileTableBody) {
+            fileTableBody.removeEventListener('click', handleFileTableClick);
+        }
 
-    window.initLoggerPage = initLoggerPage;
-    window.cleanupLoggerPage = cleanupLoggerPage;
-
-})(window);
+        isInitialized = false;
+        isRecording = false;
+        currentPath = "";
+        console.log("Logger page cleanup complete.");
+    };
+})();

@@ -1,14 +1,19 @@
-// --- Dashboard Page ---
-(function(window) {
-    let map;
-    let geoJSONLayer;
+(function() {
+    let map, geoJSONLayer, intervalID;
+    let isInitialized = false;
+    const nameCache = new Map(); // Cache to store received names/values
     const pressureTableBody = document.querySelector('#pressureTable tbody');
     const angleTableBody = document.querySelector('#angleTable tbody');
-    let ws_gps;
-    let ws_data;
-    const nameCache = new Map();
-    const suffToTypeMap = new Map([["_b", "pressure"], ["_PFAng", "angle"]]);
-    const typeToUnitMap = new Map([["pressure", "bars"], ["angle", "deg"]]);
+
+    const suffToTypeMap = new Map([
+        ["_b", "pressure"],
+        ["_PFAng", "angle"],
+    ]);
+
+    const typeToUnitMap = new Map([
+        ["pressure", "bars"],
+        ["angle", "deg"],
+    ]);
 
     function updateCell(sensorName, sensorValue) {
         let id_val = sensorName + "_val"
@@ -27,35 +32,44 @@
     setInterval(updateTables, 150)
 
     function initDashboardPage() {
+        if (isInitialized) {
+            return;
+        }
         console.log("Initializing Dashboard page...");
 
-        // --- Initialize UI Components ---
-        const mapContainer = document.getElementById('map-dashboard');
-        if (!mapContainer) return; // In case the element is not there
-
-        map = L.map(mapContainer).setView([51.505, -0.09], 13);
+        map = L.map('map-dashboard').setView([51.505, -0.09], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
         geoJSONLayer = L.geoJSON().addTo(map);
 
-        // --- WebSocket for GPS Data ---
-        ws_gps = ConnectionManager.getSocket('/ws_gps');
-        ws_gps.onmessage = function(event) {
-            var data = JSON.parse(event.data);
-            if (data && geoJSONLayer) {
-                geoJSONLayer.clearLayers();
-                geoJSONLayer.addData(data);
-                map.fitBounds(geoJSONLayer.getBounds());
-            }
-        };
+        isInitialized = true;
+        console.log("Dashboard page initialization complete.");
+    }
 
-        // --- WebSocket for Sensor Data ---
-        ws_data = ConnectionManager.getSocket('/ws_data');
+    function onWsGpsOpen() {
+        console.log("Dashboard GPS WebSocket opened.");
+        initDashboardPage();
+    }
 
+    function onWsGpsMessage(event) {
+        const data = JSON.parse(event.data);
+        if (data && geoJSONLayer) {
+            geoJSONLayer.clearLayers();
+            geoJSONLayer.addData(data);
+            map.fitBounds(geoJSONLayer.getBounds());
+        }
+    }
 
-        ws_data.onmessage = function(event) {
-            const data = JSON.parse(event.data);
+    function onWsDataOpen() {
+        console.log("Dashboard Data WebSocket opened.");
+        initDashboardPage();
+    }
+
+    function onWsDataMessage(event) {
+        const data = JSON.parse(event.data);
+
+        const data = JSON.parse(event.data);
             const sensorName = data.name;
             const sensorValue = data.value;
 
@@ -79,13 +93,20 @@
             }
 
             nameCache.set(sensorName, sensorValue);
-        };
     }
+
+    // --- WebSocket Connections ---
+    ConnectionManager.getSocket('/ws_gps', onWsGpsOpen, onWsGpsMessage);
+    ConnectionManager.getSocket('/ws_data', onWsDataOpen, onWsDataMessage);
 
     function cleanupDashboardPage() {
         console.log("Cleaning up Dashboard page...");
+        if (intervalID) {
+            clearInterval(intervalID);
+        }
         ConnectionManager.closeSocket('/ws_gps');
         ConnectionManager.closeSocket('/ws_data');
+
         if (map) {
             map.remove();
             map = null;
@@ -93,10 +114,9 @@
         // Clear tables
         if(pressureTableBody) pressureTableBody.innerHTML = "";
         if(angleTableBody) angleTableBody.innerHTML = "";
-    }
 
-    // Expose functions to global scope
-    window.initDashboardPage = initDashboardPage;
-    window.cleanupDashboardPage = cleanupDashboardPage;
-
-})(window);
+        isInitialized = false;
+        nameCache.clear();
+        console.log("Dashboard page cleanup complete.");
+    };
+})();

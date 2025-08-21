@@ -2,25 +2,25 @@
 (function(window) {
     let ws;
     let activeTab = null;
-    let settings = {};
-    let tabButtonsContainer;
-    let tabContentContainer;
+    let isInitialized = false;
+    let ws;
 
     function initSettingsPage() {
+        if (isInitialized) {
+            return;
+        }
         console.log("Initializing Settings page...");
-
-        tabButtonsContainer = document.querySelector('#page-settings .tab-buttons');
-        tabContentContainer = document.querySelector('#page-settings .tab-content');
-
-        if (!tabButtonsContainer || !tabContentContainer) return;
-
-        ws = ConnectionManager.getSocket('/ws_settings');
-        ws.onmessage = onSocketMessage;
-
-        tabButtonsContainer.addEventListener('click', onTabClick);
+        isInitialized = true;
+        // The rest of the initialization is driven by websocket messages
     }
 
-    function onSocketMessage(event) {
+    function onWsOpen() {
+        console.log("Settings WebSocket opened.");
+        initSettingsPage();
+        // Maybe request settings on open? For now, we wait for the server to send them.
+    }
+
+    function onWsMessage(event) {
         try {
             const data = JSON.parse(event.data);
             if (data.settings) {
@@ -34,35 +34,10 @@
         }
     }
 
-    function onTabClick(e) {
-        if (e.target.classList.contains('tab-button')) {
-            const groupName = e.target.dataset.group;
-            activeTab = groupName;
+    // --- WebSocket Connection ---
+    ws = ConnectionManager.getSocket('/ws_settings', onWsOpen, onWsMessage);
 
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-pane').forEach(pane => pane.style.display = 'none');
-
-            e.target.classList.add('active');
-            document.getElementById(`tab-${groupName}`).style.display = 'block';
-        }
-    }
-
-    function onSettingChange(e) {
-        const input = e.target;
-        const settingName = input.id;
-        const newValue = input.value;
-        const groupName = input.closest('.tab-pane').id.replace('tab-', '');
-
-        const updateData = {
-            [settingName]: {
-                group: groupName,
-                key: settingName,
-                value: newValue
-            }
-        };
-        ws.send(JSON.stringify(updateData));
-    }
-
+    // --- Helper functions ---
     function updateSettings(data) {
         Object.keys(data).forEach(settingName => {
             const settingData = data[settingName];
@@ -129,14 +104,10 @@
     function cleanupSettingsPage() {
         console.log("Cleaning up Settings page...");
         ConnectionManager.closeSocket('/ws_settings');
-        if (tabButtonsContainer) {
-            tabButtonsContainer.removeEventListener('click', onTabClick);
-        }
-        // Input event listeners are attached to elements that get destroyed,
-        // so we don't need to remove them manually.
-    }
-
-    window.initSettingsPage = initSettingsPage;
-    window.cleanupSettingsPage = cleanupSettingsPage;
+        isInitialized = false;
+        activeTab = null;
+        settings = {};
+        console.log("Settings page cleanup complete.");
+    };
 
 })(window);
