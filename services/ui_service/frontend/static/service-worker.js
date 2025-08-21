@@ -8,7 +8,8 @@ const urlsToCache = [
   '/static/libs/plotly/plotly.min.js',
   '/static/libs/leaflet/leaflet.css',
   '/static/images/icon-192x192.png',
-  '/static/images/icon-512x512.png'
+  '/static/images/icon-512x512.png',
+  '/static/images/favicon.ico'
 ];
 
 // Install a service worker

@@ -21,6 +21,7 @@ from common.microservice import Microservice
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(APP_DIR, "frontend", "templates")
 CAN_LOGS_DIR = os.path.abspath("can_logs")
+FAVICON_PATH = os.path.join(APP_DIR, "frontend", "static", "images", "favicon.ico")
 
 router = APIRouter()
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
@@ -59,6 +60,10 @@ manager = ConnectionManager()
 
 def get_service(request: Request) -> Microservice:
     return request.app.state.service
+
+@router.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    return FileResponse(FAVICON_PATH)
 
 # --- HTML Page Routes ---
 @router.get("/{page}", response_class=HTMLResponse)
