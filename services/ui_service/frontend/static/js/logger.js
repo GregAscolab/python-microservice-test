@@ -8,10 +8,12 @@
     function initLoggerPage() {
         console.log("Initializing Logger page...");
 
-        // --- WebSocket Connections ---
-        dataSocket = ConnectionManager.getSocket('/ws_data');
-        convertSocket = ConnectionManager.getSocket('/ws_convert');
-        convertSocket.onmessage = onConvertMessage;
+        // --- NATS Subscriptions ---
+        const textEncoder = new TextEncoder();
+        const textDecoder = new TextDecoder();
+        NatsConnectionManager.subscribe('conversion.results', (m) => {
+            onConvertMessage(JSON.parse(textDecoder.decode(m.data)));
+        });
 
         // --- DOM Elements & Listeners ---
         const toggleRecordingButton = document.getElementById('toggleRecording-logger');
@@ -28,7 +30,8 @@
     function onToggleRecording() {
         isRecording = !isRecording;
         const command = isRecording ? 'startRecording' : 'stopRecording';
-        dataSocket.send(JSON.stringify({ command }));
+        const textEncoder = new TextEncoder();
+        NatsConnectionManager.connection.publish('commands.can_bus_service', textEncoder.encode(JSON.stringify({ command })));
 
         const button = document.getElementById('toggleRecording-logger');
         const spinner = document.getElementById('recorderSpin-logger');
@@ -166,8 +169,7 @@
 
     function cleanupLoggerPage() {
         console.log("Cleaning up Logger page...");
-        ConnectionManager.closeSocket('/ws_data');
-        ConnectionManager.closeSocket('/ws_convert');
+        // NATS subscriptions are managed globally by NatsConnectionManager
 
         const toggleRecordingButton = document.getElementById('toggleRecording-logger');
         const fileTableBody = document.querySelector('#filenameTable tbody');

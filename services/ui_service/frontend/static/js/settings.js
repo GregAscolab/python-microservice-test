@@ -14,24 +14,33 @@
 
         if (!tabButtonsContainer || !tabContentContainer) return;
 
-        ws = ConnectionManager.getSocket('/ws_settings');
-        ws.onmessage = onSocketMessage;
+        const textEncoder = new TextEncoder();
+        const textDecoder = new TextDecoder();
+
+        // Subscribe to settings updates
+        NatsConnectionManager.subscribe('settings.updated', (m) => {
+            const data = JSON.parse(textDecoder.decode(m.data));
+            updateSettings(data);
+        });
+
+        // Request initial settings
+        setTimeout(async () => {
+            if (NatsConnectionManager.connection) {
+                try {
+                    const response = await NatsConnectionManager.connection.request('settings.get.all', textEncoder.encode(''), { timeout: 2000 });
+                    const data = JSON.parse(textDecoder.decode(response.data));
+                    if (data.settings) {
+                        settings = data.settings;
+                        generateTabs(settings);
+                    }
+                } catch (error) {
+                    console.error("Error requesting initial settings:", error);
+                }
+            }
+        }, 500);
+
 
         tabButtonsContainer.addEventListener('click', onTabClick);
-    }
-
-    function onSocketMessage(event) {
-        try {
-            const data = JSON.parse(event.data);
-            if (data.settings) {
-                settings = data.settings;
-                generateTabs(settings);
-            } else {
-                updateSettings(data);
-            }
-        } catch (error) {
-            console.error("Error parsing WebSocket message:", error);
-        }
     }
 
     function onTabClick(e) {
@@ -60,7 +69,11 @@
                 value: newValue
             }
         };
-        ws.send(JSON.stringify(updateData));
+        const textEncoder = new TextEncoder();
+        const command = { command: 'update_setting', group: groupName, key: settingName, value: newValue };
+        if (NatsConnectionManager.connection) {
+            NatsConnectionManager.connection.publish('commands.settings_service', textEncoder.encode(JSON.stringify(command)));
+        }
     }
 
     function updateSettings(data) {
@@ -128,7 +141,7 @@
 
     function cleanupSettingsPage() {
         console.log("Cleaning up Settings page...");
-        ConnectionManager.closeSocket('/ws_settings');
+        // NATS subscriptions are managed globally by NatsConnectionManager
         if (tabButtonsContainer) {
             tabButtonsContainer.removeEventListener('click', onTabClick);
         }

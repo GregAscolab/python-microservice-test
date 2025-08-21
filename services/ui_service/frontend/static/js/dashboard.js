@@ -39,23 +39,20 @@
         }).addTo(map);
         geoJSONLayer = L.geoJSON().addTo(map);
 
-        // --- WebSocket for GPS Data ---
-        ws_gps = ConnectionManager.getSocket('/ws_gps');
-        ws_gps.onmessage = function(event) {
-            var data = JSON.parse(event.data);
+        // --- NATS Subscription for GPS Data ---
+        const textDecoder = new TextDecoder();
+        NatsConnectionManager.subscribe('gps', (m) => {
+            const data = JSON.parse(textDecoder.decode(m.data));
             if (data && geoJSONLayer) {
                 geoJSONLayer.clearLayers();
                 geoJSONLayer.addData(data);
                 map.fitBounds(geoJSONLayer.getBounds());
             }
-        };
+        });
 
-        // --- WebSocket for Sensor Data ---
-        ws_data = ConnectionManager.getSocket('/ws_data');
-
-
-        ws_data.onmessage = function(event) {
-            const data = JSON.parse(event.data);
+        // --- NATS Subscription for Sensor Data ---
+        NatsConnectionManager.subscribe('can_data', (m) => {
+            const data = JSON.parse(textDecoder.decode(m.data));
             const sensorName = data.name;
             const sensorValue = data.value;
 
@@ -79,13 +76,12 @@
             }
 
             nameCache.set(sensorName, sensorValue);
-        };
+        });
     }
 
     function cleanupDashboardPage() {
         console.log("Cleaning up Dashboard page...");
-        ConnectionManager.closeSocket('/ws_gps');
-        ConnectionManager.closeSocket('/ws_data');
+        // NATS subscriptions are managed globally by NatsConnectionManager
         if (map) {
             map.remove();
             map = null;

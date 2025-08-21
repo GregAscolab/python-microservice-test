@@ -24,22 +24,22 @@
         closeLogModalBtn.addEventListener('click', closeLogModal);
         window.addEventListener('click', onWindowClick);
 
-        // --- WebSocket Logic ---
-        socket = ConnectionManager.getSocket('/ws_manager');
-        socket.addEventListener('open', onSocketOpen);
-        socket.onmessage = onSocketMessage;
+        // --- NATS Logic ---
+        const textEncoder = new TextEncoder();
+        const textDecoder = new TextDecoder();
+        NatsConnectionManager.subscribe('manager.status', (m) => {
+            const services = JSON.parse(textDecoder.decode(m.data));
+            updateStatusGrid(services);
+        });
+
+        // Request initial status
+        // Add a delay to ensure the NATS connection is established
+        setTimeout(() => {
+            sendCommand('get_status');
+        }, 500);
     }
 
     // --- Event Handlers ---
-    function onSocketOpen(event) {
-        console.log("Manager WebSocket connection established.");
-        sendCommand('get_status', {});
-    }
-
-    function onSocketMessage(event) {
-        const services = JSON.parse(event.data);
-        updateStatusGrid(services);
-    }
 
     function onRestartAll() { sendCommand('restart_all'); }
     function onStopAll() {
@@ -68,10 +68,11 @@
     // --- UI & Logic Functions ---
     function sendCommand(command, payload = {}) {
         const message = { command, ...payload };
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify(message));
+        const textEncoder = new TextEncoder();
+        if (NatsConnectionManager.connection) {
+            NatsConnectionManager.connection.publish('commands.manager', textEncoder.encode(JSON.stringify(message)));
         } else {
-            console.error("Manager WebSocket is not open. Cannot send command.");
+            console.error("NATS connection is not available. Cannot send command.");
         }
     }
 
@@ -153,7 +154,7 @@
 
     function cleanupManagerPage() {
         console.log("Cleaning up Manager page...");
-        ConnectionManager.closeSocket('/ws_manager');
+        // NATS subscriptions are managed globally by NatsConnectionManager
         if (logInterval) clearInterval(logInterval);
         // Remove all listeners to prevent memory leaks
         document.getElementById('restart-all-btn').removeEventListener('click', onRestartAll);

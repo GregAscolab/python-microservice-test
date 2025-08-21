@@ -33,10 +33,10 @@
         };
         Plotly.newPlot(skyviewDiv, [], layout);
 
-        // --- WebSocket Connection ---
-        ws_gps = ConnectionManager.getSocket('/ws_gps');
-        ws_gps.onmessage = function(event) {
-            const data = JSON.parse(event.data);
+        // --- NATS Connection ---
+        const textDecoder = new TextDecoder();
+        NatsConnectionManager.subscribe('gps', (m) => {
+            const data = JSON.parse(textDecoder.decode(m.data));
             if (data && data.geometry && data.geometry.type === 'Point') {
                 const coords = data.geometry.coordinates;
                 const latLng = [coords[1], coords[0]];
@@ -47,7 +47,7 @@
                     updateSkyviewChart(data.properties.SV);
                 }
             }
-        };
+        });
     }
 
     function updateGpsTable(properties, tableBody) {
@@ -109,7 +109,7 @@
 
     function cleanupGpsPage() {
         console.log("Cleaning up GPS page...");
-        ConnectionManager.closeSocket('/ws_gps');
+        // NATS subscriptions are managed globally by NatsConnectionManager
         if (skyviewDiv) {
             Plotly.purge(skyviewDiv);
             skyviewDiv = null;
