@@ -2,13 +2,19 @@
 (function(window) {
     let ws;
     let activeTab = null;
+    let settings = {};
     let isInitialized = false;
-    let ws;
+    let tabButtonsContainer;
+    let tabContentContainer;
 
     function initSettingsPage() {
         if (isInitialized) {
             return;
         }
+
+        tabButtonsContainer = document.querySelector('#page-settings .tab-buttons');
+        tabContentContainer = document.querySelector('#page-settings .tab-content');
+
         console.log("Initializing Settings page...");
         isInitialized = true;
         // The rest of the initialization is driven by websocket messages
@@ -38,6 +44,22 @@
     ws = ConnectionManager.getSocket('/ws_settings', onWsOpen, onWsMessage);
 
     // --- Helper functions ---
+    function onSettingChange(e) {
+        const input = e.target;
+        const settingName = input.id;
+        const newValue = input.value;
+        const groupName = input.closest('.tab-pane').id.replace('tab-', '');
+
+        const updateData = {
+            [settingName]: {
+                group: groupName,
+                key: settingName,
+                value: newValue
+            }
+        };
+        ws.send(JSON.stringify(updateData));
+    }
+    
     function updateSettings(data) {
         Object.keys(data).forEach(settingName => {
             const settingData = data[settingName];

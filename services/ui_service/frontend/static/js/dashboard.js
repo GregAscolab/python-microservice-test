@@ -68,8 +68,6 @@
 
     function onWsDataMessage(event) {
         const data = JSON.parse(event.data);
-
-        const data = JSON.parse(event.data);
             const sensorName = data.name;
             const sensorValue = data.value;
 

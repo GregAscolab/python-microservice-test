@@ -26,6 +26,7 @@ function showPage(path) {
     // 1. Run cleanup for the previous page if it exists
     if (currentPage.name) {
         const cleanupFunctionName = `cleanup${currentPage.name}Page`;
+        console.log("Try to cleanup "+cleanupFunctionName+"...")
         if (typeof window[cleanupFunctionName] === 'function') {
             console.log(`Cleaning up page: ${currentPage.name}`);
             window[cleanupFunctionName]();
@@ -69,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (path === currentPage.path) return;
 
             history.pushState({path: path}, '', path);
+            console.log("Navigation to "+path)
             showPage(path);
 
             document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));

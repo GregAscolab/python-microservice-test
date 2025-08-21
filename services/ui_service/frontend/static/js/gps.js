@@ -10,7 +10,7 @@
         }
         console.log("Initializing GPS page...");
 
-        if (!mapContainer || !skyviewDiv || !gpsTableBody) return;
+        gpsTable = document.getElementById('gpsDataTable');
 
         // --- Leaflet Map Initialization ---
         map = L.map('map-gps').setView([45.525, 4.924], 13);
@@ -51,7 +51,7 @@
             map.setView(latLng, map.getZoom());
 
             // Update Data Table
-            updateGpsTable(data.properties, gpsTableBody);
+            updateGpsTable(data.properties, gpsTable);
 
             // Update Skyview Chart
             if (data.properties && data.properties.SV) {
