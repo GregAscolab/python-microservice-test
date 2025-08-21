@@ -4,12 +4,9 @@ const urlsToCache = [
   '/static/css/styles.css',
   '/static/js/app.js',
   '/static/js/connection_manager.js',
-  '/static/libs/jquery/jquery-3.7.1.min.js',
-  '/static/libs/datatables/datatables.min.js',
   '/static/libs/leaflet/leaflet.js',
   '/static/libs/plotly/plotly.min.js',
   '/static/libs/leaflet/leaflet.css',
-  '/static/libs/datatables/datatables.min.css',
   '/static/images/icon-192x192.png',
   '/static/images/icon-512x512.png'
 ];
