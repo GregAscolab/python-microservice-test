@@ -2,10 +2,29 @@
 (function(window) {
     let map;
     let geoJSONLayer;
-    let pressureTable;
-    let angleTable;
+    const pressureTableBody = document.querySelector('#pressureTable tbody');
+    const angleTableBody = document.querySelector('#angleTable tbody');
     let ws_gps;
     let ws_data;
+    const nameCache = new Map();
+    const suffToTypeMap = new Map([["_b", "pressure"], ["_PFAng", "angle"]]);
+    const typeToUnitMap = new Map([["pressure", "bars"], ["angle", "deg"]]);
+
+    function updateCell(sensorName, sensorValue) {
+        let id_val = sensorName + "_val"
+        const cell_val = document.getElementById(id_val);
+        if (cell_val) {
+            cell_val.textContent = sensorValue;
+        }
+        else {}
+    }
+    function updateTables() {
+        for (let [sensorName, sensorValue] of nameCache) {
+            updateCell(sensorName, sensorValue);
+        }
+    }
+
+    setInterval(updateTables, 150)
 
     function initDashboardPage() {
         console.log("Initializing Dashboard page...");
@@ -33,10 +52,7 @@
 
         // --- WebSocket for Sensor Data ---
         ws_data = ConnectionManager.getSocket('/ws_data');
-        const nameCache = new Map();
 
-        const suffToTypeMap = new Map([["_b", "pressure"], ["_PFAng", "angle"]]);
-        const typeToUnitMap = new Map([["pressure", "bars"], ["angle", "deg"]]);
 
         ws_data.onmessage = function(event) {
             const data = JSON.parse(event.data);
@@ -44,8 +60,6 @@
             const sensorValue = data.value;
 
             if (!nameCache.has(sensorName)) {
-                nameCache.set(sensorName, sensorValue);
-
                 let unit = "";
                 let targetTable;
                 for (let [key, value] of suffToTypeMap) {
@@ -58,15 +72,13 @@
                 if (targetTable) {
                     const row = targetTable.insertRow();
                     row.id = sensorName;
-                    row.innerHTML = `<td>${sensorName}</td><td>${sensorValue}</td><td>${unit}</td>`;
+                    row.innerHTML = `<td>${sensorName}</td><td id=${sensorName}_val>${sensorValue}</td><td>${unit}</td>`;
                 }
             } else {
-                nameCache.set(sensorName, sensorValue);
-                const row = document.getElementById(sensorName);
-                if (row) {
-                    row.cells[1].textContent = sensorValue;
-                }
+                // updateCell(sensorName, sensorValue)
             }
+
+            nameCache.set(sensorName, sensorValue);
         };
     }
 
@@ -79,8 +91,6 @@
             map = null;
         }
         // Clear tables
-        const pressureTableBody = document.querySelector('#pressureTable tbody');
-        const angleTableBody = document.querySelector('#angleTable tbody');
         if(pressureTableBody) pressureTableBody.innerHTML = "";
         if(angleTableBody) angleTableBody.innerHTML = "";
     }
