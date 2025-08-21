@@ -15,73 +15,105 @@ let currentPage = {
     cleanup: function() {}
 };
 
-$(document).ready(function() {
+function getPageName(path) {
+    return path.substring(1);
+}
 
-    function getPageName(path) {
-        return path.substring(1);
+function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+        // Check if script already exists
+        if (document.querySelector(`script[src="${src}"]`)) {
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Script load error for ${src}`));
+        document.head.appendChild(script);
+    });
+}
+
+function showPage(path) {
+    // 1. Run cleanup for the previous page
+    if (typeof currentPage.cleanup === 'function') {
+        console.log(`Cleaning up page: ${currentPage.name}`);
+        currentPage.cleanup();
     }
 
-    function showPage(path) {
-        // 1. Run cleanup for the previous page
-        if (typeof currentPage.cleanup === 'function') {
-            console.log(`Cleaning up page: ${currentPage.name}`);
-            currentPage.cleanup();
-        }
+    // 2. Hide all page content divs
+    document.querySelectorAll('.page-content').forEach(page => {
+        page.style.display = 'none';
+    });
 
-        // 2. Hide all page content divs
-        $('.page-content').hide();
-
-        // 3. Show the requested page content div
-        const pageName = getPageName(path);
-        const $page = $(`#page-${pageName}`);
-        if ($page.length) {
-            $page.css( "display", "flex" );
-        } else {
-            // If page not found, maybe show a default or a 404 div
-            $('#page-dashboard').css( "display", "flex" ); // Default to dashboard
-        }
-
-        // 4. Load the corresponding script for the new page
-        currentPage.name = pageName;
-        currentPage.cleanup = function() {}; // Reset cleanup
-
-        if (pageName) {
-             $.getScript(`/static/js/${pageName}.js`)
-                .done(function(script, textStatus) {
-                    console.log(`Script for ${pageName} loaded successfully.`);
-                })
-                .fail(function(jqxhr, settings, exception) {
-                    console.error(`Error loading script for ${pageName}:`, exception);
-                });
-        }
+    // 3. Show the requested page content div
+    const pageName = getPageName(path);
+    const pageDiv = document.getElementById(`page-${pageName}`);
+    if (pageDiv) {
+        pageDiv.style.display = 'flex';
+    } else {
+        document.getElementById('page-dashboard').style.display = 'flex'; // Default to dashboard
     }
 
+    // 4. Load the corresponding script for the new page
+    currentPage.name = pageName;
+    currentPage.cleanup = function() {}; // Reset cleanup
+
+    if (pageName) {
+         loadScript(`/static/js/${pageName}.js`)
+            .then(() => {
+                console.log(`Script for ${pageName} loaded successfully.`);
+            })
+            .catch(error => {
+                console.error(error);
+            });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
     // --- Handle navigation clicks ---
-    $('.sidebar a').on('click', function(e) {
-        e.preventDefault();
-        const path = $(this).attr('href');
-        if (path === window.location.pathname) return;
+    document.querySelectorAll('.sidebar a').forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            const path = link.getAttribute('href');
+            if (path === window.location.pathname) return;
 
-        history.pushState({path: path}, '', path);
-        showPage(path);
-        $('.sidebar a').removeClass('active');
-        $(this).addClass('active');
+            history.pushState({path: path}, '', path);
+            showPage(path);
+
+            document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+        });
     });
 
     // --- Handle browser back/forward buttons ---
-    window.onpopstate = function(event) {
+    window.addEventListener('popstate', event => {
         if (event.state && event.state.path) {
             const path = event.state.path;
             showPage(path);
-            $('.sidebar a').removeClass('active');
-            $(`.sidebar a[href="${path}"]`).addClass('active');
+            document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
+            document.querySelector(`.sidebar a[href="${path}"]`).classList.add('active');
         }
-    };
+    });
 
     // --- Initial page load ---
     const initialPath = window.location.pathname === '/' ? '/dashboard' : window.location.pathname;
     showPage(initialPath);
-    $('.sidebar a').removeClass('active');
-    $(`.sidebar a[href="${initialPath}"]`).addClass('active');
+    document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
+    document.querySelector(`.sidebar a[href="${initialPath}"]`).classList.add('active');
     history.replaceState({path: initialPath}, '', initialPath);
+});
+
+// --- UI handler for connection status ---
+document.addEventListener('connectionStatusChange', event => {
+    const statusDiv = document.getElementById('connection-status');
+    if (event.detail.isOnline) {
+        statusDiv.textContent = 'Online';
+        statusDiv.classList.remove('status-offline');
+        statusDiv.classList.add('status-online');
+    } else {
+        statusDiv.textContent = 'Offline';
+        statusDiv.classList.remove('status-online');
+        statusDiv.classList.add('status-offline');
+    }
 });

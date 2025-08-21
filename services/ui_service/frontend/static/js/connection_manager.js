@@ -84,7 +84,8 @@ const ConnectionManager = {
         if (anySocketOpen !== this.isOnline) {
             this.isOnline = anySocketOpen;
             // Trigger a custom event that the UI can listen to
-            $(document).trigger('connectionStatusChange', { isOnline: this.isOnline });
+            const event = new CustomEvent('connectionStatusChange', { detail: { isOnline: this.isOnline } });
+            document.dispatchEvent(event);
             console.log(`Global connection status changed to: ${this.isOnline ? 'Online' : 'Offline'}`);
         }
     }

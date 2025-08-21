@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="/static/css/styles.css">
     <!-- Libs CSS -->
     <link rel="stylesheet" href="/static/libs/leaflet/leaflet.css">
-    <link rel="stylesheet" href="/static/libs/datatables/datatables.min.css">
 </head>
 <body>
     <header>
@@ -199,23 +198,12 @@
     </footer>
 
     <!-- Libs JS -->
-    <script src="/static/libs/jquery/jquery-3.7.1.min.js"></script>
-    <script src="/static/libs/datatables/datatables.min.js"></script>
     <script src="/static/libs/leaflet/leaflet.js"></script>
     <script src="/static/libs/plotly/plotly.min.js"></script>
 
     <!-- Core App JS -->
     <script src="/static/js/connection_manager.js"></script>
     <script src="/static/js/app.js"></script>
-    <script>
-        $(document).on('connectionStatusChange', function(event, data) {
-            const $statusDiv = $('#connection-status');
-            if (data.isOnline) {
-                $statusDiv.text('Online').removeClass('status-offline').addClass('status-online');
-            } else {
-                $statusDiv.text('Offline').removeClass('status-online').addClass('status-offline');
-            }
-        });
-    </script>
+    <!-- This logic is now inside app.js -->
 </body>
 </html>
