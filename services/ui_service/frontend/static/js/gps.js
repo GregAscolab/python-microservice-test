@@ -1,57 +1,57 @@
-// This script is loaded dynamically by app.js when the gps page is loaded
-(function() {
-    // --- Leaflet Map Initialization ---
-    var map = L.map('map-gps').setView([45.525, 4.924], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-    var marker = L.marker([45.525, 4.924]).addTo(map);
+// --- GPS Page ---
+(function(window) {
+    let map;
+    let marker;
+    let skyviewDiv;
+    let ws_gps;
 
-    // --- DataTable Initialization ---
-    var gpsTable = $('#gpsDataTable').DataTable({
-        "paging": false,
-        "searching": false,
-        "info": false,
-        "order": []
-    });
+    function initGpsPage() {
+        console.log("Initializing GPS page...");
 
-    // --- Plotly Skyview Initialization ---
-    const skyviewDiv = document.getElementById('skyviewChart');
-    const layout = {
-        polar: {
-            radialaxis: { tickfont: { size: 8 }, angle: 90, tickangle: 90, range: [90, 0] },
-            angularaxis: { tickfont: { size: 10 }, rotation: 90, direction: "clockwise" }
-        },
-        showlegend: false,
-        margin: { l: 40, r: 40, t: 40, b: 40 }
-    };
-    Plotly.newPlot(skyviewDiv, [], layout);
+        // --- UI Elements ---
+        const mapContainer = document.getElementById('map-gps');
+        skyviewDiv = document.getElementById('skyviewChart');
+        const gpsTableBody = document.querySelector('#gpsDataTable tbody');
 
-    // --- WebSocket Connection via ConnectionManager ---
-    const ws_gps = ConnectionManager.getSocket('/ws_gps');
+        if (!mapContainer || !skyviewDiv || !gpsTableBody) return;
 
-    ws_gps.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        if (data && data.geometry && data.geometry.type === 'Point') {
-            // Update Leaflet Map
-            const coords = data.geometry.coordinates;
-            const latLng = [coords[1], coords[0]];
-            marker.setLatLng(latLng);
-            map.setView(latLng, map.getZoom());
+        // --- Leaflet Map Initialization ---
+        map = L.map(mapContainer).setView([45.525, 4.924], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        marker = L.marker([45.525, 4.924]).addTo(map);
 
-            // Update Data Table
-            updateGpsTable(data.properties);
+        // --- Plotly Skyview Initialization ---
+        const layout = {
+            polar: {
+                radialaxis: { tickfont: { size: 8 }, angle: 90, tickangle: 90, range: [90, 0] },
+                angularaxis: { tickfont: { size: 10 }, rotation: 90, direction: "clockwise" }
+            },
+            showlegend: false,
+            margin: { l: 40, r: 40, t: 40, b: 40 }
+        };
+        Plotly.newPlot(skyviewDiv, [], layout);
 
-            // Update Skyview Chart
-            if (data.properties && data.properties.SV) {
-                updateSkyviewChart(data.properties.SV);
+        // --- WebSocket Connection ---
+        ws_gps = ConnectionManager.getSocket('/ws_gps');
+        ws_gps.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data && data.geometry && data.geometry.type === 'Point') {
+                const coords = data.geometry.coordinates;
+                const latLng = [coords[1], coords[0]];
+                if(marker) marker.setLatLng(latLng);
+                if(map) map.setView(latLng, map.getZoom());
+                updateGpsTable(data.properties, gpsTableBody);
+                if (data.properties && data.properties.SV) {
+                    updateSkyviewChart(data.properties.SV);
+                }
             }
-        }
-    };
+        };
+    }
 
-    // --- Helper Functions ---
-    function updateGpsTable(properties) {
-        gpsTable.clear();
+    function updateGpsTable(properties, tableBody) {
+        tableBody.innerHTML = ''; // Clear existing table rows
         const flattenObject = (obj, prefix = '') => {
             const result = {};
             for (const key in obj) {
@@ -66,7 +66,6 @@
             }
             return result;
         };
-
         const flatProps = flattenObject(properties);
         for (const [key, value] of Object.entries(flatProps)) {
             let displayValue = value;
@@ -75,9 +74,10 @@
             } else if (Array.isArray(value)) {
                 displayValue = JSON.stringify(value);
             }
-            gpsTable.row.add([key, displayValue]);
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${key}</td><td>${displayValue}</td>`;
+            tableBody.appendChild(row);
         }
-        gpsTable.draw();
     }
 
     function getSnrColor(snr) {
@@ -104,27 +104,23 @@
             hovertemplate: "r=%{r} t=%{theta} snr=%{customdata}",
             type: 'scatterpolar'
         };
-        Plotly.react(skyviewDiv, [trace], layout);
+        if(skyviewDiv) Plotly.react(skyviewDiv, [trace], skyviewDiv.layout);
     }
 
-    // --- Page Cleanup ---
-    //currentPage is a global defined in app.js
-    currentPage.cleanup = function() {
+    function cleanupGpsPage() {
         console.log("Cleaning up GPS page...");
-        // Close the WebSocket connection for this page
         ConnectionManager.closeSocket('/ws_gps');
-        // Destroy the DataTable instance to prevent memory leaks
-        if (gpsTable) {
-            gpsTable.destroy();
-        }
-        // Clean up Plotly chart
         if (skyviewDiv) {
             Plotly.purge(skyviewDiv);
+            skyviewDiv = null;
         }
-        // Clean up Leaflet map
         if (map) {
             map.remove();
+            map = null;
         }
-        console.log("GPS page cleanup complete.");
-    };
-})();
+    }
+
+    window.initGpsPage = initGpsPage;
+    window.cleanupGpsPage = cleanupGpsPage;
+
+})(window);

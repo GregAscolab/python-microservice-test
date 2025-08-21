@@ -9,79 +9,102 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// Make currentPage globally accessible for page-specific scripts
+// --- Global Page State ---
 let currentPage = {
     name: null,
-    cleanup: function() {}
+    path: null
 };
 
-$(document).ready(function() {
+// --- Helper Functions ---
+function getPageName(path) {
+    // Converts '/dashboard' -> 'Dashboard'
+    const name = path.substring(1);
+    return name.charAt(0).toUpperCase() + name.slice(1);
+}
 
-    function getPageName(path) {
-        return path.substring(1);
-    }
-
-    function showPage(path) {
-        // 1. Run cleanup for the previous page
-        if (typeof currentPage.cleanup === 'function') {
+function showPage(path) {
+    // 1. Run cleanup for the previous page if it exists
+    if (currentPage.name) {
+        const cleanupFunctionName = `cleanup${currentPage.name}Page`;
+        if (typeof window[cleanupFunctionName] === 'function') {
             console.log(`Cleaning up page: ${currentPage.name}`);
-            currentPage.cleanup();
-        }
-
-        // 2. Hide all page content divs
-        $('.page-content').hide();
-
-        // 3. Show the requested page content div
-        const pageName = getPageName(path);
-        const $page = $(`#page-${pageName}`);
-        if ($page.length) {
-            $page.css( "display", "flex" );
-        } else {
-            // If page not found, maybe show a default or a 404 div
-            $('#page-dashboard').css( "display", "flex" ); // Default to dashboard
-        }
-
-        // 4. Load the corresponding script for the new page
-        currentPage.name = pageName;
-        currentPage.cleanup = function() {}; // Reset cleanup
-
-        if (pageName) {
-             $.getScript(`/static/js/${pageName}.js`)
-                .done(function(script, textStatus) {
-                    console.log(`Script for ${pageName} loaded successfully.`);
-                })
-                .fail(function(jqxhr, settings, exception) {
-                    console.error(`Error loading script for ${pageName}:`, exception);
-                });
+            window[cleanupFunctionName]();
         }
     }
 
-    // --- Handle navigation clicks ---
-    $('.sidebar a').on('click', function(e) {
-        e.preventDefault();
-        const path = $(this).attr('href');
-        if (path === window.location.pathname) return;
-
-        history.pushState({path: path}, '', path);
-        showPage(path);
-        $('.sidebar a').removeClass('active');
-        $(this).addClass('active');
+    // 2. Hide all page content divs
+    document.querySelectorAll('.page-content').forEach(page => {
+        page.style.display = 'none';
     });
 
-    // --- Handle browser back/forward buttons ---
-    window.onpopstate = function(event) {
+    // 3. Show the requested page content div
+    const pageIdName = getPageName(path).toLowerCase();
+    const pageDiv = document.getElementById(`page-${pageIdName}`);
+    if (pageDiv) {
+        pageDiv.style.display = 'flex';
+    } else {
+        document.getElementById('page-dashboard').style.display = 'flex'; // Default to dashboard
+    }
+
+    // 4. Call the init function for the new page
+    const newPageName = getPageName(path);
+    const initFunctionName = `init${newPageName}Page`;
+    if (typeof window[initFunctionName] === 'function') {
+        console.log(`Initializing page: ${newPageName}`);
+        window[initFunctionName]();
+    }
+
+    // 5. Update global state
+    currentPage.name = newPageName;
+    currentPage.path = path;
+}
+
+// --- Event Listeners ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Handle navigation clicks
+    document.querySelectorAll('.sidebar a').forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            const path = link.getAttribute('href');
+            if (path === currentPage.path) return;
+
+            history.pushState({path: path}, '', path);
+            showPage(path);
+
+            document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+        });
+    });
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', event => {
         if (event.state && event.state.path) {
             const path = event.state.path;
             showPage(path);
-            $('.sidebar a').removeClass('active');
-            $(`.sidebar a[href="${path}"]`).addClass('active');
+            document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
+            document.querySelector(`.sidebar a[href="${path}"]`).classList.add('active');
         }
-    };
+    });
 
-    // --- Initial page load ---
+    // Initial page load
     const initialPath = window.location.pathname === '/' ? '/dashboard' : window.location.pathname;
     showPage(initialPath);
-    $('.sidebar a').removeClass('active');
-    $(`.sidebar a[href="${initialPath}"]`).addClass('active');
+    document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
+    const activeLink = document.querySelector(`.sidebar a[href="${initialPath}"]`);
+    if(activeLink) activeLink.classList.add('active');
     history.replaceState({path: initialPath}, '', initialPath);
+});
+
+// Handle connection status changes
+document.addEventListener('connectionStatusChange', event => {
+    const statusDiv = document.getElementById('connection-status');
+    if (event.detail.isOnline) {
+        statusDiv.textContent = 'Online';
+        statusDiv.classList.remove('status-offline');
+        statusDiv.classList.add('status-online');
+    } else {
+        statusDiv.textContent = 'Offline';
+        statusDiv.classList.remove('status-online');
+        statusDiv.classList.add('status-offline');
+    }
 });
