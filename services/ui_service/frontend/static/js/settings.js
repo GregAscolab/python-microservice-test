@@ -2,6 +2,9 @@
     let settings = {};
     let activeTab = null;
 
+    const tabButtonsContainer = document.querySelector('#page-settings .tab-buttons');
+    const tabContentContainer = document.querySelector('#page-settings .tab-content');
+
     // --- WebSocket Connection ---
     const ws = ConnectionManager.getSocket('/ws_settings');
 
@@ -9,8 +12,6 @@
     ws.onmessage = function(event) {
         try {
             const data = JSON.parse(event.data);
-            console.log("Received settings data:", data);
-
             if (data.settings) {
                 settings = data.settings;
                 generateTabs(settings);
@@ -24,32 +25,26 @@
 
     // --- Helper functions ---
     function updateSettings(data) {
-        console.log('Updating settings with data:', data);
         Object.keys(data).forEach(settingName => {
             const settingData = data[settingName];
             const groupName = settingData.group;
 
             if (settings[groupName] && settings[groupName][settingName] !== undefined) {
                 settings[groupName][settingName] = settingData.value;
-                // Update the input field if it's visible
-                const inputField = $(`#${settingName}`);
-                if (inputField.length) {
-                    inputField.val(settingData.value);
+                const inputField = document.getElementById(settingName);
+                if (inputField) {
+                    inputField.value = settingData.value;
                 }
             }
         });
     }
 
     function generateTabs(settingsData) {
-        const tabButtonsContainer = $('.tab-buttons');
-        const tabContentContainer = $('.tab-content');
-
-        tabButtonsContainer.empty();
-        tabContentContainer.empty();
+        tabButtonsContainer.innerHTML = '';
+        tabContentContainer.innerHTML = '';
 
         if (Object.keys(settingsData).length === 0) return;
 
-        // Set the initial active tab if not already set
         if (activeTab === null || !settingsData[activeTab]) {
             activeTab = Object.keys(settingsData)[0];
         }
@@ -58,44 +53,63 @@
             const group = settingsData[groupName];
             const isActive = activeTab === groupName;
 
-            const tabButton = $(`<button class="tab-button ${isActive ? 'active' : ''}">${groupName}</button>`);
-            tabButtonsContainer.append(tabButton);
+            const tabButton = document.createElement('button');
+            tabButton.className = `tab-button ${isActive ? 'active' : ''}`;
+            tabButton.textContent = groupName;
+            tabButton.dataset.group = groupName;
+            tabButtonsContainer.appendChild(tabButton);
 
-            const tabContent = $(`<div class="tab-pane ${isActive ? 'active' : ''}" id="tab-${groupName}"></div>`);
+            const tabContent = document.createElement('div');
+            tabContent.className = `tab-pane ${isActive ? 'active' : ''}`;
+            tabContent.id = `tab-${groupName}`;
 
             Object.keys(group).forEach(settingName => {
                 const settingValue = group[settingName];
-                const inputField = $(`
-                    <div class="setting-field">
-                        <label for="${settingName}">${settingName}</label>
-                        <input type="text" id="${settingName}" value="${settingValue}">
-                    </div>
-                `);
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'setting-field';
 
-                inputField.find('input').on('change', function() {
-                    const newValue = $(this).val();
+                const label = document.createElement('label');
+                label.setAttribute('for', settingName);
+                label.textContent = settingName;
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = settingName;
+                input.value = settingValue;
+
+                input.addEventListener('change', () => {
+                    const newValue = input.value;
                     const updateData = {
                         [settingName]: {
                             group: groupName,
-                            key: settingName, // Pass the key back
+                            key: settingName,
                             value: newValue
                         }
                     };
                     ws.send(JSON.stringify(updateData));
                 });
-                tabContent.append(inputField);
-            });
-            tabContentContainer.append(tabContent);
 
-            tabButton.on('click', function() {
-                activeTab = groupName; // Store the active tab name
-                $('.tab-button').removeClass('active');
-                $('.tab-pane').removeClass('active');
-                $(this).addClass('active');
-                $(`#tab-${groupName}`).addClass('active');
+                fieldDiv.appendChild(label);
+                fieldDiv.appendChild(input);
+                tabContent.appendChild(fieldDiv);
             });
+            tabContentContainer.appendChild(tabContent);
         });
     }
+
+    // --- Event Delegation for Tab Clicks ---
+    tabButtonsContainer.addEventListener('click', e => {
+        if (e.target.classList.contains('tab-button')) {
+            const groupName = e.target.dataset.group;
+            activeTab = groupName;
+
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+            e.target.classList.add('active');
+            document.getElementById(`tab-${groupName}`).classList.add('active');
+        }
+    });
 
     // --- Page Cleanup ---
     currentPage.cleanup = function() {

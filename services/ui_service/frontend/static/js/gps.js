@@ -1,22 +1,17 @@
-// This script is loaded dynamically by app.js when the gps page is loaded
 (function() {
+    // --- UI Elements ---
+    const mapContainer = document.getElementById('map-gps');
+    const skyviewDiv = document.getElementById('skyviewChart');
+    const gpsTableBody = document.querySelector('#gpsDataTable tbody');
+
     // --- Leaflet Map Initialization ---
-    var map = L.map('map-gps').setView([45.525, 4.924], 13);
+    var map = L.map(mapContainer).setView([45.525, 4.924], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     var marker = L.marker([45.525, 4.924]).addTo(map);
 
-    // --- DataTable Initialization ---
-    var gpsTable = $('#gpsDataTable').DataTable({
-        "paging": false,
-        "searching": false,
-        "info": false,
-        "order": []
-    });
-
     // --- Plotly Skyview Initialization ---
-    const skyviewDiv = document.getElementById('skyviewChart');
     const layout = {
         polar: {
             radialaxis: { tickfont: { size: 8 }, angle: 90, tickangle: 90, range: [90, 0] },
@@ -27,9 +22,8 @@
     };
     Plotly.newPlot(skyviewDiv, [], layout);
 
-    // --- WebSocket Connection via ConnectionManager ---
+    // --- WebSocket Connection ---
     const ws_gps = ConnectionManager.getSocket('/ws_gps');
-
     ws_gps.onmessage = function(event) {
         const data = JSON.parse(event.data);
         if (data && data.geometry && data.geometry.type === 'Point') {
@@ -51,7 +45,8 @@
 
     // --- Helper Functions ---
     function updateGpsTable(properties) {
-        gpsTable.clear();
+        gpsTableBody.innerHTML = ''; // Clear existing table rows
+
         const flattenObject = (obj, prefix = '') => {
             const result = {};
             for (const key in obj) {
@@ -75,9 +70,11 @@
             } else if (Array.isArray(value)) {
                 displayValue = JSON.stringify(value);
             }
-            gpsTable.row.add([key, displayValue]);
+
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${key}</td><td>${displayValue}</td>`;
+            gpsTableBody.appendChild(row);
         }
-        gpsTable.draw();
     }
 
     function getSnrColor(snr) {
@@ -108,23 +105,11 @@
     }
 
     // --- Page Cleanup ---
-    //currentPage is a global defined in app.js
     currentPage.cleanup = function() {
         console.log("Cleaning up GPS page...");
-        // Close the WebSocket connection for this page
         ConnectionManager.closeSocket('/ws_gps');
-        // Destroy the DataTable instance to prevent memory leaks
-        if (gpsTable) {
-            gpsTable.destroy();
-        }
-        // Clean up Plotly chart
-        if (skyviewDiv) {
-            Plotly.purge(skyviewDiv);
-        }
-        // Clean up Leaflet map
-        if (map) {
-            map.remove();
-        }
+        if (skyviewDiv) Plotly.purge(skyviewDiv);
+        if (map) map.remove();
         console.log("GPS page cleanup complete.");
     };
 })();
