@@ -1,15 +1,17 @@
-import { connect, JSONCodec, StringCodec } from "/static/libs/nats-ws/nats.js";
+import { connect, JSONCodec, StringCodec, NatsError } from "/static/libs/nats-ws/nats.js";
 
 const ConnectionManager = {
     _natsConnection: null,
     isOnline: false,
+    appStatus: "unknown",
     reconnectInterval: 1000,
     maxReconnectInterval: 30000,
+    statusPollInterval: null,
     stringCodec: StringCodec(),
     jsonCodec: JSONCodec(),
 
     async getNatsConnection() {
-        if (this._natsConnection) {
+        if (this._natsConnection && !this._natsConnection.isClosed()) {
             return this._natsConnection;
         }
 
@@ -17,12 +19,15 @@ const ConnectionManager = {
             try {
                 const wsUrl = `ws://${window.location.hostname}:4223`;
                 console.log(`Attempting to connect to NATS at ${wsUrl}...`);
-                this._natsConnection = await connect({
+
+                const nc = await connect({
                     servers: [wsUrl],
                     reconnect: true,
                     reconnectTimeWait: this.reconnectInterval,
                     maxReconnectAttempts: -1,
                 });
+
+                this._natsConnection = nc;
                 console.log(`Connected to NATS server ${this._natsConnection.getServer()}`);
                 this.isOnline = true;
                 this.updateGlobalStatus();
@@ -35,17 +40,21 @@ const ConnectionManager = {
                     }
                 })().then();
 
-                this._natsConnection.closed().then(() => {
-                    console.log("NATS connection closed");
+                this._natsConnection.closed().then((err) => {
+                    console.log(`NATS connection closed: ${err}`);
                     this.isOnline = false;
+                    this.appStatus = "offline";
                     this.updateGlobalStatus();
                     this._natsConnection = null;
                     setTimeout(connectToNats, this.reconnectInterval);
                 });
 
+                this.startStatusPolling();
+
             } catch (error) {
                 console.error("Failed to connect to NATS:", error);
                 this.isOnline = false;
+                this.appStatus = "offline";
                 this.updateGlobalStatus();
                 this._natsConnection = null;
                 setTimeout(connectToNats, this.reconnectInterval);
@@ -54,6 +63,32 @@ const ConnectionManager = {
 
         await connectToNats();
         return this._natsConnection;
+    },
+
+    startStatusPolling() {
+        if (this.statusPollInterval) {
+            clearInterval(this.statusPollInterval);
+        }
+        this.statusPollInterval = setInterval(async () => {
+            if (!this._natsConnection || this._natsConnection.isClosed()) {
+                this.appStatus = "offline";
+                this.updateGlobalStatus();
+                return;
+            }
+            try {
+                const res = await this._natsConnection.request("manager.status", this.stringCodec.encode(JSON.stringify({command: "get_status"})));
+                const status = this.jsonCodec.decode(res.data);
+                this.appStatus = status.global_status;
+            } catch (err) {
+                if (err.code === "TIMEOUT") { // NatsError.REQ_TIMEOUT is not available in the browser
+                    this.appStatus = "degraded";
+                } else {
+                    console.error("Error getting manager status:", err);
+                    this.appStatus = "degraded";
+                }
+            }
+            this.updateGlobalStatus();
+        }, 2000);
     },
 
     async subscribe(subject, callback) {
@@ -90,13 +125,18 @@ const ConnectionManager = {
     },
 
     updateGlobalStatus: function() {
-        const event = new CustomEvent('connectionStatusChange', { detail: { isOnline: this.isOnline } });
-        document.dispatchEvent(event);
-        const statusDiv = document.getElementById('connection-status');
-        if (statusDiv) {
-            statusDiv.textContent = this.isOnline ? 'Online' : 'Offline';
-            statusDiv.className = this.isOnline ? 'status-online' : 'status-offline';
+        let status = "offline";
+        if (this.isOnline) {
+            if (this.appStatus === "all_ok") {
+                status = "online";
+            } else {
+                status = "degraded";
+            }
         }
+
+        const event = new CustomEvent('connectionStatusChange', { detail: { status: status } });
+        document.dispatchEvent(event);
+        console.log(`Global connection status changed to: ${status}`);
     }
 };
 

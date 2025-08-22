@@ -113,13 +113,15 @@ document.addEventListener('DOMContentLoaded', () => {
 // Handle connection status changes
 document.addEventListener('connectionStatusChange', event => {
     const statusDiv = document.getElementById('connection-status');
-    if (event.detail.isOnline) {
+    const status = event.detail.status;
+    if (status === 'online') {
         statusDiv.textContent = 'Online';
-        statusDiv.classList.remove('status-offline');
-        statusDiv.classList.add('status-online');
+        statusDiv.className = 'status-online';
+    } else if (status === 'degraded') {
+        statusDiv.textContent = 'Degraded';
+        statusDiv.className = 'status-degraded';
     } else {
         statusDiv.textContent = 'Offline';
-        statusDiv.classList.remove('status-online');
-        statusDiv.classList.add('status-offline');
+        statusDiv.className = 'status-offline';
     }
 });

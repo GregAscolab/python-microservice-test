@@ -26,8 +26,9 @@ async function initManagerPage() {
 
     // --- NATS Logic ---
     ConnectionManager.subscribe('manager.status', (m) => {
-        const services = ConnectionManager.jsonCodec.decode(m.data);
-        updateStatusGrid(services);
+        const data = ConnectionManager.jsonCodec.decode(m.data);
+        updateStatusGrid(data.services);
+        updateGlobalStatusIndicator(data.global_status);
     }).then(sub => {
         managerSub = sub;
         // Request initial status after subscription is established
@@ -104,6 +105,19 @@ function updateStatusGrid(services) {
     });
 }
 
+function updateGlobalStatusIndicator(globalStatus) {
+    const indicator = document.getElementById('global-status-indicator');
+    if (!indicator) return;
+
+    if (globalStatus === 'all_ok') {
+        indicator.textContent = 'All services OK';
+        indicator.className = 'status-badge status-running';
+    } else {
+        indicator.textContent = 'Degraded';
+        indicator.className = 'status-badge status-degraded';
+    }
+}
+
 function closeStopAllModal() {
     document.getElementById('stop-all-modal').style.display = 'none';
     document.body.classList.remove('modal-open');
@@ -151,16 +165,16 @@ function cleanupManagerPage() {
     if (logInterval) clearInterval(logInterval);
     // Remove all listeners to prevent memory leaks
     const restartAllBtn = document.getElementById('restart-all-btn');
-    if (restartAllBtn) restartAllBtn.removeEventListener('click', onRestartAll);
+    if(restartAllBtn) restartAllBtn.removeEventListener('click', onRestartAll);
 
     const stopAllBtn = document.getElementById('stop-all-btn');
-    if (stopAllBtn) stopAllBtn.removeEventListener('click', onStopAll);
+    if(stopAllBtn) stopAllBtn.removeEventListener('click', onStopAll);
 
     const statusGrid = document.getElementById('status-grid');
-    if (statusGrid) statusGrid.removeEventListener('click', onStatusGridClick);
+    if(statusGrid) statusGrid.removeEventListener('click', onStatusGridClick);
 
     const closeModalBtn = document.getElementById('close-modal-btn');
-    if (closeModalBtn) closeModalBtn.removeEventListener('click', closeStopAllModal);
+    if(closeModalBtn) closeModalBtn.removeEventListener('click', closeStopAllModal);
 
     const cancelStopAllBtn = document.getElementById('cancel-stop-all-btn');
     if(cancelStopAllBtn) cancelStopAllBtn.removeEventListener('click', closeStopAllModal);
