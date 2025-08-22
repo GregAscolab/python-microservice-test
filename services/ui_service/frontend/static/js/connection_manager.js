@@ -49,6 +49,12 @@ const ConnectionManager = {
                     setTimeout(connectToNats, this.reconnectInterval);
                 });
 
+                this.subscribe('manager.status', (m) => {
+                    const status = this.jsonCodec.decode(m.data);
+                    this.appStatus = status.global_status;
+                    this.updateGlobalStatus();
+                })
+
                 this.startStatusPolling();
 
             } catch (error) {
