@@ -35,7 +35,7 @@ const ConnectionManager = {
                 (async () => {
                     for await (const status of this._natsConnection.status()) {
                         console.info(`NATS status: ${status.type}`);
-                        this.isOnline = status.type === 'reconnect' || status.type === 'connect';
+                        this.isOnline = status.type === 'reconnect' || status.type === 'connect' || status.type === 'pingTimer';
                         this.updateGlobalStatus();
                     }
                 })().then();
