@@ -76,7 +76,7 @@ const ConnectionManager = {
                 return;
             }
             try {
-                const res = await this._natsConnection.request("manager.status", this.stringCodec.encode(JSON.stringify({command: "get_status"})));
+                const res = await this._natsConnection.request("commands.manager", this.stringCodec.encode(JSON.stringify({command: "get_status"})));
                 const status = this.jsonCodec.decode(res.data);
                 this.appStatus = status.global_status;
             } catch (err) {
@@ -88,7 +88,7 @@ const ConnectionManager = {
                 }
             }
             this.updateGlobalStatus();
-        }, 2000);
+        }, 10000);
     },
 
     async subscribe(subject, callback) {

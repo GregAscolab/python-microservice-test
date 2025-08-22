@@ -172,11 +172,9 @@ class ManagerService(Microservice):
         await self.start_all_command()
         self.logger.info("Finished restart_all command.")
 
-    async def get_status_command(self, msg: Msg):
+    async def get_status_command(self, reply:str=""):
         """Replies with the current status of all services."""
-        status_payload = self.get_status_payload()
-        if msg.reply:
-            await self.messaging_client.publish(msg.reply, json.dumps(status_payload).encode())
+        await self.publish_status(reply=reply, forced=True)
 
     def get_status_payload(self):
         """Constructs the status payload dictionary."""
@@ -234,13 +232,17 @@ class ManagerService(Microservice):
             await self.stop_service(service_name)
         self.logger.info("All managed services have been signaled to stop.")
 
-    async def publish_status(self):
+    async def publish_status(self, reply:str="", forced:bool=False):
         """Publishes the status of all managed services to NATS and stores it."""
         status_payload = self.get_status_payload()
-        if self.last_published_status != status_payload:
+        if forced or (self.last_published_status != status_payload):
             self.logger.info(f"Publishing status update for {len(status_payload['services'])} services.")
+            if reply:
+                subject = reply
+            else:
+                subject = "manager.status"
             await self.messaging_client.publish(
-                "manager.status",
+                subject,
                 json.dumps(status_payload).encode()
             )
             self.last_published_status = status_payload
