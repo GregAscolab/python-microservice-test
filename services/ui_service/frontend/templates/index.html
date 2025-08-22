@@ -197,6 +197,7 @@
             <div id="page-manager" class="page-content" style="display: none;">
                 <div class="manager-header">
                     <h1>Service Manager</h1>
+                    <div id="global-status-indicator"></div>
                     <div id="global-actions" class="global-actions">
                         <button id="restart-all-btn">Restart All</button>
                         <button id="stop-all-btn" class="danger">Stop All</button>
@@ -239,19 +240,20 @@
     <!-- Libs JS -->
     <script src="/static/libs/leaflet/leaflet.js"></script>
     <script src="/static/libs/plotly/plotly.min.js"></script>
+    <script src="/static/libs/nats-ws/nats.js"></script>
 
     <!-- Core App JS -->
-    <script src="/static/js/connection_manager.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script type="module" src="/static/js/connection_manager.js"></script>
+    <script type="module" src="/static/js/app.js"></script>
 
     <!-- Page-Specific Scripts (loaded upfront) -->
-    <script src="/static/js/dashboard.js"></script>
-    <script src="/static/js/gps.js"></script>
-    <script src="/static/js/app_logger.js"></script>
-    <script src="/static/js/logger.js"></script>
-    <script src="/static/js/map.js"></script>
-    <script src="/static/js/sensors.js"></script>
-    <script src="/static/js/settings.js"></script>
-    <script src="/static/js/manager.js"></script>
+    <script type="module" src="/static/js/dashboard.js"></script>
+    <script type="module" src="/static/js/gps.js"></script>
+    <script type="module" src="/static/js/app_logger.js"></script>
+    <script type="module" src="/static/js/logger.js"></script>
+    <script type="module" src="/static/js/map.js"></script>
+    <script type="module" src="/static/js/sensors.js"></script>
+    <script type="module" src="/static/js/settings.js"></script>
+    <script type="module" src="/static/js/manager.js"></script>
 </body>
 </html>

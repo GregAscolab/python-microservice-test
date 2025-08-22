@@ -91,7 +91,7 @@ class Microservice(ABC):
         self.logger.info(f"Subscribing to command subject: {subject}")
 
         async def command_message_handler(msg: Msg):
-            await self.command_handler.handle_message(msg.data)
+            await self.command_handler.handle_message(msg.data, msg.reply)
 
         await self.messaging_client.subscribe(subject, cb=command_message_handler)
 

@@ -19,7 +19,7 @@ class CommandHandler:
         self.logger.info(f"Registering command: {command_name}")
         self._handlers[command_name] = handler
 
-    async def handle_message(self, msg_payload: bytes):
+    async def handle_message(self, msg_payload: bytes, reply:str=""):
         """
         Parses a raw message payload, identifies the command, and executes the
         corresponding handler.
@@ -38,6 +38,8 @@ class CommandHandler:
                 return
 
             args = {k: v for k, v in data.items() if k != 'command'}
+            if reply:
+                args["reply"] = reply
 
             self.logger.info(f"Executing command '{command}' with args: {args}")
             await handler(**args)

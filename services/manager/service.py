@@ -4,6 +4,7 @@ import subprocess
 import sys
 import json
 from typing import Dict, TypedDict, Optional
+from nats.aio.msg import Msg
 
 # Add the project root to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -89,10 +90,12 @@ class ManagerService(Microservice):
                 "last_command": "start"
             })
             self.logger.info(f"Service '{service_name}' started with PID {process.pid}.")
+            await self.publish_status() # Publish status after starting a service
             return True
         except Exception as e:
             self.logger.error(f"Error starting service '{service_name}': {e}", exc_info=True)
             service_info["status"] = "error"
+            await self.publish_status() # Publish status after a failed start
             return False
 
     async def stop_service(self, service_name: str):
@@ -119,6 +122,7 @@ class ManagerService(Microservice):
                 self.logger.error(f"Error while stopping service {service_name}: {e}")
 
         service_info.update({"status": "stopped", "pid": None, "process": None})
+        await self.publish_status()
 
     async def restart_service(self, service_name: str):
         self.logger.info(f"Restarting service '{service_name}'...")
@@ -155,10 +159,12 @@ class ManagerService(Microservice):
             if service_name == "settings_service":
                 self.logger.info("Waiting for settings_service to initialize...")
                 await asyncio.sleep(2) # Give it time to start and be available
+        await self.publish_status()
 
     async def stop_all_command(self):
         self.logger.info("Executing stop_all command...")
         await self._stop_logic()
+        await self.publish_status()
 
     async def restart_all_command(self):
         self.logger.info("Executing restart_all command...")
@@ -166,13 +172,34 @@ class ManagerService(Microservice):
         await self.start_all_command()
         self.logger.info("Finished restart_all command.")
 
-    async def get_status_command(self):
-        """Publishes the current status of all services."""
-        current_status_payload = []
+    async def get_status_command(self, reply:str=""):
+        """Replies with the current status of all services."""
+        await self.publish_status(reply=reply, forced=True)
+
+    def get_status_payload(self):
+        """Constructs the status payload dictionary."""
+        services_status_list = []
+        is_all_running = True
         for name, info in self.managed_services.items():
+            # Check if the process is still running
+            process = info.get("process")
+            status = info["status"]
+            if status == 'running' and process and process.poll() is not None:
+                status = 'crashed' # Or 'stopped', depending on desired behavior
+                info['status'] = status
+                info['pid'] = None
+                info['process'] = None
+
+            if status != 'running':
+                is_all_running = False
+
             status_info = {k: v for k, v in info.items() if k != 'process'}
-            current_status_payload.append(status_info)
-        await self.publish_status(current_status_payload)
+            services_status_list.append(status_info)
+
+        return {
+            "global_status": "all_ok" if is_all_running else "degraded",
+            "services": services_status_list
+        }
 
     # --- Core Logic ---
 
@@ -205,20 +232,26 @@ class ManagerService(Microservice):
             await self.stop_service(service_name)
         self.logger.info("All managed services have been signaled to stop.")
 
-    async def publish_status(self, status_payload: list):
+    async def publish_status(self, reply:str="", forced:bool=False):
         """Publishes the status of all managed services to NATS and stores it."""
-        self.logger.info(f"Publishing status update for {len(status_payload)} services.")
-        await self.messaging_client.publish(
-            "manager.status",
-            json.dumps(status_payload).encode()
-        )
-        self.last_published_status = status_payload
+        status_payload = self.get_status_payload()
+        if forced or (self.last_published_status != status_payload):
+            self.logger.info(f"Publishing status update for {len(status_payload['services'])} services.")
+            if reply:
+                subject = reply
+            else:
+                subject = "manager.status"
+            await self.messaging_client.publish(
+                subject,
+                json.dumps(status_payload).encode()
+            )
+            self.last_published_status = status_payload
 
     async def monitor_services(self):
         """Periodically checks the health of services and handles crashes."""
         while not self._shutdown_event.is_set():
             state_changed = False
-            for name, service_info in self.managed_services.items():
+            for name, service_info in list(self.managed_services.items()):
                 process = service_info.get("process")
                 if service_info["status"] == "running" and process and process.poll() is not None:
                     # The process has terminated, but was it intentional?
@@ -242,15 +275,8 @@ class ManagerService(Microservice):
                         service_info.update({"status": "stopped", "pid": None, "process": None})
                     state_changed = True
 
-            # Construct the current status payload
-            current_status_payload = []
-            for name, info in self.managed_services.items():
-                status_info = {k: v for k, v in info.items() if k != 'process'}
-                current_status_payload.append(status_info)
-
-            # Publish status only if it has changed
-            if state_changed or self.last_published_status != current_status_payload:
-                await self.publish_status(current_status_payload)
+            if state_changed:
+                await self.publish_status()
 
             try:
                 # Wait for 2 seconds or until shutdown is triggered
