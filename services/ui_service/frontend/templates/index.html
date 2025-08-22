@@ -19,7 +19,8 @@
             <ul>
                 <li><a href="/dashboard">Dashboard</a></li>
                 <li><a href="/gps">GPS</a></li>
-                <li><a href="/logger">Logger</a></li>
+                <li><a href="/app_logger">App Logger</a></li>
+                <li><a href="/logger">CAN Logger</a></li>
                 <li><a href="/map">Map</a></li>
                 <li><a href="/sensors">Sensors</a></li>
                 <li><a href="/settings">Settings</a></li>
@@ -91,9 +92,47 @@
                     </div>
                 </div>
             </div>
+            
+            <div id="page-applogger" class="page-content" style="display: none;">
+                <h2>App Logger</h2>
+                <div class="controls">
+                   <button id="toggleRecording-app-logger">Start Recording</button>
+                   <div id="recorderSpin-app-logger" class="recorderSpin" style="display: none;"></div>
+                </div>
+                <div id="status-display">
+                    <h3>Status</h3>
+                    <p><strong>State:</strong> <span id="app-logger-state">Stopped</span></p>
+                    <p><strong>Start Time:</strong> <span id="start-time">N/A</span></p>
+                    <p><strong>Start Position:</strong> <span id="start-position">N/A</span></p>
+                </div>
+                <div class="log_container">
+                    <div id="files-panel">
+                        <h3 id="app-logger-current-path">Contenu du dossier : /</h3>
+                        <!-- Extension filter can be added back later if needed -->
+                        <table id="app-filenameTable">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Taille</th>
+                                    <th>Download</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- File list will be populated by app_logger.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="loader-container">
+                        <h3>Log Content</h3>
+                        <pre id="app-log-content"></pre>
+                        <div id="app-log-status"></div>
+                        <div id="app-log-loader" class="loader" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
 
             <div id="page-logger" class="page-content" style="display: none;">
-                <h2>Logger</h2>
+                <h2>CAN Logger</h2>
                 <div class="controls">
                    <button id="toggleRecording-logger">Start Recording</button>
                    <div id="recorderSpin-logger" class="recorderSpin" style="display: none;"></div>
@@ -208,6 +247,7 @@
     <!-- Page-Specific Scripts (loaded upfront) -->
     <script src="/static/js/dashboard.js"></script>
     <script src="/static/js/gps.js"></script>
+    <script src="/static/js/app_logger.js"></script>
     <script src="/static/js/logger.js"></script>
     <script src="/static/js/map.js"></script>
     <script src="/static/js/sensors.js"></script>

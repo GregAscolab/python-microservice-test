@@ -118,11 +118,11 @@ class CanBusService(Microservice):
         try:
             s3_client = boto3.client(
                 's3',
-                endpoint_url=self.settings.get("s3_endpoint_url"),
-                aws_access_key_id=self.settings.get("s3_access_key"),
-                aws_secret_access_key=self.settings.get("s3_secret_key")
+                endpoint_url=self.global_settings.get("s3_endpoint_url"),
+                aws_access_key_id=self.global_settings.get("s3_access_key"),
+                aws_secret_access_key=self.global_settings.get("s3_secret_key")
             )
-            bucket_name = self.settings.get("s3_bucket")
+            bucket_name = self.global_settings.get("s3_bucket")
 
             for file_to_upload in glob.glob(f"{file_path_pattern}*"):
                 file_name = os.path.basename(file_to_upload)
@@ -178,5 +178,14 @@ class CanBusService(Microservice):
         self.can_logger.stop()
         self.can_logger = None
 
-        await self._upload_to_s3(self.current_log_path_pattern)
+        file_path_pattern = self.current_log_path_pattern
         self.current_log_path_pattern = None
+
+        # Upload to S3 and gather file list
+        await self._upload_to_s3(file_path_pattern)
+
+        logged_files = glob.glob(f"{file_path_pattern}*")
+
+        self.logger.info(f"Publishing file list to can_bus.files.logged")
+        payload = {"files": [os.path.basename(f) for f in logged_files]}
+        await self.messaging_client.publish("can_bus.files.logged", json.dumps(payload).encode())

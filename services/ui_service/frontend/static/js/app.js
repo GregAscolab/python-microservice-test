@@ -17,9 +17,10 @@ let currentPage = {
 
 // --- Helper Functions ---
 function getPageName(path) {
-    // Converts '/dashboard' -> 'Dashboard'
+    // Converts '/can_bus_logger' -> 'CanBusLogger'
+    // Converts '/app_logger' -> 'AppLogger'
     const name = path.substring(1);
-    return name.charAt(0).toUpperCase() + name.slice(1);
+    return name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
 }
 
 function showPage(path) {

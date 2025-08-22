@@ -87,7 +87,7 @@
         fileTableBody.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
 
         try {
-            const response = await fetch(`/api/logger/files/${path}`);
+            const response = await fetch(`/api/files/logger/${path}`);
             const data = await response.json();
             fileTableBody.innerHTML = '';
 
@@ -101,7 +101,7 @@
                     fileTableBody.insertAdjacentHTML('beforeend', `<tr><td class="dir-link" data-path="${path ? path + '/' : ''}${item.name}">${item.name}/</td><td></td><td></td></tr>`);
                 } else {
                     const b64path = btoa((path ? path + '/' : '') + item.name);
-                    fileTableBody.insertAdjacentHTML('beforeend', `<tr class="file-row" data-ext="${item.name.split('.').pop()}"><td class="file-link" data-path="${path}" data-file="${item.name}">${item.name}</td><td>${formatFileSize(item.size)}</td><td><a href="/download/${b64path}" class="download-btn">⬇️</a></td></tr>`);
+                    fileTableBody.insertAdjacentHTML('beforeend', `<tr class="file-row" data-ext="${item.name.split('.').pop()}"><td class="file-link" data-path="${path}" data-file="${item.name}">${item.name}</td><td>${formatFileSize(item.size)}</td><td><a href="/api/download/logger/${b64path}" class="download-btn">⬇️</a></td></tr>`);
                 }
             });
         } catch (error) {
@@ -126,7 +126,7 @@
         loader.style.display = "flex";
 
         try {
-            const response = await fetch("/convert", {
+            const response = await fetch("/api/convert", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: file, folder: folder }),
@@ -136,7 +136,7 @@
                 loader.style.display = "none";
             }
         } catch (error) {
-            console.error("Error calling /convert endpoint:", error);
+            console.error("Error calling /api/convert endpoint:", error);
             loader.style.display = "none";
         }
     }

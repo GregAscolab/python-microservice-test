@@ -93,6 +93,9 @@
         // Clear tables
         if(pressureTableBody) pressureTableBody.innerHTML = "";
         if(angleTableBody) angleTableBody.innerHTML = "";
+
+        // Clear cache
+        nameCache.clear();
     }
 
     // Expose functions to global scope

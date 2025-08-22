@@ -1,5 +1,6 @@
 # App specific
 can_logs/
+app_logs/
 *.blf
 
 # Python
@@ -18,6 +19,7 @@ venv/
 env/
 
 # Logs and temporary files
+*.bak
 *.log
 *.zip
 *.tar.gz

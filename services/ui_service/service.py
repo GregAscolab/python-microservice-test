@@ -74,6 +74,8 @@ class UiService(Microservice):
         self.logger.info("Subscribed to 'manager.status'")
         await self.messaging_client.subscribe("conversion.results", cb=self._conversion_results_handler)
         self.logger.info("Subscribed to 'conversion.results'")
+        await self.messaging_client.subscribe("app_logger.status", cb=self._nats_data_handler)
+        self.logger.info("Subscribed to 'app_logger.status'")
         await self._subscribe_to_commands()
 
         self.logger.info("Starting FastAPI server...")
