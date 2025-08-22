@@ -23,16 +23,18 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "frontend", "static")
 TEMPLATES_DIR = os.path.join(APP_DIR, "frontend", "templates")
 # Use an absolute path for the main log directory as well
+LOGS_DIR = os.path.abspath("logs")
 CAN_LOGS_DIR = os.path.abspath("can_logs")
+APP_LOGS_DIR = os.path.abspath("app_logs")
+FAVICON_PATH = os.path.join(APP_DIR, "frontend", "static", "images", "favicon.ico")
 
 # We use an APIRouter now, which will be included by the main app in service.py
 router = APIRouter()
-
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
 def b64encode(input:str):
     return base64.b64encode(input.encode("utf-8")).decode("utf-8")
 templates.env.filters["b64encode"] = b64encode
-
 
 class ConnectionManager:
     """Manages active WebSocket connections."""
@@ -47,12 +49,18 @@ class ConnectionManager:
 
     def disconnect(self, websocket: WebSocket, channel: str):
         if channel in self.active_connections:
-            self.active_connections[channel].remove(websocket)
+            try:
+                self.active_connections[channel].remove(websocket)
+            except ValueError:
+                pass
 
     async def broadcast(self, message: str, channel: str):
         if channel in self.active_connections:
             for connection in self.active_connections[channel]:
-                await connection.send_text(message)
+                try:
+                    await connection.send_text(message)
+                except WebSocketDisconnect:
+                    self.disconnect(connection, channel)
 
 manager = ConnectionManager()
 
@@ -60,85 +68,42 @@ manager = ConnectionManager()
 def get_service(request: Request) -> Microservice:
     return request.app.state.service
 
-# --- HTML Page Routes ---
+@router.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    return FileResponse(FAVICON_PATH)
 
+# --- HTML Page Routes ---
+@router.get("/{page}", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-@router.get("/logger", response_class=HTMLResponse)
-@router.get("/logger/{path:path}", response_class=HTMLResponse)
-async def read_logger_path(request: Request, path: str = ""):
-    service = get_service(request)
-    try:
-        os.makedirs(CAN_LOGS_DIR, exist_ok=True)
-        full_path = os.path.normpath(os.path.join(CAN_LOGS_DIR, path))
-
-        # Security check to prevent path traversal
-        if not full_path.startswith(CAN_LOGS_DIR):
-            return HTMLResponse("Forbidden", status_code=403)
-
-        items = sorted(os.listdir(full_path))  # Sort items alphabetically
-        files = {item: os.path.getsize(os.path.join(full_path, item)) for item in items if os.path.isfile(os.path.join(full_path, item))}
-        dirs = [item for item in items if os.path.isdir(os.path.join(full_path, item))]
-        extensions = sorted(list(set(os.path.splitext(f)[1] for f in files))) # Sort extensions alphabetically
-    except Exception as e:
-        service.logger.error(f"Error reading logger path '{path}': {e}")
-        files, dirs, extensions = {}, [], []
-
-    return templates.TemplateResponse("logger.html", {"request": request, "files": files, "dirs": dirs, "extensions": extensions, "current_path": path})
-
-@router.get("/manager", response_class=HTMLResponse)
-async def read_manager(request: Request):
-    """Serves the manager page."""
-    return templates.TemplateResponse("manager.html", {"request": request})
-
-@router.get("/{page}", response_class=HTMLResponse)
-async def read_page(request: Request, page: str):
-    try:
-        return templates.TemplateResponse(f"{page}.html", {"request": request})
-    except JinjaExceptions.TemplateNotFound:
-        return HTMLResponse("Page not found", status_code=404)
-
 # --- WebSocket Endpoints ---
-
 @router.websocket("/ws_data")
 async def websocket_data_endpoint(websocket: WebSocket):
-    request = websocket
-    service = get_service(request)
     await manager.connect(websocket, "can_data")
     try:
         while True:
             data = await websocket.receive_text()
-            await service.messaging_client.publish(
-                "commands.can_bus_service",
-                data.encode()
-            )
+            await get_service(websocket).messaging_client.publish("commands.can_bus_service", data.encode())
     except WebSocketDisconnect:
         manager.disconnect(websocket, "can_data")
 
 @router.websocket("/ws_gps")
 async def websocket_gps_endpoint(websocket: WebSocket):
-    request = websocket
-    service = get_service(request)
     await manager.connect(websocket, "gps")
     try:
         while True:
             data = await websocket.receive_text()
-            await service.messaging_client.publish(
-                "commands.gps_service",
-                data.encode()
-            )
+            await get_service(websocket).messaging_client.publish("commands.gps_service", data.encode())
     except WebSocketDisconnect:
         manager.disconnect(websocket, "gps")
 
 @router.websocket("/ws_settings")
 async def websocket_settings_endpoint(websocket: WebSocket):
-    request = websocket
-    service = get_service(request)
     await manager.connect(websocket, "settings")
-
-    subject = f"settings.get.all"
+    service = get_service(websocket)
+    subject = "settings.get.all"
     service.logger.info(f"Requesting settings on subject: {subject}")
     response = await service.messaging_client.request(subject, b'', timeout=2.0)
 
@@ -195,7 +160,6 @@ async def websocket_manager_endpoint(websocket: WebSocket):
         manager.disconnect(websocket, "manager")
         service.logger.info("Manager client disconnected from WebSocket.")
 
-
 @router.websocket("/ws_convert")
 async def websocket_convert_endpoint(websocket: WebSocket):
     await manager.connect(websocket, "conversion")
@@ -207,10 +171,93 @@ async def websocket_convert_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket, "conversion")
 
+@router.websocket("/ws_app_logger")
+async def websocket_app_logger_endpoint(websocket: WebSocket):
+    service = get_service(websocket)
+    await manager.connect(websocket, "app_logger.status")
+    service.logger.info("App logger client connected to WebSocket.")
+    try:
+        # Initial status push
+        status_payload = await service.messaging_client.request("app_logger.get_status", b'', timeout=1.0)
+        await websocket.send_text(status_payload.data.decode())
+
+        while True:
+            data = await websocket.receive_text()
+            try:
+                command = json.loads(data)
+                await service.messaging_client.publish(
+                    "commands.app_logger_service",
+                    json.dumps(command).encode()
+                )
+                service.logger.info(f"Forwarded command to app_logger_service: {command}")
+            except json.JSONDecodeError:
+                service.logger.error(f"Received invalid JSON from app_logger websocket: {data}")
+            except Exception as e:
+                service.logger.error(f"Error processing command from app_logger websocket: {e}")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, "app_logger.status")
+        service.logger.info("App logger client disconnected from WebSocket.")
 
 # --- API Endpoints ---
+def getServiceNameFolder(service_name:str) -> str|None:
+    folder_path = None
+    if service_name == "logger":
+        folder_path = CAN_LOGS_DIR
+    elif service_name == "app_logger":
+        folder_path = APP_LOGS_DIR
+    else:
+        pass
+        # folder_path = None
 
-LOGS_DIR = os.path.abspath("logs")
+    return folder_path
+
+@router.get("/api/files/{service_name}/{path:path}", response_class=HTMLResponse)
+async def list_files(request: Request, service_name:str, path: str = ""):
+    folder_path = getServiceNameFolder(service_name)
+    if not folder_path:
+        return HTMLResponse(f"Unknowed service name: {service_name}", status_code=404)
+    
+    service = get_service(request)
+    try:
+        # Security check to prevent path traversal
+        safe_path = os.path.normpath(os.path.join(folder_path, path))
+        if not safe_path.startswith(folder_path):
+            return HTMLResponse("Forbidden", status_code=403)
+
+        os.makedirs(safe_path, exist_ok=True)
+        items = sorted(os.listdir(safe_path))  # Sort items alphabetically
+
+        files = [{"name": item, "size": os.path.getsize(os.path.join(safe_path, item)), "type": "file"} for item in items if os.path.isfile(os.path.join(safe_path, item))]
+        dirs = [{"name": item, "type": "dir"} for item in items if os.path.isdir(os.path.join(safe_path, item))]
+
+        response_data = {"path": path, "contents": dirs + files}
+        return HTMLResponse(content=json.dumps(response_data), media_type="application/json")
+
+    except Exception as e:
+        service.logger.error(f"Error listing files for logger path '{path}': {e}")
+        return HTMLResponse(content=json.dumps({"error": str(e)}), status_code=500, media_type="application/json")
+
+@router.get("/api/file/{service_name}/{filename}")
+async def get_app_log_content(service_name:str, filename: str, request: Request):
+    folder_path = getServiceNameFolder(service_name)
+    if not folder_path:
+        return HTMLResponse(f"Unknowed service name: {service_name}", status_code=404)
+    
+    service = get_service(request)
+    try:
+        log_file_path = os.path.normpath(os.path.join(folder_path, filename))
+        if not os.path.abspath(log_file_path).startswith(folder_path):
+            return HTMLResponse("Forbidden", status_code=403)
+
+        if not os.path.exists(log_file_path):
+            return HTMLResponse("File not found", status_code=404)
+
+        with open(log_file_path, "r", encoding="utf-8") as f:
+            content = json.load(f)
+            return content
+    except Exception as e:
+        service.logger.error(f"Error reading app log file '{filename}': {e}", exc_info=True)
+        return HTMLResponse("Error reading file", status_code=500)
 
 @router.get("/api/logs/{service_name}", response_class=HTMLResponse)
 async def get_service_logs(service_name: str, request: Request):
@@ -246,31 +293,26 @@ async def get_service_logs(service_name: str, request: Request):
         service.logger.error(f"Error reading log for service '{service_name}': {e}", exc_info=True)
         return HTMLResponse(f"An error occurred while trying to read the log file.", status_code=500)
 
-
-@router.get("/download/{file_path_b64:path}")
-async def download_file(file_path_b64: str):
-    base64_bytes = file_path_b64.encode("utf-8")
-    file_path_bytes = base64.b64decode(base64_bytes)
-    file_path = file_path_bytes.decode("utf-8")
-
-    full_path = os.path.normpath(os.path.join(CAN_LOGS_DIR, file_path))
-    if not full_path.startswith(CAN_LOGS_DIR):
+@router.get("/api/download/{service_name}/{file_path_b64:path}")
+async def download_file(service_name:str, file_path_b64: str):
+    folder_path = getServiceNameFolder(service_name)
+    if not folder_path:
+        return HTMLResponse(f"Unknowed service name: {service_name}", status_code=404)
+    
+    file_path = base64.b64decode(file_path_b64.encode("utf-8")).decode("utf-8")
+    full_path = os.path.normpath(os.path.join(folder_path, file_path))
+    if not full_path.startswith(folder_path):
         return HTMLResponse("Forbidden", status_code=403)
 
     if os.path.exists(full_path):
         return FileResponse(full_path, filename=os.path.basename(full_path))
-    return HTMLResponse("File not found", status_code=404)
+    return HTMLResponse(f"File not found: {full_path}", status_code=404)
 
 class FileToConvert(BaseModel):
     name: str
     folder: str
 
-class TimeSeriesData(BaseModel):
-    name: str
-    timestamps: List[str]
-    values: List[float]
-
-@router.post("/convert")
+@router.post("/api/convert")
 async def convert_file(file_content: FileToConvert, request: Request):
     service = get_service(request)
     service.logger.info(f"Queueing conversion for file: {file_content.name} in folder {file_content.folder}")

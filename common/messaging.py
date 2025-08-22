@@ -5,6 +5,7 @@ from typing import Callable, Awaitable
 import nats
 from nats.aio.client import Client as NATS
 from nats.aio.msg import Msg
+from nats.aio.subscription import Subscription
 
 class MessagingClient(ABC):
     """
@@ -23,7 +24,7 @@ class MessagingClient(ABC):
         pass
 
     @abstractmethod
-    async def subscribe(self, subject: str, cb: Callable[[Msg], Awaitable[None]], queue: str = ""):
+    async def subscribe(self, subject: str, cb: Callable[[Msg], Awaitable[None]], queue: str = "") -> Subscription:
         pass
 
     @abstractmethod
@@ -52,8 +53,8 @@ class NatsMessagingClient(MessagingClient):
     async def publish(self, subject: str, payload: bytes):
         await self.nc.publish(subject, payload)
 
-    async def subscribe(self, subject: str, cb: Callable[[Msg], Awaitable[None]], queue: str = ""):
-        await self.nc.subscribe(subject, cb=cb, queue=queue)
+    async def subscribe(self, subject: str, cb: Callable[[Msg], Awaitable[None]], queue: str = "") -> Subscription:
+        return await self.nc.subscribe(subject, cb=cb, queue=queue)
 
     async def request(self, subject: str, payload: bytes, timeout: float = 1.0) -> Msg:
         return await self.nc.request(subject, payload, timeout=timeout)

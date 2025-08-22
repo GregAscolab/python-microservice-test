@@ -1,89 +1,101 @@
+/* --- Global & Layout --- */
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+}
+
 body {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    margin: 0;
-    font-family: Arial, sans-serif;
-}
-
-header, footer {
-    background-color: #333;
-    color: white;
-    text-align: center;
-    /* padding: 1em; */
 }
 
 .container {
     display: flex;
-    flex-direction: row;
-    /* flex-wrap: wrap; */
-    flex: 1;
+    flex-grow: 1;
+    overflow: hidden; /* Prevent body from scrolling */
 }
 
-.row-container {
-    display: flex;
-    flex-direction: row;
-    flex: 1;
+header {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 0.5em 1em;
+    flex-shrink: 0;
+    
 }
 
-.log_container {
+header h1 {
+    font-size: 1em;
+    margin: 0;
+}
+
+h1, h2, h3 {
+    margin: 0;
+}
+
+footer {
+    background-color: #333;
+    color: white;
+    padding: 5px 0;
+    flex-shrink: 0;
     display: flex;
     flex-direction: row;
-    align-items: stretch;
-    column-gap: 10px;
-    flex:1;
-}
-#files-panel {
-    border-right: 1px solid #ccc;
-}
-#plotly-panel {
-    display: flex;
-    flex-direction: column;
-    row-gap: 10px;
+    justify-content: center;
     align-items: center;
-    flex-grow:1;
-    overflow: auto;
+    gap: 10px;
 }
-.plotly-container {
-    /* width: 100%; */
-    flex:1;
-    /* border-top: 1px solid #ccc; */
-    /* height: 450px; */
-}
-.plotly-log-graph{
-    width: 100%;
-}
-/* #plot {
-    width: 100%;
-} */
+
 .sidebar {
     /* width: 200px; */
-    background-color: #f4f4f4;
+    flex-shrink: 0;
+    background-color: #f8f9fa;
     padding: 1em;
+    border-right: 1px solid #dee2e6;
+    overflow-y: auto;
 }
 
+main {
+    flex: 1 0 0;
+    padding: 1em;
+    overflow-y: auto; /* This makes the main content scrollable */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Hide all page content by default */
+.page-content {
+    display: none;
+    height: 100%;
+    flex-direction: column; /* Ensure page content can use flexbox */
+}
+
+/* --- Sidebar --- */
 .sidebar ul {
     list-style-type: none;
     padding: 0;
+    margin: 0;
 }
 
 .sidebar ul li {
-    margin: 10px 0;
+    margin-bottom: 10px;
 }
 
 .sidebar ul li a {
     display: block;
-    padding: 10px;
+    padding: 10px 15px;
     text-decoration: none;
-    color: #333;
-    background-color: #e0e0e0;
+    color: #343a40;
+    background-color: #e9ecef;
     border-radius: 5px;
     text-align: center;
-    transition: background-color 0.3s;
+    font-weight: bold;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .sidebar ul li a:hover {
-    background-color: #ccc;
+    background-color: #ced4da;
 }
 
 .sidebar ul li a.active {
@@ -91,78 +103,126 @@ header, footer {
     color: white;
 }
 
-main {
+
+/* --- General Content & Controls --- */
+.controls {
     display: flex;
-    flex-direction: column;
-    row-gap: 10px;
-    width: 100%;
-    align-items: stretch;
-    padding: 1em;
-}
-
-#dashboard-container {
-    display: flex;
-    flex-direction: row;
-    column-gap: 10px;
-    width: 100%;
-    flex:1;
-}
-#dashboard-data {
-    display:flex;
-    flex-direction: column;
-    row-gap: 10px;
-    flex: 1;
-}
-
-#dashboard-map {
-    display:flex;
-    flex-direction: column;
-    flex:2;
-}
-
-#map {
-    flex:1;
-    min-height: 400px;
-}
-
-#controls {
-    display: flex;
-    flex-direction: row;
-    /* justify-content: space-around; */
+    flex-wrap: wrap;
     align-items: center;
     padding: 10px;
     background: #f1f1f1;
     border-radius: 5px;
-    /* margin: 10px; */
-}
-label {
-    margin-right: 15px;
-}
-button {
-    margin: 10px;
-    padding: 8px 16px;
-    cursor: pointer;
+    margin-bottom: 1em;
+    gap: 10px;
 }
 
-.loader-container {
-    flex:1;
-    width: 100%;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    /* align-items: center; */
+button {
+    padding: 8px 16px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
 }
+
+button:hover {
+    background-color: #f0f0f0;
+}
+
+/* --- Map & Chart Styles --- */
+.map-container, .chart-container {
+    flex-grow: 1;
+    min-height: 300px; /* Crucial for visibility in a flex container */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure map divs take up full space of their container */
+#map-dashboard, #map-gps, #map-main, #skyviewChart {
+    flex: 1 0 0;
+    width: 100%;
+    border-radius: 4px;
+    min-height: 300px;
+}
+
+.plotly-container {
+    flex: 1 0 0;
+    border-radius: 4px;
+    min-height: 300px;
+}
+
+/* --- Page Specific Layouts --- */
+#page-dashboard, #page-gps, #page-map {
+    display: flex; /* Use flex for these pages */
+    flex-direction: column;
+    gap: 0.5em;
+}
+
+#gps-container {
+    display: flex;
+    flex-direction: column;
+}
+
+#dashboard-container, .gps-row, .row-container, .log_container {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1; /* Allow these containers to grow */
+    gap: 0.5em;
+    min-height: 0; /* Fix for flexbox overflow issue in some browsers */
+}
+
+#dashboard-map, #gps-map-container, #gps-skyview-container, #gps-data-container, #files-panel, .loader-container, #plotly-panel {
+    flex: 1 0 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 0px; /* Fix for flexbox overflow issue */
+}
+#dashboard-map { flex: 1 0 0; } /* Make dashboard map wider */
+
+#dashboard-data {
+    flex: 1 0 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+ }
+
+ .loader-container {
+    align-items: center;
+ }
+
+ #logStatus {
+    display: flex;
+ }
+
+
+/* --- Connection Status --- */
+#connection-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.status-online {
+    background-color: #28a745;
+    color: white;
+}
+
+.status-offline {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* --- Loader Spinner --- */
 .loader {
-  border: 16px solid #f3f3f3; /* Light grey */
-  border-top: 16px solid #007bff; /* Blue */
+  border: 16px solid #f3f3f3;
+  border-top: 16px solid #007bff;
   border-radius: 50%;
   width: 120px;
   height: 120px;
   animation: spin 1.5s linear infinite;
 }
 .recorderSpin {
-  border: 5px solid #c7c7c7; /* Light grey */
-  border-top: 5px solid #ff1e00; /* Red */
+  border: 5px solid #c7c7c7;
+  border-top: 5px solid #ff1e00;
   border-radius: 50%;
   width: 10px;
   height: 10px;
@@ -173,124 +233,24 @@ button {
   100% { transform: rotate(360deg); }
 }
 
-.tabs {
-    margin-top: 20px;
-}
-
-.tab-buttons {
-    display: flex;
-    border-bottom: 1px solid #ccc;
-}
-
-.tab-button {
-    padding: 10px 20px;
-    background-color: #f4f4f4;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.tab-button:hover {
-    background-color: #e0e0e0;
-}
-
-.tab-button.active {
-    background-color: #007bff;
-    color: white;
-}
-
-.tab-pane {
-    display: none;
-    padding: 20px;
-}
-
-.tab-pane.active {
-    display: block;
-}
-
-.setting-field {
-    margin-bottom: 15px;
-}
-
-.setting-field label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-.setting-field input {
-    padding: 8px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.setting-field input[readonly] {
-    color: #999;
-    background-color: #f9f9f9;
-}
-
-.setting-field .unit {
-    margin-left: 5px;
-}
-
-#gps-container {
-    display: flex;
-    flex-direction: column;
-    row-gap: 20px;
-    height: 100%;
-}
-
-.gps-row {
-    display: flex;
-    flex-direction: row;
-    column-gap: 20px;
-    flex: 1;
-}
-
-#gps-map-container, #gps-skyview-container, #gps-data-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-#map, #skyviewChart {
-    flex-grow: 1;
-    min-height: 300px; /* Ensure a minimum height */
-}
-
-#skyviewChart {
-    position: relative;
-    height: 100%;
-    width: 100%;
-}
-
-/* --- Manager Page Styles --- */
-
+/* --- Manager Page --- */
 .manager-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
 }
-
-.global-actions button {
-    margin-left: 10px;
-}
-
 .status-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 8px;
 }
-
 .service-card {
     background-color: #fff;
     border: 1px solid #ddd;
     border-radius: 8px;
     padding: 16px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    flex: 1 1 300px; /* Flex properties for responsive grid */
-    min-width: 280px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -330,7 +290,8 @@ button {
 
 .card-footer {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
+    gap: 8px;
     align-items: center;
     margin-top: 16px;
 }
@@ -372,11 +333,14 @@ button {
     height: 100%;
     overflow: auto;
     background-color: rgba(0,0,0,0.5);
+    /* Changed to flex for centering */
+    align-items: center;
+    justify-content: center;
 }
 
 .modal-content {
     background-color: #fefefe;
-    margin: 15% auto;
+    margin: auto; /* Margin is handled by flexbox centering */
     padding: 20px;
     border: 1px solid #888;
     width: 80%;
@@ -419,6 +383,7 @@ button {
     justify-content: flex-end;
     padding-top: 10px;
     border-top: 1px solid #ddd;
+    gap: 10px;
 }
 
 .modal-footer .button {
@@ -463,4 +428,74 @@ body.modal-open {
 .log-modal-content {
     max-width: 90vw;
     margin: 5vh auto;
+}
+
+/* --- Settings Page Tabs --- */
+.tabs {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.tab-buttons {
+    display: flex;
+    flex-shrink: 0;
+    border-bottom: 1px solid #ccc;
+}
+
+.tab-button {
+    padding: 8px 12px;
+    background-color: #f4f4f4;
+    border: 1px solid #ccc;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+    margin-right: 5px;
+    margin-bottom: -1px;
+    transition: background-color 0.3s;
+}
+
+.tab-button:hover {
+    background-color: #e0e0e0;
+}
+
+.tab-button.active {
+    background-color: #fff;
+    border-bottom: 1px solid #fff;
+    font-weight: bold;
+}
+
+.tab-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-top: none;
+    background-color: #fff;
+}
+
+.tab-pane {
+    display: none; /* Hide all panes by default */
+}
+
+.tab-pane.active {
+    display: block; /* Show only the active one */
+}
+
+.setting-field {
+    margin-bottom: 15px;
+}
+
+.setting-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.setting-field input {
+    padding: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
 }

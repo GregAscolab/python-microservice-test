@@ -74,6 +74,8 @@ class UiService(Microservice):
         self.logger.info("Subscribed to 'manager.status'")
         await self.messaging_client.subscribe("conversion.results", cb=self._conversion_results_handler)
         self.logger.info("Subscribed to 'conversion.results'")
+        await self.messaging_client.subscribe("app_logger.status", cb=self._nats_data_handler)
+        self.logger.info("Subscribed to 'app_logger.status'")
         await self._subscribe_to_commands()
 
         self.logger.info("Starting FastAPI server...")
@@ -86,6 +88,11 @@ class UiService(Microservice):
             host=self.settings.get("host", "0.0.0.0"),
             port=self.settings.get("port", 8000),
             log_config=None,
+            # --- HTTPS/SSL Configuration ---
+            # To enable HTTPS, generate certs with `mkcert localhost 127.0.0.1 ::1`
+            # and uncomment the two lines below.
+            # ssl_keyfile="./localhost+2-key.pem",
+            # ssl_certfile="./localhost+2.pem",
         )
         self.server = uvicorn.Server(config)
 

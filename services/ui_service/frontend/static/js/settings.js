@@ -1,23 +1,28 @@
-$(document).ready(function() {
-    // Initialize settings
-    let settings = {};
+// --- Settings Page ---
+(function(window) {
+    let ws;
     let activeTab = null;
+    let settings = {};
+    let tabButtonsContainer;
+    let tabContentContainer;
 
-    // WebSocket connection
-    const url = "ws://" + window.location.host + "/ws_settings";
-    const ws = new WebSocket(url);
+    function initSettingsPage() {
+        console.log("Initializing Settings page...");
 
-    // Handle WebSocket connection
-    ws.onopen = function() {
-        console.log("WebSocket connection established");
-    };
+        tabButtonsContainer = document.querySelector('#page-settings .tab-buttons');
+        tabContentContainer = document.querySelector('#page-settings .tab-content');
 
-    // Handle WebSocket messages
-    ws.onmessage = function(event) {
+        if (!tabButtonsContainer || !tabContentContainer) return;
+
+        ws = ConnectionManager.getSocket('/ws_settings');
+        ws.onmessage = onSocketMessage;
+
+        tabButtonsContainer.addEventListener('click', onTabClick);
+    }
+
+    function onSocketMessage(event) {
         try {
             const data = JSON.parse(event.data);
-            console.log("Received data:", data);
-
             if (data.settings) {
                 settings = data.settings;
                 generateTabs(settings);
@@ -27,108 +32,111 @@ $(document).ready(function() {
         } catch (error) {
             console.error("Error parsing WebSocket message:", error);
         }
-    };
+    }
 
-    // Handle WebSocket errors
-    ws.onerror = function(error) {
-        console.error("WebSocket error:", error);
-    };
+    function onTabClick(e) {
+        if (e.target.classList.contains('tab-button')) {
+            const groupName = e.target.dataset.group;
+            activeTab = groupName;
 
-    // Handle WebSocket close
-    ws.onclose = function() {
-        console.log("WebSocket connection closed");
-    };
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.style.display = 'none');
 
-    // Function to update settings
+            e.target.classList.add('active');
+            document.getElementById(`tab-${groupName}`).style.display = 'block';
+        }
+    }
+
+    function onSettingChange(e) {
+        const input = e.target;
+        const settingName = input.id;
+        const newValue = input.value;
+        const groupName = input.closest('.tab-pane').id.replace('tab-', '');
+
+        const updateData = {
+            [settingName]: {
+                group: groupName,
+                key: settingName,
+                value: newValue
+            }
+        };
+        ws.send(JSON.stringify(updateData));
+    }
+
     function updateSettings(data) {
-        console.log('UpdateSettings=' + JSON.stringify(data));
         Object.keys(data).forEach(settingName => {
             const settingData = data[settingName];
-            const groupName = settingData.group;
-
-            // Ensure the group exists
-            if (!settings[groupName]) {
-                settings[groupName] = {};
+            if (settings[settingData.group] && settings[settingData.group][settingName] !== undefined) {
+                settings[settingData.group][settingName] = settingData.value;
+                const inputField = document.getElementById(settingName);
+                if (inputField) {
+                    inputField.value = settingData.value;
+                }
             }
-
-            // Ensure the setting exists
-            if (!settings[groupName][settingName]) {
-                settings[groupName][settingName] = {};
-            }
-
-            // Update the setting
-            settings[groupName][settingName] = settingData.value;
-            // settings[groupName][settingName] = {
-            //     value: settingData.value,
-            //     unit: settingData.unit || settings[groupName][settingName].unit || "",
-            //     ro: settingData.ro !== undefined ? settingData.ro : settings[groupName][settingName].ro || false
-            // };
         });
-
-        generateTabs(settings);
     }
 
-    // Function to generate tabs and tab content
-    function generateTabs(settings) {
-        console.log('generateTabs');
-        const tabButtonsContainer = $('.tab-buttons');
-        const tabContentContainer = $('.tab-content');
+    function generateTabs(settingsData) {
+        tabButtonsContainer.innerHTML = '';
+        tabContentContainer.innerHTML = '';
 
-        tabButtonsContainer.empty();
-        tabContentContainer.empty();
+        if (Object.keys(settingsData).length === 0) return;
 
-        Object.keys(settings).forEach((groupName, index) => {
-            const group = settings[groupName];
+        if (activeTab === null || !settingsData[activeTab]) {
+            activeTab = Object.keys(settingsData)[0];
+        }
 
-            // Determine if this tab should be active
-            const isActive = activeTab === groupName || (activeTab === null && index === 0);
+        Object.keys(settingsData).forEach(groupName => {
+            const group = settingsData[groupName];
+            const isActive = activeTab === groupName;
 
-            // Generate tab button
-            const tabButton = $(`<button class="tab-button ${isActive ? 'active' : ''}">${groupName}</button>`);
-            tabButtonsContainer.append(tabButton);
+            const tabButton = document.createElement('button');
+            tabButton.className = 'tab-button';
+            if(isActive) tabButton.classList.add('active');
+            tabButton.textContent = groupName;
+            tabButton.dataset.group = groupName;
+            tabButtonsContainer.appendChild(tabButton);
 
-            // Generate tab content
-            const tabContent = $(`<div class="tab-pane ${isActive ? 'active' : ''}" id="tab-${groupName}"></div>`);
+            const tabContent = document.createElement('div');
+            tabContent.className = 'tab-pane';
+            if(isActive) tabContent.classList.add('active');
+            tabContent.id = `tab-${groupName}`;
+            tabContent.style.display = isActive ? 'block' : 'none';
 
-            // Generate input fields for each setting in the group
             Object.keys(group).forEach(settingName => {
-                const setting = group[settingName];
-                const inputField = $(`
-                    <div class="setting-field">
-                        <label for="${settingName}">${settingName}</label>
-                        <input type="text" id="${settingName}" value="${setting}">
-                        <!--
-                        <input type="text" id="${settingName}" value="${setting.value}" ${setting.ro ? 'readonly' : ''}>
-                        <span class="unit">${setting.unit}</span>
-                        --!>
-                    </div>
-                `);
+                const settingValue = group[settingName];
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'setting-field';
 
-                // Add change event to input field
-                inputField.find('input').on('change', function() {
-                    const newValue = $(this).val();
-                    const updateData = {
-                        [settingName]: {
-                            group: groupName,
-                            value: newValue
-                        }
-                    };
-                    ws.send(JSON.stringify(updateData));
-                });
+                const label = document.createElement('label');
+                label.setAttribute('for', settingName);
+                label.textContent = settingName;
 
-                tabContent.append(inputField);
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = settingName;
+                input.value = settingValue;
+                input.addEventListener('change', onSettingChange);
+
+                fieldDiv.appendChild(label);
+                fieldDiv.appendChild(input);
+                tabContent.appendChild(fieldDiv);
             });
-
-            tabContentContainer.append(tabContent);
-
-            // Add click event to tab button
-            tabButton.on('click', function() {
-                $('.tab-button').removeClass('active');
-                $('.tab-pane').removeClass('active');
-                $(this).addClass('active');
-                $(`#tab-${groupName}`).addClass('active');
-                activeTab = groupName;
-            });
+            tabContentContainer.appendChild(tabContent);
         });
     }
-});
+
+    function cleanupSettingsPage() {
+        console.log("Cleaning up Settings page...");
+        ConnectionManager.closeSocket('/ws_settings');
+        if (tabButtonsContainer) {
+            tabButtonsContainer.removeEventListener('click', onTabClick);
+        }
+        // Input event listeners are attached to elements that get destroyed,
+        // so we don't need to remove them manually.
+    }
+
+    window.initSettingsPage = initSettingsPage;
+    window.cleanupSettingsPage = cleanupSettingsPage;
+
+})(window);

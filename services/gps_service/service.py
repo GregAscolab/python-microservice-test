@@ -26,6 +26,7 @@ class GpsService(Microservice):
         self.gps = None
         self.publisher_task = None
         self.update_pos_counter = 0
+        self.last_payload = {}
 
     async def _wait_for_owa_service(self, timeout=60.0, retry_delay=2.0):
         """Waits for the OWA service to be ready using a request-reply pattern."""
@@ -106,10 +107,21 @@ class GpsService(Microservice):
 
             self.publisher_task = asyncio.create_task(self._gps_publisher_loop())
             self.logger.info("GPS data publisher started.")
+
+            await self.messaging_client.subscribe(
+                "gps.get_current_position.request",
+                cb=self._handle_get_current_position_request
+            )
         except Exception as e:
             self.logger.error(f"An error occurred during GPS service startup: {e}", exc_info=True)
             await self.stop()
 
+    async def _handle_get_current_position_request(self, msg: Msg):
+        """Replies with the last known GPS position."""
+        self.logger.info(f"Received request for current position on subject: {msg.subject}")
+        if msg.reply:
+            await self.messaging_client.publish(msg.reply, json.dumps(self.last_payload).encode())
+            self.logger.info(f"Replied to {msg.reply} with current position.")
 
     async def _stop_logic(self):
         """Stops the GPS service logic."""
@@ -226,5 +238,6 @@ class GpsService(Microservice):
             }
 
         if payload:
+            self.last_payload = payload
             await self.messaging_client.publish("gps", json.dumps(payload, indent=None, separators=(',',':')).encode())
             self.logger.debug(f"Published GPS data: {payload}")

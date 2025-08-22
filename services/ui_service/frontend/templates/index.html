@@ -3,33 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Web App</title>
+    <title>RockMeter Project</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#333">
     <link rel="stylesheet" href="/static/css/styles.css">
+    <!-- Libs CSS -->
+    <link rel="stylesheet" href="/static/libs/leaflet/leaflet.css">
 </head>
 <body>
-    {% include 'header.html' %}
+    <header>
+        <h1>RockMeter Project</h1>
+    </header>
     <div class="container">
-        {% include 'sidebar.html' %}
-        <main>
-            <h2>Welcome to My Web App</h2>
+        <nav class="sidebar">
+            <ul>
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/gps">GPS</a></li>
+                <li><a href="/app_logger">App Logger</a></li>
+                <li><a href="/logger">CAN Logger</a></li>
+                <li><a href="/map">Map</a></li>
+                <li><a href="/sensors">Sensors</a></li>
+                <li><a href="/settings">Settings</a></li>
+                <li><a href="/manager">Manager</a></li>
+            </ul>
+        </nav>
+        <main id="content">
+            <!-- Page content will be shown here -->
+
+            <div id="page-dashboard" class="page-content" style="display: none;">
+                <h2>Dashboard</h2>
+                <div id="dashboard-container">
+                    <div id="dashboard-map">
+                        <h3>Map</h3>
+                        <div id="map-dashboard"></div>
+                    </div>
+                    <div id="dashboard-data">
+                        <h3>Sensors</h3>
+                        <table id="pressureTable" class="display">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Value</th>
+                                    <th>Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <table id="angleTable" class="display">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Value</th>
+                                    <th>Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-gps" class="page-content" style="display: none;">
+                <h2>GPS Status</h2>
+                <div id="gps-container">
+                    <div class="gps-row">
+                        <div id="gps-map-container">
+                            <h3>Map</h3>
+                            <div id="map-gps"></div>
+                        </div>
+                        <div id="gps-skyview-container">
+                            <h3>Satellite Skyview</h3>
+                            <div id="skyviewChart"></div>
+                        </div>
+                    </div>
+                    <div class="gps-row">
+                        <div id="gps-data-container">
+                            <h3>GPS Data</h3>
+                            <table id="gpsDataTable" class="display" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th>Property</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="page-applogger" class="page-content" style="display: none;">
+                <h2>App Logger</h2>
+                <div class="controls">
+                   <button id="toggleRecording-app-logger">Start Recording</button>
+                   <div id="recorderSpin-app-logger" class="recorderSpin" style="display: none;"></div>
+                </div>
+                <div id="status-display">
+                    <h3>Status</h3>
+                    <p><strong>State:</strong> <span id="app-logger-state">Stopped</span></p>
+                    <p><strong>Start Time:</strong> <span id="start-time">N/A</span></p>
+                    <p><strong>Start Position:</strong> <span id="start-position">N/A</span></p>
+                </div>
+                <div class="log_container">
+                    <div id="files-panel">
+                        <h3 id="app-logger-current-path">Contenu du dossier : /</h3>
+                        <!-- Extension filter can be added back later if needed -->
+                        <table id="app-filenameTable">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Taille</th>
+                                    <th>Download</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- File list will be populated by app_logger.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="loader-container">
+                        <h3>Log Content</h3>
+                        <pre id="app-log-content"></pre>
+                        <div id="app-log-status"></div>
+                        <div id="app-log-loader" class="loader" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-logger" class="page-content" style="display: none;">
+                <h2>CAN Logger</h2>
+                <div class="controls">
+                   <button id="toggleRecording-logger">Start Recording</button>
+                   <div id="recorderSpin-logger" class="recorderSpin" style="display: none;"></div>
+                </div>
+                <div class="log_container">
+                    <div id="files-panel">
+                        <h3 id="logger-current-path">Contenu du dossier : /</h3>
+                        <!-- Extension filter can be added back later if needed -->
+                        <table id="filenameTable">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Taille</th>
+                                    <th>Download</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- File list will be populated by logger.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="loader-container">
+                        <div id="log-status"></div>
+                        <div id="loader" class="loader" style="display: none;"></div>
+                        <div id="plotly-panel"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-map" class="page-content" style="display: none;">
+                <h2>Map</h2>
+                <div class="controls">
+                    <label><input type="checkbox" id="toggleHardness-map"> Afficher la dureté</label>
+                    <label>
+                        Fond de carte:
+                        <select id="mapType-map">
+                            <option value="plan">Plan</option>
+                            <option value="satellite">Satellite</option>
+                        </select>
+                    </label>
+                    <button id="resetMapView-map">Reset zoom carte</button>
+                </div>
+                <div class="row-container">
+                    <div id="map-main"></div>
+                    <div id="plotly-3Dgraph" class="plotly-container"></div>
+                </div>
+            </div>
+
+            <div id="page-sensors" class="page-content" style="display: none;">
+                <h2>Sensors</h2>
+                <!-- Sensors content will go here -->
+            </div>
+
+            <div id="page-settings" class="page-content" style="display: none;">
+                <h2>Settings</h2>
+                <div class="tabs">
+                    <div class="tab-buttons"></div>
+                    <div class="tab-content"></div>
+                </div>
+            </div>
+
+            <div id="page-manager" class="page-content" style="display: none;">
+                <div class="manager-header">
+                    <h1>Service Manager</h1>
+                    <div id="global-actions" class="global-actions">
+                        <button id="restart-all-btn">Restart All</button>
+                        <button id="stop-all-btn" class="danger">Stop All</button>
+                    </div>
+                </div>
+                <div id="status-grid" class="status-grid"></div>
+                <!-- Modals for Manager page -->
+                <div id="stop-all-modal" class="modal" style="display: none;">
+                    <div class="modal-content danger-theme">
+                        <div class="modal-header">
+                            <span class="modal-icon warning-icon">⚠️</span>
+                            <h2>Confirm Stop All</h2>
+                            <span class="close-button" id="close-modal-btn">&times;</span>
+                        </div>
+                        <div class="modal-body"><p>Are you sure you want to stop all services? This will shut down the entire application. You will not be able to restart it from this UI.</p></div>
+                        <div class="modal-footer">
+                            <button id="cancel-stop-all-btn" class="button">Cancel</button>
+                            <button id="confirm-stop-all-btn" class="button danger">Confirm Stop</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="log-modal" class="modal" style="display: none;">
+                  <div class="modal-content log-modal-content">
+                    <div class="modal-header">
+                      <h2>Log Viewer: <span id="log-service-name"></span></h2>
+                      <span class="close-button" id="close-log-modal-btn">&times;</span>
+                    </div>
+                    <div class="modal-body"><pre id="log-content" class="log-viewer"></pre></div>
+                  </div>
+                </div>
+            </div>
+
         </main>
     </div>
-    {% include 'footer.html' %}
+    <footer>
+        <div id="connection-status" class="status-offline">Offline</div>
+        <p style="font-size: x-small;">&copy; 2025 RockMeter Made by Ascolab</p>
+    </footer>
 
-    <script>
-        // document.querySelector("body").requestFullscreen();
-        document.body.requestFullscreen();
+    <!-- Libs JS -->
+    <script src="/static/libs/leaflet/leaflet.js"></script>
+    <script src="/static/libs/plotly/plotly.min.js"></script>
 
-        // try {
-        // const primaryScreen = (await getScreenDetails()).screens.find(
-        //     (screen) => screen.isPrimary,
-        // );
-        // await document.body.requestFullscreen({ screen: primaryScreen });
-        // } catch (err) {
-        // console.error(err.name, err.message);
-        // }
+    <!-- Core App JS -->
+    <script src="/static/js/connection_manager.js"></script>
+    <script src="/static/js/app.js"></script>
 
-        console.log("fullscreen");
-    </script>
+    <!-- Page-Specific Scripts (loaded upfront) -->
+    <script src="/static/js/dashboard.js"></script>
+    <script src="/static/js/gps.js"></script>
+    <script src="/static/js/app_logger.js"></script>
+    <script src="/static/js/logger.js"></script>
+    <script src="/static/js/map.js"></script>
+    <script src="/static/js/sensors.js"></script>
+    <script src="/static/js/settings.js"></script>
+    <script src="/static/js/manager.js"></script>
 </body>
 </html>
