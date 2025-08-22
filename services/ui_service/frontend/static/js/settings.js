@@ -22,9 +22,8 @@ async function initSettingsPage() {
 
     try {
         const response = await nc.request('settings.get.all', ConnectionManager.stringCodec.encode(''), { timeout: 2000 });
-        const data = ConnectionManager.jsonCodec.decode(response.data);
-        if (data.settings) {
-            settings = data.settings;
+        const settings = ConnectionManager.jsonCodec.decode(response.data);
+        if(settings) {
             generateTabs(settings);
         }
     } catch(err) {
