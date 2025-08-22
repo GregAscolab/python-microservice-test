@@ -1,3 +1,5 @@
+import ConnectionManager from './connection_manager.js';
+
 // --- Service Worker Registration ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -19,8 +21,13 @@ let currentPage = {
 function getPageName(path) {
     // Converts '/can_bus_logger' -> 'CanBusLogger'
     // Converts '/app_logger' -> 'AppLogger'
-    const name = path.substring(1);
-    return name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+    if (path.startsWith('/')) {
+        path = path.substring(1);
+    }
+    if (path === "") {
+        return "Dashboard";
+    }
+    return path.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
 }
 
 function showPage(path) {
@@ -44,7 +51,11 @@ function showPage(path) {
     if (pageDiv) {
         pageDiv.style.display = 'flex';
     } else {
-        document.getElementById('page-dashboard').style.display = 'flex'; // Default to dashboard
+        // if the page is not found, default to the dashboard
+        const dashboardPage = document.getElementById('page-dashboard');
+        if (dashboardPage) {
+            dashboardPage.style.display = 'flex';
+        }
     }
 
     // 4. Call the init function for the new page
@@ -62,6 +73,9 @@ function showPage(path) {
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize NATS connection
+    ConnectionManager.getNatsConnection();
+
     // Handle navigation clicks
     document.querySelectorAll('.sidebar a').forEach(link => {
         link.addEventListener('click', e => {

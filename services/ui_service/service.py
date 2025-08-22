@@ -12,7 +12,7 @@ import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from common.microservice import Microservice
-from services.ui_service.fastapi_app import router as api_router, manager as connection_manager
+from services.ui_service.fastapi_app import router as api_router
 
 class UiService(Microservice):
     """
@@ -32,25 +32,6 @@ class UiService(Microservice):
         self.app.include_router(api_router)
         self.app.state.service = self
 
-    async def _nats_data_handler(self, msg: Msg):
-        channel = msg.subject
-        data = msg.data.decode()
-        self.logger.debug(f"Received message on '{channel}', broadcasting to WebSocket.")
-        await connection_manager.broadcast(data, channel)
-
-    async def _settings_update_handler(self, msg: Msg):
-        self.logger.info(f"Received settings update: {msg.data.decode()}")
-        await connection_manager.broadcast(msg.data.decode(), "settings")
-
-    async def _manager_status_handler(self, msg: Msg):
-        """Forwards manager status updates to the UI via WebSocket."""
-        self.logger.info(f"Received manager status update, broadcasting to WebSocket.")
-        await connection_manager.broadcast(msg.data.decode(), "manager")
-
-    async def _conversion_results_handler(self, msg: Msg):
-        self.logger.info(f"Received conversion result: {msg.data.decode()}")
-        await connection_manager.broadcast(msg.data.decode(), "conversion")
-
     async def _handle_ping_command(self, message: str = "pong"):
         self.logger.info(f"Received ping command! Replying with: {message}")
         await asyncio.sleep(1)
@@ -63,19 +44,6 @@ class UiService(Microservice):
             return
 
         self.command_handler.register_command("ping", self._handle_ping_command)
-
-        await self.messaging_client.subscribe("can_data", cb=self._nats_data_handler)
-        self.logger.info("Subscribed to 'can_data'")
-        await self.messaging_client.subscribe("gps", cb=self._nats_data_handler)
-        self.logger.info("Subscribed to 'gps'")
-        await self.messaging_client.subscribe("settings.updated", cb=self._settings_update_handler)
-        self.logger.info("Subscribed to 'settings.updated'")
-        await self.messaging_client.subscribe("manager.status", cb=self._manager_status_handler)
-        self.logger.info("Subscribed to 'manager.status'")
-        await self.messaging_client.subscribe("conversion.results", cb=self._conversion_results_handler)
-        self.logger.info("Subscribed to 'conversion.results'")
-        await self.messaging_client.subscribe("app_logger.status", cb=self._nats_data_handler)
-        self.logger.info("Subscribed to 'app_logger.status'")
         await self._subscribe_to_commands()
 
         self.logger.info("Starting FastAPI server...")

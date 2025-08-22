@@ -1,149 +1,103 @@
+import { connect, JSONCodec, StringCodec } from "/static/libs/nats-ws/nats.js";
+
 const ConnectionManager = {
-    _sockets: {},
+    _natsConnection: null,
     isOnline: false,
     reconnectInterval: 1000,
     maxReconnectInterval: 30000,
+    stringCodec: StringCodec(),
+    jsonCodec: JSONCodec(),
 
-    getSocket: function(path) {
-        const url = `ws://${window.location.host}${path}`;
-        if (!this._sockets[url]) {
-            this._sockets[url] = this.createSocket(url, path);
+    async getNatsConnection() {
+        if (this._natsConnection) {
+            return this._natsConnection;
         }
-        return this._sockets[url].publicInterface;
-    },
 
-    createSocket: function(url, path) {
-        const socketWrapper = {
-            instance: null,
-            path: path,
-            reconnectTimer: null,
-            manualClose: false,
-            attempts: 0,
-            onMessageCallback: null,
-            publicInterface: null,
-            listeners: {} // Store listeners here
-        };
-
-        const publicInterface = {
-            set onmessage(handler) {
-                socketWrapper.onMessageCallback = handler;
-                if (socketWrapper.instance) {
-                    socketWrapper.instance.onmessage = handler;
-                }
-            },
-            get onmessage() {
-                return socketWrapper.onMessageCallback;
-            },
-            send: (data) => {
-                if (socketWrapper.instance && socketWrapper.instance.readyState === WebSocket.OPEN) {
-                    socketWrapper.instance.send(data);
-                } else {
-                    console.error(`WebSocket to ${url} not open. readyState: ${socketWrapper.instance?.readyState}. Cannot send data.`);
-                }
-            },
-            close: () => {
-                this.closeSocket(path);
-            },
-            get readyState() {
-                return socketWrapper.instance ? socketWrapper.instance.readyState : WebSocket.CLOSED;
-            },
-            addEventListener: (type, listener) => {
-                if (!socketWrapper.listeners[type]) {
-                    socketWrapper.listeners[type] = [];
-                }
-                socketWrapper.listeners[type].push(listener);
-                if (socketWrapper.instance) {
-                    socketWrapper.instance.addEventListener(type, listener);
-                }
-            },
-            removeEventListener: (type, listener) => {
-                if (socketWrapper.listeners[type]) {
-                    socketWrapper.listeners[type] = socketWrapper.listeners[type].filter(l => l !== listener);
-                }
-                if (socketWrapper.instance) {
-                    socketWrapper.instance.removeEventListener(type, listener);
-                }
-            }
-        };
-        
-        socketWrapper.publicInterface = publicInterface;
-
-        const connect = () => {
-            console.log(`Attempting to connect to ${url}...`);
-            const ws = new WebSocket(url);
-            socketWrapper.instance = ws;
-
-            // Re-apply stored listeners from addEventListener
-            for (const type in socketWrapper.listeners) {
-                socketWrapper.listeners[type].forEach(listener => {
-                    ws.addEventListener(type, listener);
+        const connectToNats = async () => {
+            try {
+                const wsUrl = `ws://${window.location.hostname}:4223`;
+                console.log(`Attempting to connect to NATS at ${wsUrl}...`);
+                this._natsConnection = await connect({
+                    servers: [wsUrl],
+                    reconnect: true,
+                    reconnectTimeWait: this.reconnectInterval,
+                    maxReconnectAttempts: -1,
                 });
-            }
-            
-            // Re-apply onmessage
-            if (socketWrapper.onMessageCallback) {
-                ws.onmessage = socketWrapper.onMessageCallback;
-            }
-
-            // Internal listeners for manager's own logic
-            ws.addEventListener('open', () => {
-                console.log(`WebSocket connected to ${url}`);
-                socketWrapper.attempts = 0;
-                this.reconnectInterval = 1000;
+                console.log(`Connected to NATS server ${this._natsConnection.getServer()}`);
+                this.isOnline = true;
                 this.updateGlobalStatus();
-            });
 
-            ws.addEventListener('close', (event) => {
-                console.log(`WebSocket disconnected from ${url}. Code: ${event.code}`);
-                if (!socketWrapper.manualClose) {
-                    socketWrapper.attempts++;
-                    const timeout = Math.min(this.maxReconnectInterval, this.reconnectInterval * Math.pow(2, socketWrapper.attempts));
-                    console.log(`Will try to reconnect to ${url} in ${timeout} ms`);
-                    socketWrapper.reconnectTimer = setTimeout(connect, timeout);
-                }
+                (async () => {
+                    for await (const status of this._natsConnection.status()) {
+                        console.info(`NATS status: ${status.type}`);
+                        this.isOnline = status.type === 'reconnect' || status.type === 'connect';
+                        this.updateGlobalStatus();
+                    }
+                })().then();
+
+                this._natsConnection.closed().then(() => {
+                    console.log("NATS connection closed");
+                    this.isOnline = false;
+                    this.updateGlobalStatus();
+                    this._natsConnection = null;
+                    setTimeout(connectToNats, this.reconnectInterval);
+                });
+
+            } catch (error) {
+                console.error("Failed to connect to NATS:", error);
+                this.isOnline = false;
                 this.updateGlobalStatus();
-            });
-
-            ws.addEventListener('error', (error) => {
-                console.error(`WebSocket error on ${url}:`, error);
-            });
+                this._natsConnection = null;
+                setTimeout(connectToNats, this.reconnectInterval);
+            }
         };
 
-        connect();
-        return socketWrapper;
+        await connectToNats();
+        return this._natsConnection;
     },
 
-    closeSocket: function(path) {
-        const url = `ws://${window.location.host}${path}`;
-        const socketWrapper = this._sockets[url];
-        if (socketWrapper) {
-            console.log(`Manually closing socket to ${url}`);
-            socketWrapper.manualClose = true;
-            if (socketWrapper.reconnectTimer) {
-                clearTimeout(socketWrapper.reconnectTimer);
-            }
-            if (socketWrapper.instance) {
-                socketWrapper.instance.close();
-            }
-            delete this._sockets[url];
-            this.updateGlobalStatus();
+    async subscribe(subject, callback) {
+        const nc = await this.getNatsConnection();
+        if (!nc) {
+            console.error("Cannot subscribe, NATS connection not available");
+            return null;
         }
+        const sub = nc.subscribe(subject);
+        (async () => {
+            for await (const m of sub) {
+                callback(m);
+            }
+        })();
+        return sub;
+    },
+
+    async publish(subject, data) {
+        const nc = await this.getNatsConnection();
+        if (!nc) {
+            console.error("Cannot publish, NATS connection not available");
+            return;
+        }
+        nc.publish(subject, this.stringCodec.encode(data));
+    },
+
+    async publishJson(subject, data) {
+        const nc = await this.getNatsConnection();
+        if (!nc) {
+            console.error("Cannot publish, NATS connection not available");
+            return;
+        }
+        nc.publish(subject, this.jsonCodec.encode(data));
     },
 
     updateGlobalStatus: function() {
-        let anySocketOpen = false;
-        for (const url in this._sockets) {
-            if (this._sockets[url].instance && this._sockets[url].instance.readyState === WebSocket.OPEN) {
-                anySocketOpen = true;
-                break;
-            }
-        }
-
-        if (anySocketOpen !== this.isOnline) {
-            this.isOnline = anySocketOpen;
-            const event = new CustomEvent('connectionStatusChange', { detail: { isOnline: this.isOnline } });
-            document.dispatchEvent(event);
-            console.log(`Global connection status changed to: ${this.isOnline ? 'Online' : 'Offline'}`);
+        const event = new CustomEvent('connectionStatusChange', { detail: { isOnline: this.isOnline } });
+        document.dispatchEvent(event);
+        const statusDiv = document.getElementById('connection-status');
+        if (statusDiv) {
+            statusDiv.textContent = this.isOnline ? 'Online' : 'Offline';
+            statusDiv.className = this.isOnline ? 'status-online' : 'status-offline';
         }
     }
 };
+
+export default ConnectionManager;
