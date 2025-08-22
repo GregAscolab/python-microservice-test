@@ -4,6 +4,7 @@ const ConnectionManager = {
     _natsConnection: null,
     isOnline: false,
     appStatus: "unknown",
+    globalConnectionStatus: "unknowed",
     reconnectInterval: 1000,
     maxReconnectInterval: 30000,
     statusPollInterval: null,
@@ -140,9 +141,12 @@ const ConnectionManager = {
             }
         }
 
-        const event = new CustomEvent('connectionStatusChange', { detail: { status: status } });
-        document.dispatchEvent(event);
-        console.log(`Global connection status changed to: ${status}`);
+        if(this.globalConnectionStatus != status) {
+            this.globalConnectionStatus = status;
+            const event = new CustomEvent('connectionStatusChange', { detail: { status: this.globalConnectionStatus } });
+            document.dispatchEvent(event);
+            console.log(`Global connection status changed to: ${this.globalConnectionStatus}`);
+        }
     }
 };
 
