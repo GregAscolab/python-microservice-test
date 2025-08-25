@@ -197,60 +197,128 @@ Modify `service.py` again to register and implement the command handler.
 
 ## Step 7: Integrate with the UI
 
-Finally, let's display the dummy data on the UI and add a button to call our new command.
+Finally, let's display the dummy data on the UI and add a button to call our new command. This involves creating a new JavaScript module that follows the application's frontend patterns and modifying the main HTML template to include the new page and script.
 
-**1. Create a new JavaScript file** for our service's UI logic. Create the file `services/ui_service/frontend/static/js/dummy.js` and add this code:
+**1. Create the JavaScript Module**
+
+Create a new file at `services/ui_service/frontend/static/js/dummy.js`. This script will be responsible for initializing and cleaning up the "Dummy" page. It will subscribe to NATS subjects and handle user interaction.
+
+Copy the following code into `dummy.js`. Note how it uses the `ConnectionManager` and exports `initDummyPage` and `cleanupDummyPage` functions.
 
 ```javascript
-document.addEventListener('DOMContentLoaded', function() {
-    const nats = window.nats;
-    const dummyDataElement = document.getElementById('dummy-data');
-    const resetButton = document.getElementById('reset-dummy-counter');
+import ConnectionManager from './connection_manager.js';
 
-    // 1. Subscribe to the data subject from our dummy service
-    nats.subscribe('dummy.data', (msg) => {
-        const data = JSON.parse(new TextDecoder().decode(msg.data));
-        dummyDataElement.textContent = JSON.stringify(data, null, 2);
+// Module-level state variables
+let dummySub;
+let dummyDataElement;
+let resetButton;
+
+/**
+ * Event handler for the reset button click.
+ */
+function handleResetClick() {
+    console.log('Sending reset_counter command to dummy_service...');
+    const command = {
+        command: 'reset_counter'
+    };
+    // Publish the command using the shared ConnectionManager
+    ConnectionManager.publish('commands.dummy_service', command);
+}
+
+/**
+ * Initializes the Dummy page elements and subscriptions.
+ */
+function initDummyPage() {
+    console.log("Initializing Dummy page...");
+
+    // 1. Get references to UI elements
+    dummyDataElement = document.getElementById('dummy-data');
+    resetButton = document.getElementById('reset-dummy-counter');
+
+    if (!dummyDataElement || !resetButton) {
+        console.error("Dummy page UI elements not found! Cannot initialize page.");
+        return;
+    }
+
+    // 2. Set up NATS subscription for dummy data
+    ConnectionManager.subscribe('dummy.data', (m) => {
+        const data = ConnectionManager.jsonCodec.decode(m.data);
+        if (dummyDataElement) {
+            // Update the UI with the received data
+            dummyDataElement.textContent = JSON.stringify(data, null, 2);
+        }
+    }).then(sub => {
+        // Store the subscription object so we can unsubscribe later
+        dummySub = sub;
     });
 
-    // 2. Add a click listener for our reset button
-    resetButton.addEventListener('click', () => {
-        // Construct the command payload
-        const command = {
-            command: 'reset_counter'
-            // No arguments needed for this command
-        };
-        // Publish the command to the dummy service's command subject
-        nats.publish('commands.dummy_service', JSON.stringify(command));
-        console.log('Sent reset_counter command to dummy_service');
-    });
-});
+    // 3. Add event listener for the reset button
+    resetButton.addEventListener('click', handleResetClick);
+}
+
+/**
+ * Cleans up resources used by the Dummy page.
+ */
+function cleanupDummyPage() {
+    console.log("Cleaning up Dummy page...");
+
+    // 1. Unsubscribe from NATS to prevent memory leaks
+    if (dummySub) {
+        dummySub.unsubscribe();
+        dummySub = null;
+    }
+
+    // 2. Remove event listener from the button
+    if (resetButton) {
+        resetButton.removeEventListener('click', handleResetClick);
+        resetButton = null;
+    }
+
+    // 3. Clear references to DOM elements
+    dummyDataElement = null;
+}
+
+// Expose the init and cleanup functions to the global window object
+// so that app.js can call them when navigating between pages.
+window.initDummyPage = initDummyPage;
+window.cleanupDummyPage = cleanupDummyPage;
 ```
 
-**2. Modify the main HTML file** to include our new UI elements. Open `services/ui_service/frontend/templates/index.html`.
+**2. Modify the Main HTML Template**
 
--   **Add a new tab link** in the left-hand navigation list (the `div` with `id="v-pills-tab"`):
+Now, open `services/ui_service/frontend/templates/index.html` to add the new navigation link and the content placeholder for our page.
+
+-   **Add a new link to the sidebar navigation.** Find the `<ul>` inside the `<nav class="sidebar">` and add a new list item for "Dummy":
     ```html
-    <a class="nav-link" id="v-pills-dummy-tab" data-bs-toggle="pill" href="#v-pills-dummy" role="tab" aria-controls="v-pills-dummy" aria-selected="false">Dummy</a>
+    <!-- ... other list items ... -->
+    <li><a href="/manager">Manager</a></li>
+    <li><a href="/dummy">Dummy</a></li>
     ```
 
--   **Add the content pane for the new tab** inside the `div` with `id="v-pills-tabContent"`:
+-   **Add the content `div` for the new page.** Inside the `<main id="content">` element, add the HTML structure for the dummy page. It must have the `page-content` class and a unique `id` that matches the link's `href` (e.g., `page-dummy`).
     ```html
-    <div class="tab-pane fade" id="v-pills-dummy" role="tabpanel" aria-labelledby="v-pills-dummy-tab">
-        <h3>Dummy Service</h3>
+    <!-- ... other page divs ... -->
+    <div id="page-manager" class="page-content" style="display: none;">
+        <!-- ... manager content ... -->
+    </div>
+
+    <div id="page-dummy" class="page-content" style="display: none;">
+        <h2>Dummy Service</h2>
         <p>This tab displays live data from the dummy_service and allows interaction.</p>
         <button id="reset-dummy-counter" class="btn btn-warning mb-3">Reset Counter</button>
         <pre><code id="dummy-data" class="text-white">Waiting for data...</code></pre>
     </div>
     ```
 
--   **Include the new JavaScript file** at the very bottom of the `<body>` section, with the other scripts:
+-   **Include the new JavaScript file.** At the bottom of the `<body>`, add a script tag for `dummy.js`. It's important to load it as a `module`.
     ```html
-    <script src="{{ url_for('static', path='/js/dummy.js') }}"></script>
+    <!-- ... other page-specific scripts ... -->
+    <script type="module" src="/static/js/manager.js"></script>
+    <script type="module" src="/static/js/dummy.js"></script>
     ```
 
 ## Conclusion
 
-You have now successfully created and integrated a new service.
+You have now successfully created a new service and integrated it into the application, following the established frontend and backend patterns.
 
-Run the application with `python main.py`. The `dummy_service` will be discovered and started automatically. Open the web UI at `http://localhost:8000`, navigate to the "Dummy" tab, and you will see the live counter data. Clicking the "Reset Counter" button will send a command to the service and reset the count to zero. Congratulations!
+Run the application with `python main.py`. The `dummy_service` will be discovered and started automatically. Open the web UI at `http://localhost:8000`, navigate to the "Dummy" page using the sidebar link, and you will see the live counter data. Clicking the "Reset Counter" button will send a command to the service and reset the count to zero. Congratulations!
