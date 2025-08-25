@@ -37,16 +37,36 @@ pip install -r requirements.txt
 
 ### Step 3: Set Up the NATS Server
 
-The microservices require a NATS server for communication. The application is configured to connect to a server at `nats://localhost:4222` by default. The easiest way to run one is by using Docker.
+The microservices require a NATS server for communication. Crucially, the `ui_service` requires that the NATS server has **WebSocket support enabled** to allow the frontend to connect.
 
-```bash
-docker run --name nats-main -p 4222:4222 -p 6222:6222 -p 8222:8222 nats:latest
-```
+The easiest way to run a properly configured NATS server is by using Docker in conjunction with the `nats-server.conf` file provided in this repository.
 
-This command starts a NATS server in a Docker container named `nats-main` and exposes the necessary ports:
--   `4222`: For client connections from the services.
--   `6222`: For server-to-server routing (not used in this setup).
--   `8222`: For HTTP monitoring. You can check the server status at `http://localhost:8222`.
+1.  **Review the Configuration:** The `nats-server.conf` file in the root of this repository contains the necessary block to enable WebSockets:
+    ```
+    websocket {
+        port: 4223
+        no_tls: true
+    }
+    ```
+    This tells the NATS server to listen for insecure WebSocket connections on port `4223`.
+
+2.  **Run the NATS Server with Docker:**
+    From the **root of the project directory**, run the following command. This command mounts the local configuration file into the Docker container and tells the server to use it.
+
+    ```bash
+    # For Linux/macOS:
+    docker run --name nats-main -p 4222:4222 -p 8222:8222 -p 4223:4223 -v "$(pwd)/nats-server.conf":/etc/nats/nats-server.conf nats:latest -c /etc/nats/nats-server.conf
+
+    # For Windows (Command Prompt):
+    # docker run --name nats-main -p 4222:4222 -p 8222:8222 -p 4223:4223 -v "%cd%/nats-server.conf":/etc/nats/nats-server.conf nats:latest -c /etc/nats/nats-server.conf
+    ```
+
+    This command starts a NATS server and exposes the necessary ports:
+    -   `4222`: For standard TCP connections from the backend services.
+    -   `8222`: For HTTP monitoring. You can check the server status at `http://localhost:8222`.
+    -   `4223`: For the WebSocket connections required by the UI service.
+
+For more detailed information on NATS WebSocket configuration, please refer to the [official NATS documentation](https://docs.nats.io/running-a-nats-service/configuration/websocket/websocket_conf).
 
 ## 4. Running the Application
 
