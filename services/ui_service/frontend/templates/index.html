@@ -25,6 +25,7 @@
                 <li><a href="/sensors">Sensors</a></li>
                 <li><a href="/settings">Settings</a></li>
                 <li><a href="/manager">Manager</a></li>
+                <li><a href="/dummy">Dummy</a></li>
             </ul>
         </nav>
         <main id="content">
@@ -230,6 +231,13 @@
                 </div>
             </div>
 
+            <div id="page-dummy" class="page-content" style="display: none;">
+                <h2>Dummy Service</h2>
+                <p>This tab displays live data from the dummy_service and allows interaction.</p>
+                <button id="reset-dummy-counter" class="btn btn-warning mb-3">Reset Counter</button>
+                <pre><code id="dummy-data" class="text-white">Waiting for data...</code></pre>
+            </div>
+
         </main>
     </div>
     <footer>
@@ -255,5 +263,6 @@
     <script type="module" src="/static/js/sensors.js"></script>
     <script type="module" src="/static/js/settings.js"></script>
     <script type="module" src="/static/js/manager.js"></script>
+    <script type="module" src="/static/js/dummy.js"></script>
 </body>
 </html>
