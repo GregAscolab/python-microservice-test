@@ -22,18 +22,43 @@
         "update_interval": 1,
         "dbc_file": "config/db-full.dbc",
         "excavator": {
-            "chassis": { "length": 5, "width": 3, "height": 1 },
-            "turret": { "height": 2, "radius": 1.5 },
-            "boom": { "length": 8, "width": 0.5, "height": 0.5 },
-            "jib": { "length": 4, "width": 0.4, "height": 0.4 },
-            "bucket": { "width": 2, "depth": 1, "height": 1 }
+            "chassis": {
+                "dimensions": { "length": 5, "width": 3, "height": 1 }
+            },
+            "turret": {
+                "dimensions": { "length": 0, "offset": [0, 0, 1] }
+            },
+            "boom": {
+                "dimensions": { "length": 8, "offset": [1, 0, 0.5] }
+            },
+            "jib": {
+                "dimensions": { "length": 4 }
+            },
+            "bucket": {
+                "dimensions": { "length": 2 }
+            },
+            "boom_cylinder": {
+                "dimensions": { "length": 2, "external_diameter": 0.2, "rod_diameter": 0.1 }
+            },
+            "jib_cylinder": {
+                "dimensions": { "length": 1.5, "external_diameter": 0.18, "rod_diameter": 0.09 }
+            },
+            "bucket_cylinder": {
+                "dimensions": { "length": 1, "external_diameter": 0.15, "rod_diameter": 0.07 }
+            }
         },
         "signal_mapping": {
             "chassis_slope": "PF_CHASSIS_InclX",
             "turret_angle": "TURRET_Angle",
             "boom_angle": "PF_BOOM_InclX",
             "jib_angle": "PF_BAL_InclX",
-            "bucket_angle": "PF_BUCKET_InclX"
+            "bucket_angle": "PF_BUCKET_InclX",
+            "boom_hp": "A1_BOOM_HP_b",
+            "boom_bp": "A2_BOOM_BP_b",
+            "jib_hp": "A3_STICK_HP_b",
+            "jib_bp": "A4_STICK_BP_b",
+            "bucket_hp": "A5_TOOTH_HP_b",
+            "bucket_bp": "A6_TOOTH_BP_b"
         }
     },
     "global": {

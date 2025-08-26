@@ -1,17 +1,18 @@
 import ConnectionManager from './connection_manager.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+let digitalTwinSub;
+
+function initDigitalTwinsPage() {
+    console.log("Initializing Digital Twin page...");
     const digitalTwinContainer = document.getElementById('digital-twin-container');
 
     if (digitalTwinContainer) {
-        console.log("Digital Twin page loaded");
-
         Plotly.newPlot('digital-twin-container', [], {
             margin: { l: 0, r: 0, b: 0, t: 0 },
             scene: {
-                xaxis: { title: 'X' },
-                yaxis: { title: 'Y' },
-                zaxis: { title: 'Z' },
+                xaxis: { title: 'X', range: [-10, 10] },
+                yaxis: { title: 'Y', range: [-10, 10] },
+                zaxis: { title: 'Z', range: [0, 10] },
                 aspectratio: { x: 1, y: 1, z: 1 }
             }
         });
@@ -46,6 +47,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     aspectratio: { x: 1, y: 1, z: 1 }
                 }
             });
+        }).then(sub => {
+            digitalTwinSub = sub;
         });
     }
-});
+}
+
+function cleanupDigitalTwinsPage() {
+    console.log("Cleaning up Digital Twin page...");
+    if (digitalTwinSub) {
+        digitalTwinSub.unsubscribe();
+        digitalTwinSub = null;
+    }
+}
+
+window.initDigitalTwinsPage = initDigitalTwinsPage;
+window.cleanupDigitalTwinsPage = cleanupDigitalTwinsPage;
