@@ -18,6 +18,24 @@
     "dummy_service": {
         "update_interval": 5
     },
+    "digital_twin_service": {
+        "update_interval": 1,
+        "dbc_file": "config/db-full.dbc",
+        "excavator": {
+            "chassis": { "length": 5, "width": 3, "height": 1 },
+            "turret": { "height": 2, "radius": 1.5 },
+            "boom": { "length": 8, "width": 0.5, "height": 0.5 },
+            "jib": { "length": 4, "width": 0.4, "height": 0.4 },
+            "bucket": { "width": 2, "depth": 1, "height": 1 }
+        },
+        "signal_mapping": {
+            "chassis_slope": "PF_CHASSIS_InclX",
+            "turret_angle": "TURRET_Angle",
+            "boom_angle": "PF_BOOM_InclX",
+            "jib_angle": "PF_BAL_InclX",
+            "bucket_angle": "PF_BUCKET_InclX"
+        }
+    },
     "global": {
         "nats_url": "nats://localhost:4222",
         "hardware_platform": "generic",

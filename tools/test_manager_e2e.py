@@ -28,7 +28,8 @@ class ManagerE2ETest:
             raise FileNotFoundError("NATS server not found. Please run `go install github.com/nats-io/nats-server/v2@latest`")
 
         print("Starting NATS server...")
-        self.nats_server_process = subprocess.Popen([nats_server_path, "-p", "4222"])
+        config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'nats-server.conf'))
+        self.nats_server_process = subprocess.Popen([nats_server_path, "-c", config_path])
         await asyncio.sleep(2) # Give it a moment to start
 
         # Start the main application
@@ -36,7 +37,7 @@ class ManagerE2ETest:
         main_script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'main.py'))
         self.app_process = subprocess.Popen([sys.executable, main_script_path])
         print("  - Waiting for all services to auto-start...")
-        await asyncio.sleep(10) # Give services time to auto-start
+        await asyncio.sleep(15) # Give services time to auto-start
 
         # Connect NATS client
         print("Connecting NATS client for test commands...")
@@ -87,6 +88,9 @@ class ManagerE2ETest:
             return status.lower()
         except Exception as e:
             print(f"Error getting status for {service_name}: {e}")
+            screenshot_path = "failed_test_screenshot.png"
+            await self.page.screenshot(path=screenshot_path)
+            print(f"Screenshot saved to {screenshot_path}")
             print("Page content on failure:")
             print(await self.page.content())
             return "not_found"
@@ -100,7 +104,7 @@ class ManagerE2ETest:
         await self.page.goto("http://localhost:8000/manager")
         await asyncio.sleep(2) # Wait for page to load and connect WebSocket
 
-        all_services = ["settings_service", "ui_service", "can_bus_service", "gps_service", "owa_service"]
+        all_services = ["settings_service", "ui_service", "can_bus_service", "gps_service", "owa_service", "dummy_service", "digital_twin_service"]
         for service in all_services:
             status = await self.get_service_status(service)
             assert status == "running", f"Expected {service} to be running on startup, but it was {status}"
@@ -129,7 +133,7 @@ class ManagerE2ETest:
         await self.nats_client.publish("commands.manager", b'{"command": "stop_all"}')
         await asyncio.sleep(5)
 
-        for service in running_services:
+        for service in all_services:
             status = await self.get_service_status(service)
             assert status == "stopped", f"Expected {service} to be stopped, but it was {status}"
             print(f"  - {service} is stopped: PASSED")
