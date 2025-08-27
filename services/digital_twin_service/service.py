@@ -76,7 +76,6 @@ class DigitalTwinService(Microservice):
         update_interval = self.settings.get("update_interval", 1)
         while True:
             try:
-                await asyncio.sleep(update_interval)
                 if self.excavator:
                     # Update model and get representation in one call
                     self.excavator.update_from_sensors(self.sensor_state)
@@ -86,6 +85,7 @@ class DigitalTwinService(Microservice):
                         json.dumps(payload).encode()
                     )
                     self.logger.debug(f"Published digital twin data: {payload}")
+                    await asyncio.sleep(update_interval)
             except asyncio.CancelledError:
                 self.logger.info("Publisher task was cancelled.")
                 break
