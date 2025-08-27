@@ -15,8 +15,82 @@
     "log_file_size": 100000,
     "dbc_file": "config/db-full.dbc"
   },
+  "dummy_service": {
+    "update_interval": 5
+  },
+  "digital_twin_service": {
+    "update_interval": 0.1,
+    "dbc_file": "config/db-full.dbc",
+    "excavator": {
+      "turret": {
+        "dimensions": {
+          "length": 10,
+          "width": 10,
+          "height": 1
+        }
+      },
+      "boom": {
+        "dimensions": {
+          "length": 8,
+          "width": 1,
+          "height": 1
+        }
+      },
+      "jib": {
+        "dimensions": {
+          "length": 4,
+          "width": 1,
+          "height": 1
+        }
+      },
+      "bucket": {
+        "dimensions": {
+          "length": 2,
+          "width": 1,
+          "height": 1
+        }
+      },
+      "boom_cylinder": {
+        "dimensions": {
+          "length": 2,
+          "external_diameter": 0.2,
+          "rod_diameter": 0.1
+        }
+      },
+      "jib_cylinder": {
+        "dimensions": {
+          "length": 1.5,
+          "external_diameter": 0.18,
+          "rod_diameter": 0.09
+        }
+      },
+      "bucket_cylinder": {
+        "dimensions": {
+          "length": 1,
+          "external_diameter": 0.15,
+          "rod_diameter": 0.07
+        }
+      }
+    },
+    "signal_mapping": {
+      "turret_angle_pitch": "PF_CHASSIS_PFAngX",
+      "turret_angle_roll": "PF_CHASSIS_PFAngY",
+      "boom_angle_pitch": "PF_BOOM_PFAngX",
+      "boom_angle_roll": "PF_BOOM_PFAngY",
+      "jib_angle_pitch": "PF_BAL_PFAngX",
+      "jib_angle_roll": "PF_BAL_PFAngY",
+      "bucket_angle_pitch": "PF_BUCKET_PFAngX",
+      "bucket_angle_roll": "PF_BUCKET_PFAngY",
+      "boom_hp": "A1_BOOM_HP_b",
+      "boom_bp": "A2_BOOM_BP_b",
+      "jib_hp": "A3_STICK_HP_b",
+      "jib_bp": "A4_STICK_BP_b",
+      "bucket_hp": "A5_TOOTH_HP_b",
+      "bucket_bp": "A6_TOOTH_BP_b"
+    }
+  },
   "global": {
-    "nats_url": "nats://localhost:4222",
+    "nats_url": "nats://127.0.0.1:4222",
     "hardware_platform": "owa5x",
     "s3_endpoint_url": "http://dev.ascolab.fr:10000",
     "s3_bucket": "eiffage-test",

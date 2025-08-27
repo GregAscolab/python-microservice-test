@@ -26,6 +26,7 @@
                 <li><a href="/settings">Settings</a></li>
                 <li><a href="/manager">Manager</a></li>
                 <li><a href="/dummy">Dummy</a></li>
+                <li><a href="/digital_twins">Digital Twin</a></li>
             </ul>
         </nav>
         <main id="content">
@@ -231,11 +232,16 @@
                 </div>
             </div>
 
-            <div id="page-dummy" class="page-content" style="display: none;">
+            <div id="page-dummy" class.page-content" style="display: none;">
                 <h2>Dummy Service</h2>
                 <p>This tab displays live data from the dummy_service and allows interaction.</p>
                 <button id="reset-dummy-counter" class="btn btn-warning mb-3">Reset Counter</button>
                 <pre><code id="dummy-data" class="text-white">Waiting for data...</code></pre>
+            </div>
+
+            <div id="page-digitaltwins" class="page-content" style="display: none;">
+                <h2>Digital Twin</h2>
+                <div id="digital-twin-container"></div>
             </div>
 
         </main>
@@ -264,5 +270,6 @@
     <script type="module" src="/static/js/settings.js"></script>
     <script type="module" src="/static/js/manager.js"></script>
     <script type="module" src="/static/js/dummy.js"></script>
+    <script type="module" src="/static/js/digital_twin.js"></script>
 </body>
 </html>

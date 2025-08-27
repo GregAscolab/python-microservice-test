@@ -87,6 +87,45 @@ function updateSettings(data) {
     });
 }
 
+function loopInJson(group, tabContent) {
+    Object.keys(group).forEach(settingName => {
+            const settingValue = group[settingName];
+
+            if (typeof settingValue === 'object' && settingValue !== null) {
+                console.log(settingName + " is an object: ", settingValue);
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'setting-group-field';
+
+                const label = document.createElement('label');
+                label.setAttribute('for', settingName);
+                label.textContent = settingName;
+
+                fieldDiv.appendChild(label);
+                tabContent.appendChild(fieldDiv);
+
+                return loopInJson(settingValue, tabContent); // Recursive
+            }
+            else {
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'setting-field';
+
+                const label = document.createElement('label');
+                label.setAttribute('for', settingName);
+                label.textContent = settingName;
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = settingName;
+                input.value = settingValue;
+                input.addEventListener('change', onSettingChange);
+
+                fieldDiv.appendChild(label);
+                fieldDiv.appendChild(input);
+                tabContent.appendChild(fieldDiv);
+            }
+        });
+};
+
 function generateTabs(settingsData) {
     tabButtonsContainer.innerHTML = '';
     tabContentContainer.innerHTML = '';
@@ -114,25 +153,7 @@ function generateTabs(settingsData) {
         tabContent.id = `tab-${groupName}`;
         tabContent.style.display = isActive ? 'block' : 'none';
 
-        Object.keys(group).forEach(settingName => {
-            const settingValue = group[settingName];
-            const fieldDiv = document.createElement('div');
-            fieldDiv.className = 'setting-field';
-
-            const label = document.createElement('label');
-            label.setAttribute('for', settingName);
-            label.textContent = settingName;
-
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.id = settingName;
-            input.value = settingValue;
-            input.addEventListener('change', onSettingChange);
-
-            fieldDiv.appendChild(label);
-            fieldDiv.appendChild(input);
-            tabContent.appendChild(fieldDiv);
-        });
+        loopInJson(group, tabContent); // Recursive call !
         tabContentContainer.appendChild(tabContent);
     });
 }

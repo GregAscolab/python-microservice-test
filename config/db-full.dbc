@@ -273,6 +273,9 @@ BO_ 415 PF_BUCKET_Temp: 4 Vector__XXX
  SG_ PF_BUCKET_TempMain : 16|16@1- (0.1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_TempMems : 0|16@1- (0.1,0) [0|0] "" Vector__XXX
 
+BO_ 500 TURRET_SENSORS: 2 Vector__XXX
+ SG_ TURRET_Angle : 0|16@1- (0.01,0) [-180|180] "deg" Vector__XXX
+
 
 
 
