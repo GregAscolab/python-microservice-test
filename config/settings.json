@@ -19,7 +19,7 @@
         "update_interval": 5
     },
     "digital_twin_service": {
-        "update_interval": 1,
+        "update_interval": 0.1,
         "dbc_file": "config/db-full.dbc",
         "excavator": {
             "turret": {
@@ -90,7 +90,7 @@
         }
     },
     "global": {
-        "nats_url": "nats://localhost:4222",
+        "nats_url": "nats://127.0.0.1:4222",
         "hardware_platform": "generic",
         "s3_endpoint_url": "http://dev.ascolab.fr:10000",
         "s3_bucket": "eiffage-test",
