@@ -52,7 +52,7 @@ async def main(args):
         all_settings = load_settings()
         can_bus_settings = all_settings.get("can_bus_service", {})
         global_settings = all_settings.get("global", {})
-        nats_url = global_settings.get("nats_url", "nats://localhost:8888") # Default for safety
+        nats_url = global_settings.get("nats_url", "nats://127.0.0.1:8888") # Default for safety
 
         # Generate a unique filename for this test run
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

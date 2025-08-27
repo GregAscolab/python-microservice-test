@@ -22,7 +22,7 @@ class Microservice(ABC):
         self._shutdown_event = asyncio.Event()
         self.messaging_client: MessagingClient = NatsMessagingClient()
         self.command_handler = CommandHandler(self.service_name, self.logger)
-        self.nats_url = "nats://localhost:4222"
+        self.nats_url = "nats://127.0.0.1:4222"
 
     def _signal_handler(self, *args):
         self.logger.info("Shutdown signal received.")

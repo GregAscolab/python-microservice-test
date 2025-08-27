@@ -41,7 +41,7 @@ class ManagerE2ETest:
 
         # Connect NATS client
         print("Connecting NATS client for test commands...")
-        self.nats_client = await nats.connect("nats://localhost:4222")
+        self.nats_client = await nats.connect("nats://127.0.0.1:4222")
 
         # Start Playwright
         print("Starting Playwright...")
@@ -101,7 +101,7 @@ class ManagerE2ETest:
 
         # 1. Navigate to UI and check initial running state
         print("\n[TEST] Navigating to UI and checking auto-start states...")
-        await self.page.goto("http://localhost:8000/manager")
+        await self.page.goto("http://127.0.0.1:8000/manager")
         await asyncio.sleep(2) # Wait for page to load and connect WebSocket
 
         all_services = ["settings_service", "ui_service", "can_bus_service", "gps_service", "owa_service", "dummy_service", "digital_twin_service"]

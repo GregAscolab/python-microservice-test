@@ -9,7 +9,7 @@ async def main():
     """
     print("Connecting to NATS...")
     try:
-        nc = await nats.connect("nats://localhost:4222")
+        nc = await nats.connect("nats://127.0.0.1:4222")
         print("Connected to NATS.")
     except Exception as e:
         print(f"Error connecting to NATS: {e}")

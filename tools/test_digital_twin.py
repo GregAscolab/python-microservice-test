@@ -87,7 +87,7 @@ class DigitalTwinTester:
 
 async def main():
     tester = DigitalTwinTester(
-        nats_url="nats://localhost:4222",
+        nats_url="nats://127.0.0.1:4222",
         can_interface="virtual",
         can_channel="vcan0",
         dbc_file="config/db-full.dbc"
