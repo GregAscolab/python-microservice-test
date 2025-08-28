@@ -6,5 +6,6 @@ python-dotenv
 aiofiles
 python-can
 cantools
+canopen
 Jinja2
 boto3
