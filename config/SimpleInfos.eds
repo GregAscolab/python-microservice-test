@@ -1,0 +1,96 @@
+; EDS file for simple object access
+[FileInfo]
+FileName=simple.eds
+FileVersion=1
+FileRevision=0
+EDSVersion=4.0
+Description=EDS
+CreationTime=13:38PM
+CreationDate=28-08-25
+ModificationTime=13:38PM
+ModificationDate=28-08-25
+CreatedBy=Grégory JANISZEWSKI
+ModifiedBy=
+
+[Comments]
+Lines=1
+Line1=Created by ASCOLAB for simple LSS configuration
+
+[DeviceInfo]
+VendorName=ASCOLAB
+
+[MandatoryObjects]
+SupportedObjects=3
+1=0x1000
+2=0x1001
+3=0x1018
+
+
+[ManufacturerObjects]
+SupportedObjects=1
+1=0x2201
+
+[1000]
+ParameterName=Device Type
+ObjectType=7
+DataType=7
+AccessType=ro
+PDOMapping=0
+DefaultValue=0x0102019a
+
+[1001]
+ParameterName=Error Register
+ObjectType=7
+DataType=5
+AccessType=ro
+PDOMapping=0
+
+[1018]
+ParameterName=Identity Object
+ObjectType=9
+SubNumber=5
+
+[1018sub0]
+ParameterName=Number of entries
+ObjectType=7
+DataType=5
+AccessType=ro
+PDOMapping=0
+DefaultValue=4
+
+[1018sub1]
+ParameterName=Vendor Id
+ObjectType=7
+DataType=7
+AccessType=ro
+PDOMapping=0
+DefaultValue=0x000000AD
+
+[1018sub2]
+ParameterName=Product Code
+ObjectType=7
+DataType=7
+AccessType=ro
+PDOMapping=0
+DefaultValue=0x05000001
+
+[1018sub3]
+ParameterName=Revision number
+ObjectType=7
+DataType=7
+AccessType=ro
+PDOMapping=0
+
+[1018sub4]
+ParameterName=Serial number
+ObjectType=7
+DataType=7
+AccessType=ro
+PDOMapping=0
+
+[2201]
+ParameterName=PF Serial Number
+ObjectType=7
+DataType=9
+AccessType=ro
+PDOMapping=0
