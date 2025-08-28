@@ -23,7 +23,7 @@
             "jib":    {"id":24, "serial":0, "x_offset":0, "y_offset":0, "z_offset":0},
             "bucket": {"id":28, "serial":0, "x_offset":0, "y_offset":0, "z_offset":0}
         },
-        "pf_sensor_edc": "config/IMUF99.eds"
+        "pf_sensor_eds": "config/IMUF99.eds"
     },
     "dummy_service": {
         "update_interval": 5
