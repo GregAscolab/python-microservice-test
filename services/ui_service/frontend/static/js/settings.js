@@ -87,23 +87,28 @@ function updateSettings(data) {
     });
 }
 
-function loopInJson(group, tabContent) {
+function loopInJson(group, tabContent, parent= null, level=1) {
     Object.keys(group).forEach(settingName => {
             const settingValue = group[settingName];
 
             if (typeof settingValue === 'object' && settingValue !== null) {
                 console.log(settingName + " is an object: ", settingValue);
                 const fieldDiv = document.createElement('div');
-                fieldDiv.className = 'setting-group-field';
+                fieldDiv.className = 'setting-group-field level-'+level;
+                // fieldDiv.data = 'level-'+level
 
-                const label = document.createElement('label');
-                label.setAttribute('for', settingName);
-                label.textContent = settingName;
+                const title = document.createElement('h'+level);
+                title.textContent = settingName;
 
-                fieldDiv.appendChild(label);
-                tabContent.appendChild(fieldDiv);
+                fieldDiv.appendChild(title);
+                if (parent) {
+                    parent.appendChild(fieldDiv);
+                }
+                else{
+                    tabContent.appendChild(fieldDiv);
+                }
 
-                return loopInJson(settingValue, tabContent); // Recursive
+                return loopInJson(settingValue, tabContent, fieldDiv, level+1); // Recursive
             }
             else {
                 const fieldDiv = document.createElement('div');
@@ -119,9 +124,15 @@ function loopInJson(group, tabContent) {
                 input.value = settingValue;
                 input.addEventListener('change', onSettingChange);
 
+                
                 fieldDiv.appendChild(label);
                 fieldDiv.appendChild(input);
-                tabContent.appendChild(fieldDiv);
+                if (parent) {
+                    parent.appendChild(fieldDiv);
+                }
+                else{
+                    tabContent.appendChild(fieldDiv);
+                }
             }
         });
 };
