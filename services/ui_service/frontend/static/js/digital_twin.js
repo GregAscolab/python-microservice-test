@@ -37,7 +37,7 @@ function initDigitalTwinsPage() {
 
         ConnectionManager.subscribe('digital_twin.data', (m) => {
             const data = ConnectionManager.jsonCodec.decode(m.data);
-            console.log("Received digital twin data:", data);
+            // console.log("Received digital twin data:", data);
 
             let camera;
 
@@ -72,9 +72,9 @@ function initDigitalTwinsPage() {
                         // Le plan est un quadrilatère, donc nous avons besoin de deux triangles.
                         // triangle 1: points 0, 1, 2
                         // triangle 2: points 0, 2, 3
-                        i: [0, 0],
-                        j: [1, 2],
-                        k: [2, 3],
+                        i: [0, 0, 0, 0, 3, 3, 4, 4],
+                        j: [1, 2, 1, 5, 2, 6, 5, 6],
+                        k: [2, 3, 5, 4, 6, 7, 6, 7],
                         type: 'mesh3d',
                         opacity: 0.8,
                         showscale: false,

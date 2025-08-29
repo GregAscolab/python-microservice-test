@@ -19,14 +19,14 @@
         "update_interval": 5
     },
     "digital_twin_service": {
-        "update_interval": 1,
+        "update_interval": 0.05,
         "dbc_file": "config/db-full.dbc",
         "excavator": {
             "turret": {
                 "dimensions": {
                     "length": 10,
                     "width": 10,
-                    "height": 1,
+                    "height": 2,
                     "offset": {
                         "x": 0,
                         "y": 0,
@@ -34,16 +34,16 @@
                     }
                 },
                 "angles_offset": {
-                    "x": 12,
-                    "y": 0,
-                    "z": 0
+                    "roll": 0,
+                    "pitch": 0,
+                    "yaw": 0
                 }
             },
             "boom": {
                 "dimensions": {
-                    "length": 8,
+                    "length": 4,
                     "width": 1,
-                    "height": 1,
+                    "height": 2,
                     "offset": {
                         "x": 0,
                         "y": 0,
@@ -51,9 +51,19 @@
                     }
                 },
                 "angles_offset": {
-                    "x": 0,
-                    "y": 0,
-                    "z": 0
+                    "roll": -90.0,
+                    "pitch": 0,
+                    "yaw": 0
+                },
+                "axis_mapping": {
+                    "roll": "X",
+                    "pitch": "Z",
+                    "yaw": "Y"
+                },
+                "axis_reverse": {
+                    "roll": 1,
+                    "pitch": 1,
+                    "yaw": 0
                 }
             },
             "jib": {
@@ -95,12 +105,21 @@
         "signal_mapping": {
             "turret_angle_pitch": "PF_CHASSIS_PFAngX",
             "turret_angle_roll": "PF_CHASSIS_PFAngY",
-            "boom_angle_pitch": "PF_BOOM_PFAngX",
-            "boom_angle_roll": "PF_BOOM_PFAngY",
+            "turret_angle_yaw": "PF_CHASSIS_PFAngZ",
+            "boom_angle_x": "PF_BOOM_PFAngX",
+            "boom_angle_y": "PF_BOOM_PFAngY",
+            "boom_angle_z": "PF_BOOM_PFAngZ",
+            "boom_angle_gf": "PF_BOOM_PFAngGF",
+            "boom_angle_quatX": "PF_BOOM_QuatX",
+            "boom_angle_quatY": "PF_BOOM_QuatY",
+            "boom_angle_quatZ": "PF_BOOM_QuatZ",
+            "boom_angle_quatW": "PF_BOOM_QuatW",
             "jib_angle_pitch": "PF_BAL_PFAngX",
             "jib_angle_roll": "PF_BAL_PFAngY",
+            "jib_angle_yaw": "PF_BAL_PFAngZ",
             "bucket_angle_pitch": "PF_BUCKET_PFAngX",
             "bucket_angle_roll": "PF_BUCKET_PFAngY",
+            "bucket_angle_yaw": "PF_BUCKET_PFAngZ",
             "boom_hp": "A1_BOOM_HP_b",
             "boom_bp": "A2_BOOM_BP_b",
             "jib_hp": "A3_STICK_HP_b",

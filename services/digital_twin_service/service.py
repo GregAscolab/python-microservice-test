@@ -4,6 +4,7 @@ from datetime import datetime
 import sys
 import os
 import cantools
+import logging
 
 # Add the project root to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -19,6 +20,9 @@ class DigitalTwinService(Microservice):
         self.excavator = None
         self.db = None
         self.sensor_state = {}
+        # self.logger.setLevel(logging.DEBUG)
+        # for handler in self.logger.handlers:
+        #     handler.setLevel(logging.DEBUG)
 
     async def _start_logic(self):
         """This is called when the service starts."""
@@ -38,6 +42,8 @@ class DigitalTwinService(Microservice):
                 for message in self.db.messages:
                     for signal in message.signals:
                         self.sensor_state[signal.name] = 0
+                        # if signal.name == "PF_BOOM_PFAngGF":
+                        #     self.logger.info(f"PF_BOOM_PFAngGF exist <<<<<<")
                 self.logger.info(f"Initialized sensor state with {len(self.sensor_state)} signals.")
             except FileNotFoundError:
                 self.logger.error(f"DBC file not found at {dbc_file}")
@@ -74,6 +80,7 @@ class DigitalTwinService(Microservice):
     async def _publish_data(self):
         update_interval = self.settings.get("update_interval", 1)
         while True:
+            # self.logger.info(f"publishdata")
             try:
                 if self.excavator:
                     # Update model and get representation in one call

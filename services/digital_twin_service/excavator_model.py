@@ -1,4 +1,5 @@
 import math
+import logging
 
 # --- Coordinate System Documentation ---
 # The 3D coordinate system is defined as follows:
@@ -11,6 +12,232 @@ import math
 # - All angles are measured in degrees.
 # - Turret angle: Rotation around the Z-axis. 0 degrees is facing forward (along the X-axis). Positive is counter-clockwise.
 # - Part angles (Boom, Jib, Bucket): Rotation around the Y-axis (pitch). 0 degrees is horizontal (parallel to the X-Y plane). Positive is upwards.
+
+class Sensor3DModel:
+    """
+    Représente un capteur en tant qu'objet 3D (un pavé droit) et calcule ses
+    points dans l'espace en fonction des angles de roulis, de tangage et de lacet.
+    """
+    
+    def __init__(self, length, width, height, center_point, roll_offset=0, pitch_offset=0, yaw_offset=0, rotation_order='XY', axis_mapping={'roll': 'X', 'pitch': 'Y', 'yaw': 'Z'}, axis_reverse={'roll': 0, 'pitch': 0, 'yaw': 0}):
+        """
+        Initialise le modèle du capteur avec ses dimensions, son point central
+        fixe, les décalages (offsets) angulaires, l'ordre de rotation et le mappage des axes.
+
+        Args:
+            length (float): Longueur du capteur (dimension sur l'axe X local).
+            width (float): Largeur du capteur (dimension sur l'axe Y local).
+            height (float): Hauteur du capteur (dimension sur l'axe Z local).
+            center_point (list or tuple): Coordonnées [x, y, z] du centre fixe du capteur.
+            roll_offset (float): Décalage de l'angle de roulis en degrés.
+            pitch_offset (float): Décalage de l'angle de tangage en degrés.
+            yaw_offset (float): Décalage de l'angle de lacet en degrés.
+            rotation_order (str): L'ordre des rotations. Par exemple 'XYZ' ou 'ZYX'.
+                                  Sera utilisé pour la multiplication des matrices.
+            axis_mapping (dict): Mappage des angles d'entrée aux axes de rotation.
+                                 Exemple: {'roll': 'Y', 'pitch': 'X', 'yaw': 'Z'}.
+        """
+        self.length = length
+        self.width = width
+        self.height = height
+        self.center_point = center_point
+        self.roll = 0.0
+        self.pitch = 0.0
+        self.yaw = 0.0
+        self.roll_offset = roll_offset
+        self.pitch_offset = pitch_offset
+        self.yaw_offset = yaw_offset
+        self.rotation_order = rotation_order.upper()
+        self.axis_mapping = {k.lower(): v.upper() for k, v in axis_mapping.items()}
+        self.axis_reverse=axis_reverse
+        self.logger = logging.getLogger("digital_twin_service")
+        
+    def _multiply_matrix_vector(self, matrix, vector):
+        """
+        Effectue une multiplication manuelle d'une matrice 3x3 et d'un vecteur 3x1.
+        """
+        result = [0, 0, 0]
+        for i in range(3):
+            for j in range(3):
+                result[i] += matrix[i][j] * vector[j]
+        return result
+
+    def _get_rotation_matrix(self, axis, angle_rad):
+        """
+        Retourne la matrice de rotation pour un axe et un angle donnés.
+        """
+        cos_a = math.cos(angle_rad)
+        sin_a = math.sin(angle_rad)
+        if axis == 'X':
+            return [
+                [1, 0, 0],
+                [0, cos_a, -sin_a],
+                [0, sin_a, cos_a]
+            ]
+        elif axis == 'Y':
+            return [
+                [cos_a, 0, sin_a],
+                [0, 1, 0],
+                [-sin_a, 0, cos_a]
+            ]
+        elif axis == 'Z':
+            return [
+                [cos_a, -sin_a, 0],
+                [sin_a, cos_a, 0],
+                [0, 0, 1]
+            ]
+        else:
+            raise ValueError("L'axe de rotation doit être 'X', 'Y' ou 'Z'")
+
+    def update_angles(self, x_deg, y_deg, z_deg, AppFlag:int):
+        """
+        Met à jour les angles du capteur en appliquant le mappage et les décalages.
+        
+        Args:
+            roll_deg (float): Angle de roulis en degrés.
+            pitch_deg (float): Angle de tangage en degrés.
+            yaw_deg (float): Angle de lacet en degrés.
+        """
+        if isinstance(AppFlag, float) :
+            AppFlag = round(AppFlag)
+        else:
+            AppFlag = int(AppFlag)
+    
+        mask = {
+            'X':0x01,
+            'Y':0x02,
+            'Z':0x04
+        }
+        
+        angles_xyz={
+            'X': x_deg,
+            'Y':y_deg,
+            'Z':z_deg
+        }
+    
+        if not (AppFlag & mask[self.axis_mapping.get('roll', 'X')]):
+            self.roll = angles_xyz[self.axis_mapping.get('roll', 'X')] + self.roll_offset
+        if not (AppFlag & mask[self.axis_mapping.get('pitch', 'Y')]):
+            self.pitch = angles_xyz[self.axis_mapping.get('pitch', 'Y')] + self.pitch_offset
+            # if self.axis_reverse["pitch"] :
+            #     self.pitch = 180-self.pitch
+        if not (AppFlag & mask[self.axis_mapping.get('yaw', 'Y')]):
+            self.yaw = angles_xyz[self.axis_mapping.get('yaw', 'Z')] + self.yaw_offset
+            # if self.axis_reverse["yaw"] :
+            #     self.yaw = 180-self.yaw
+        
+    def update_angles_quaternion(self, qx, qy, qz, qw):
+        """
+        Met à jour les angles en utilisant un quaternion, puis convertit en angles d'Euler
+        (roulis, tangage, lacet) pour la suite des calculs.
+        
+        Args:
+            qx (float): Composante x du quaternion.
+            qy (float): Composante y du quaternion.
+            qz (float): Composante z du quaternion.
+            qw (float): Composante w du quaternion.
+        """
+        # Normalisation du quaternion
+        norm = math.sqrt(qx*qx + qy*qy + qz*qz + qw*qw)
+        if norm > 0:
+            qx /= norm
+            qy /= norm
+            qz /= norm
+            qw /= norm
+
+        # Conversion du quaternion en angles d'Euler (Z-Y-X convention)
+        # Roll (autour de X)
+        sinr_cosp = 2.0 * (qw * qx + qy * qz)
+        cosr_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
+        roll = math.atan2(sinr_cosp, cosr_cosp)
+
+        # Pitch (autour de Y)
+        sinp = 2.0 * (qw * qy - qz * qx)
+        if abs(sinp) >= 1:
+            pitch = math.copysign(math.pi / 2, sinp) # Utilisation de 90 degrés si singulier
+        else:
+            pitch = math.asin(sinp)
+        
+        # Yaw (autour de Z)
+        siny_cosp = 2.0 * (qw * qz + qx * qy)
+        cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
+        yaw = 0
+        
+        # Mettre à jour les angles de la classe en degrés
+        self.update_angles(math.degrees(roll), math.degrees(pitch), math.degrees(yaw), 0)
+        
+    def calculate_3d_points(self, center_point=None):
+        """
+        Calcule les 8 points du pavé droit 3D représentant le capteur.
+        
+        Returns:
+            list: Une liste de 8 points, chacun étant une liste [x, y, z].
+        """
+        # Obtenir les angles mappés aux bons axes de rotation
+        # angles = {
+        #     self.axis_mapping.get('roll', 'X'): math.radians(self.roll),
+        #     self.axis_mapping.get('pitch', 'Y'): math.radians(self.pitch),
+        #     self.axis_mapping.get('yaw', 'Z'): math.radians(self.yaw)
+        # }
+        if self.axis_reverse["roll"] :
+            roll = 180-self.roll
+        else:
+            roll=self.roll
+
+        if self.axis_reverse["pitch"] :
+            pitch = 180-self.pitch
+        else:
+            pitch=self.roll
+        
+        if self.axis_reverse["yaw"] :
+            yaw = 180-self.yaw
+        else:
+            yaw=self.yaw
+
+        angles = {
+            'X': math.radians(roll),
+            'Y': math.radians(pitch),
+            'Z': math.radians(yaw)
+        }
+
+        
+        half_l = self.length / 2
+        half_w = self.width / 2
+        half_h = self.height / 2
+
+        # Définir les 8 points du pavé droit dans le repère local
+        local_points = [
+            [-half_l, -half_w, -half_h],  # 0
+            [ half_l, -half_w, -half_h],  # 1
+            [ half_l,  half_w, -half_h],  # 2
+            [-half_l,  half_w, -half_h],  # 3
+            [-half_l, -half_w,  half_h],  # 4
+            [ half_l, -half_w,  half_h],  # 5
+            [ half_l,  half_w,  half_h],  # 6
+            [-half_l,  half_w,  half_h]   # 7
+        ]
+        
+        rotated_points = []
+        for point in local_points:
+            rotated = point
+            # Appliquer les rotations dans l'ordre spécifié
+            for axis in self.rotation_order:
+                matrix = self._get_rotation_matrix(axis, angles.get(axis, 0))
+                rotated = self._multiply_matrix_vector(matrix, rotated)
+            
+            # Appliquer la translation
+            if center_point:
+                self.center_point = center_point
+
+            final_point = [
+                rotated[0] + self.center_point[0],
+                rotated[1] + self.center_point[1],
+                rotated[2] + self.center_point[2]
+            ]
+            rotated_points.append(final_point)
+            
+        return rotated_points
 
 class Part:
     """
@@ -27,8 +254,9 @@ class Part:
         self.dimensions = settings.get("dimensions", {})
         self.length = self.dimensions.get("length", 0)
         self.width = self.dimensions.get("width", 0)
+        self.height = self.dimensions.get("height", 0)
         self.offset = self.dimensions.get("offset", {"x": 0, "y": 0, "z": 0})
-        self.angles_offset = settings.get("angles_offset", {"x": 0, "y": 0, "z": 0})
+        self.angles_offset = settings.get("angles_offset", {"roll": 0, "pitch": 0, "yaw": 0})
 
         self.rollAngle = 0  # The part's current angle in degrees around x axis.
         self.pitchAngle = 0  # The part's current angle in degrees around y axis.
@@ -38,6 +266,17 @@ class Part:
         self.planEquation = [0, 0, 0, 0]
         self.planPoints = []
         self.planPlotlySurface = []
+
+        self.logger = logging.getLogger("digital_twin_service")
+        am = settings.get("axis_mapping",{'roll': 'X', 'pitch': 'Y', 'yaw': 'Z'})
+        self.logger.info(f"{self.name} axis_mapping={am}")
+
+        self.sensor = Sensor3DModel(self.length, self.width, self.height, [self.length/2, self.width/2, self.height/2],
+                                    roll_offset=self.angles_offset["roll"],
+                                    pitch_offset=self.angles_offset["pitch"],
+                                    yaw_offset=self.angles_offset["yaw"],
+                                    axis_mapping=settings.get("axis_mapping",{'roll': 'X', 'pitch': 'Y', 'yaw': 'Z'}),
+                                    axis_reverse=settings.get("axis_reverse",{'roll': 0, 'pitch': 0, 'yaw': 0}))
 
     def update_kinematics(self, parent_end_point=[0, 0, 0], parent_angle=0):
         """
@@ -49,6 +288,10 @@ class Part:
             parent_end_point[1] + self.offset["y"],
             parent_end_point[2] + self.offset["z"]
         ]
+
+        self.rollAngle = self.sensor.roll
+        self.pitchAngle = self.sensor.pitch
+        self.yawAngle = self.sensor.yaw
 
         # The total angle is the sum of the parent's angle and this part's angle.
         # total_angle_rad = math.radians(parent_angle + self.angle)
@@ -62,14 +305,17 @@ class Part:
         ]
 
         # Calculate the plan equation
-        if self.rollAngle != 0:
-            # self.planEquation = self.__calculate_plane_equation_from_angles(self.rollAngle, self.pitchAngle, 0, self.start_point)
+        # if self.rollAngle != 0 and self.yawAngle!=0 :
+        if True:
             xc = (self.end_point[0] - self.start_point[0]) / 2 + self.start_point[0]
             yc = (self.end_point[1] - self.start_point[1]) / 2 + self.start_point[1]
             zc = (self.end_point[2] - self.start_point[2]) / 2 + self.start_point[2]
             center_point = [xc, yc, zc]
+        else:
+            center_point = None
 
-            self.planPoints = self.calculate_plane_points(self.rollAngle, -self.pitchAngle, 0, self.length, self.width, center_point)
+        #     self.planPoints = self.calculate_plane_points(self.rollAngle, self.pitchAngle, self.yawAngle, self.length, self.width, center_point)
+        self.planPoints = self.sensor.calculate_3d_points(center_point)
 
     def get_height(self):
         """Returns the maximum height (Z coordinate) of the part."""
@@ -166,7 +412,7 @@ class Part:
                 result[i] += matrix[i][j] * vector[j]
         return result
     
-    def calculate_plane_points(self, roll_deg, pitch_deg, yaw_deg, length, width, center_point):
+    def calculate_plane_points(self, roll_deg, pitch_deg, yaw_deg, length, width, center_point, start_point=None):
         """
         Calcule les 4 points d'un plan à partir des angles, des dimensions et du point central.
 
@@ -204,15 +450,26 @@ class Part:
         ]
 
         # Définir les points de référence dans le repère local du plan (à (0,0,0) avec l'orientation standard)
-        half_length = length / 2
-        half_width = width / 2
-        
-        local_points = [
-            [-half_length, -half_width, 0],
-            [half_length, -half_width, 0],
-            [half_length, half_width, 0],
-            [-half_length, half_width, 0]
-        ]
+        if start_point:
+            half_length = length / 2
+            half_width = width / 2
+            
+            local_points = [
+                [0, -half_width, 0],
+                [length, -half_width, 0],
+                [length, half_width, 0],
+                [0, half_width, 0]
+            ]
+        else:
+            half_length = length / 2
+            half_width = width / 2
+            
+            local_points = [
+                [-half_length, -half_width, 0],
+                [half_length, -half_width, 0],
+                [half_length, half_width, 0],
+                [-half_length, half_width, 0]
+            ]
         
         plane_points = []
         
@@ -223,11 +480,18 @@ class Part:
             rotated_point = self.multiply_matrix_vector(R_x, rotated_point)
 
             # Appliquer la translation
-            final_point = [
-                rotated_point[0] + center_point[0],
-                rotated_point[1] + center_point[1],
-                rotated_point[2] + center_point[2]
-            ]
+            if start_point:
+                final_point = [
+                    rotated_point[0] + start_point[0],
+                    rotated_point[1] + start_point[1],
+                    rotated_point[2] + start_point[2]
+                ]
+            else:
+                final_point = [
+                    rotated_point[0] + center_point[0],
+                    rotated_point[1] + center_point[1],
+                    rotated_point[2] + center_point[2]
+                ]
             plane_points.append(final_point)
         
         return plane_points
@@ -274,14 +538,40 @@ class Excavator:
         Updates the state of all excavator components from the full sensor state dictionary.
         """
         # Update part angles
-        self.turret.pitchAngle = sensor_state.get(self.signal_mapping.get("turret_angle_pitch"), 0) + self.turret.angles_offset["y"]
-        self.turret.rollAngle = sensor_state.get(self.signal_mapping.get("turret_angle_roll"), 0) + self.turret.angles_offset["x"]
-        self.boom.pitchAngle = sensor_state.get(self.signal_mapping.get("boom_angle_pitch"), 0) + self.boom.angles_offset["y"]
-        self.boom.rollAngle = sensor_state.get(self.signal_mapping.get("boom_angle_roll"), 0) + self.boom.angles_offset["x"]
-        self.jib.pitchAngle = sensor_state.get(self.signal_mapping.get("jib_angle_pitch"), 0) + self.jib.angles_offset["y"]
-        self.jib.rollAngle = sensor_state.get(self.signal_mapping.get("jib_angle_roll"), 0) + self.jib.angles_offset["x"]
-        self.bucket.pitchAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_pitch"), 0) + self.bucket.angles_offset["y"]
-        self.bucket.rollAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_roll"), 0) + self.bucket.angles_offset["x"]
+        # self.turret.sensor.update_angles( sensor_state.get(self.signal_mapping.get("turret_angle_roll"), 0),
+        #                                   sensor_state.get(self.signal_mapping.get("turret_angle_pitch"), 0),
+        #                                   sensor_state.get(self.signal_mapping.get("turret_angle_yaw"), 0) )
+        
+        self.boom.sensor.update_angles( sensor_state.get(self.signal_mapping.get("boom_angle_x"), 0),
+                                        sensor_state.get(self.signal_mapping.get("boom_angle_y"), 0),
+                                        sensor_state.get(self.signal_mapping.get("boom_angle_z"), 0),
+                                        sensor_state.get(self.signal_mapping.get("boom_angle_gf"), 0))
+        
+        # self.boom.sensor.update_angles_quaternion( sensor_state.get(self.signal_mapping.get("boom_angle_quatX"), 0),
+        #                                            sensor_state.get(self.signal_mapping.get("boom_angle_quatY"), 0),
+        #                                            sensor_state.get(self.signal_mapping.get("boom_angle_quatZ"), 0),
+        #                                            sensor_state.get(self.signal_mapping.get("boom_angle_quatW"), 1))
+        
+        # self.jib.sensor.update_angles( sensor_state.get(self.signal_mapping.get("jib_angle_roll"), 0),
+        #                                sensor_state.get(self.signal_mapping.get("jib_angle_pitch"), 0),
+        #                                sensor_state.get(self.signal_mapping.get("jib_angle_yaw"), 0) )
+        
+        # self.bucket.sensor.update_angles( sensor_state.get(self.signal_mapping.get("bucket_angle_roll"), 0),
+        #                                   sensor_state.get(self.signal_mapping.get("bucket_angle_pitch"), 0),
+        #                                   sensor_state.get(self.signal_mapping.get("bucket_angle_yaw"), 0) )
+
+        # self.turret.rollAngle = sensor_state.get(self.signal_mapping.get("turret_angle_roll"), 0) + self.turret.angles_offset["x"]
+        # self.turret.pitchAngle = sensor_state.get(self.signal_mapping.get("turret_angle_pitch"), 0) + self.turret.angles_offset["y"]
+        # self.turret.yawAngle = sensor_state.get(self.signal_mapping.get("turret_angle_yaw"), 0) + self.turret.angles_offset["z"]
+        # self.boom.rollAngle = sensor_state.get(self.signal_mapping.get("boom_angle_roll"), 0) + self.boom.angles_offset["x"]
+        # self.boom.pitchAngle = sensor_state.get(self.signal_mapping.get("boom_angle_pitch"), 0) + self.boom.angles_offset["y"]
+        # self.boom.yawAngle = sensor_state.get(self.signal_mapping.get("boom_angle_yaw"), 0) + self.boom.angles_offset["z"]
+        # self.jib.rollAngle = sensor_state.get(self.signal_mapping.get("jib_angle_roll"), 0) + self.jib.angles_offset["x"]
+        # self.jib.pitchAngle = sensor_state.get(self.signal_mapping.get("jib_angle_pitch"), 0) + self.jib.angles_offset["y"]
+        # self.jib.yawAngle = sensor_state.get(self.signal_mapping.get("jib_angle_yaw"), 0) + self.jib.angles_offset["z"]
+        # self.bucket.rollAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_roll"), 0) + self.bucket.angles_offset["x"]
+        # self.bucket.pitchAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_pitch"), 0) + self.bucket.angles_offset["y"]
+        # self.bucket.yawAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_yaw"), 0) + self.bucket.angles_offset["z"]
 
         # Update cylinder pressures
         self.boom_cylinder.hp_pressure = sensor_state.get(self.signal_mapping.get("boom_hp"), 0)
