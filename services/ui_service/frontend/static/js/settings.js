@@ -57,7 +57,6 @@ function onSettingChange(e) {
     const input = e.target;
     const settingName = input.id;
     let newValue = input.value;
-    const groupName = input.closest('.tab-pane').id.replace('tab-', '');
 
     // Attempt to parse as a number if it looks like one
     if (!isNaN(newValue) && newValue.trim() !== '') {
@@ -66,7 +65,6 @@ function onSettingChange(e) {
 
     const command = {
         "command": "update_setting",
-        "group": groupName,
         "key": settingName,
         "value": newValue
     };
@@ -77,8 +75,8 @@ function onSettingChange(e) {
 function updateSettings(data) {
     Object.keys(data).forEach(settingName => {
         const settingData = data[settingName];
-        if (settings[settingData.group] && settings[settingData.group][settingName] !== undefined) {
-            settings[settingData.group][settingName] = settingData.value;
+        if (settings[settingName] !== undefined) {
+            settings[settingName] = settingData.value;
             const inputField = document.getElementById(settingName);
             if (inputField) {
                 inputField.value = settingData.value;
@@ -87,7 +85,7 @@ function updateSettings(data) {
     });
 }
 
-function loopInJson(group, tabContent, parent= null, level=1) {
+function loopInJson(group, groupName, tabContent, parent= null, level=1) {
     Object.keys(group).forEach(settingName => {
             const settingValue = group[settingName];
 
@@ -95,7 +93,12 @@ function loopInJson(group, tabContent, parent= null, level=1) {
                 console.log(settingName + " is an object: ", settingValue);
                 const fieldDiv = document.createElement('div');
                 fieldDiv.className = 'setting-group-field level-'+level;
-                // fieldDiv.data = 'level-'+level
+                if (parent) {
+                    fieldDiv.id = `${parent.id}.${settingName}`;
+                }
+                else {
+                    fieldDiv.id = `${groupName}.${settingName}`;
+                }
 
                 const title = document.createElement('h'+level);
                 title.textContent = settingName;
@@ -108,7 +111,7 @@ function loopInJson(group, tabContent, parent= null, level=1) {
                     tabContent.appendChild(fieldDiv);
                 }
 
-                return loopInJson(settingValue, tabContent, fieldDiv, level+1); // Recursive
+                return loopInJson(settingValue, groupName, tabContent, fieldDiv, level+1); // Recursive
             }
             else {
                 const fieldDiv = document.createElement('div');
@@ -120,7 +123,12 @@ function loopInJson(group, tabContent, parent= null, level=1) {
 
                 const input = document.createElement('input');
                 input.type = 'text';
-                input.id = settingName;
+                if (parent) {
+                    input.id = `${parent.id}.${settingName}`;
+                }
+                else {
+                    input.id = `${groupName}.${settingName}`;
+                }
                 input.value = settingValue;
                 input.addEventListener('change', onSettingChange);
 
@@ -164,7 +172,7 @@ function generateTabs(settingsData) {
         tabContent.id = `tab-${groupName}`;
         tabContent.style.display = isActive ? 'block' : 'none';
 
-        loopInJson(group, tabContent); // Recursive call !
+        loopInJson(group, groupName, tabContent); // Recursive call !
         tabContentContainer.appendChild(tabContent);
     });
 }

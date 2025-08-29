@@ -61,12 +61,36 @@ class SettingsService(Microservice):
             await self.messaging_client.publish(reply, response_json.encode())
             self.logger.debug(f"Sent settings for '{service_key}' to {reply}")
 
-    async def _handle_update_setting_command(self, group: str, key: str, value: any):
-        """Handles the 'update_setting' command."""
-        self.logger.info(f"Received update for setting '{group}.{key}' with value '{value}'")
+    def _get_nested_dict_val(self, dict: dict, keys: list):
+        for key in keys:
+            if type(dict) is list:
+                key = int(key)
+            else :
+                if key not in dict:
+                    dict[key] = {}
+            dict = dict[key]
+        return dict
+    
+    def _set_nested_dict_val(self, val:int|float|str, dict: dict, keys: list):
+        for key in keys:
+            if type(dict) is list:
+                key = int(key)
+            else :
+                if key not in dict:
+                    dict[key] = {}
+            
+            if (isinstance(dict[key], int) or isinstance(dict[key], float) or isinstance(dict[key], str)) :
+                dict[key] = val
+                return True, dict[key]
+            else:
+                dict = dict[key]
+        return False, dict
+            
 
-        if group not in self.all_settings:
-            self.all_settings[group] = {}
+
+    async def _handle_update_setting_command(self, key: str, value: any):
+        """Handles the 'update_setting' command."""
+        self.logger.info(f"Received update for setting '{key}' with value '{value}'")
 
         # Check if setting is read-only
         # if key in self.all_settings[group] and self.all_settings[group][key].get('ro', False):
@@ -82,23 +106,24 @@ class SettingsService(Microservice):
         except ValueError:
             converted_val = value
 
+        # Extract the list of succesive keys (path) in the object
+        list_of_keys = key.split('.')
         # Update the setting
-        if key not in self.all_settings[group]:
-             self.all_settings[group][key] = {}
-        # self.all_settings[group][key]['value'] = converted_val
-        self.all_settings[group][key] = converted_val
+        ret, val = self._set_nested_dict_val(converted_val, self.all_settings, list_of_keys)
 
-        # Persist the changes
-        self._save_settings()
+        if ret:
+            # Persist the changes
+            self._save_settings()
 
-        # Broadcast the change to all services
-        update_payload = {
-            "group": group,
-            # "key": key,
-            "value": converted_val
-        }
-        await self.messaging_client.publish("settings.updated", json.dumps({key:update_payload}, indent=None, separators=(',',':')).encode())
-        self.logger.info(f"Broadcasted update for {group}.{key}")
+            # Broadcast the change to all services
+            update_payload = {
+                "key": key,
+                "value": converted_val
+            }
+            await self.messaging_client.publish("settings.updated", json.dumps(update_payload, indent=None, separators=(',',':')).encode())
+            self.logger.info(f"Broadcasted update for {key}")
+        else:
+            self.logger.error(f"Impossible to save the key:{key} with value:{value}!")
 
     async def _start_logic(self):
         """
