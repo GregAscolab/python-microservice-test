@@ -13,8 +13,8 @@ The Settings Service acts as the centralized configuration manager for the entir
 
 ### Command: `update_setting`
 
--   **Arguments:** `group`, `key`, `value`
--   **Description:** Updates a specific setting. The `group` typically corresponds to the service name (e.g., "gps_service") or "global". The change is saved to `settings.json` and then broadcast on the `settings.updated` subject.
+-   **Arguments:** `key`, `value`
+-   **Description:** Updates a specific setting. The `key` corresponds to the full path of the JSON entry, starting with the service name, and separated with '.' (dot) (e.g., "digital_twin_service.excavator.bucket.dimensions.length"). The change is saved to `settings.json` and then broadcast on the `settings.updated` subject.
 
 ## Publications
 
