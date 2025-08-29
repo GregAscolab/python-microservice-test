@@ -7,33 +7,53 @@
         "port": 8000
     },
     "can_bus_service": {
-        "interface": "virtual",
-        "channel": "vcan0",
+        "interface": "pcan",
+        "channel": "",
         "bitrate": 500000,
         "log_file_format": ".blf",
         "log_dir": "can_logs",
-        "log_file_size": 100000,
+        "log_file_size": 10000000,
         "dbc_file": "config/db-full.dbc"
     },
     "dummy_service": {
         "update_interval": 5
     },
     "digital_twin_service": {
-        "update_interval": 0.1,
+        "update_interval": 1,
         "dbc_file": "config/db-full.dbc",
         "excavator": {
             "turret": {
                 "dimensions": {
                     "length": 10,
                     "width": 10,
-                    "height": 1
+                    "height": 1,
+                    "offset": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                    }
+                },
+                "angles_offset": {
+                    "x": 12,
+                    "y": 0,
+                    "z": 0
                 }
             },
             "boom": {
                 "dimensions": {
                     "length": 8,
                     "width": 1,
-                    "height": 1
+                    "height": 1,
+                    "offset": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                    }
+                },
+                "angles_offset": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
                 }
             },
             "jib": {
@@ -45,7 +65,7 @@
             },
             "bucket": {
                 "dimensions": {
-                    "length": 2,
+                    "length": 1,
                     "width": 1,
                     "height": 1
                 }
@@ -96,5 +116,6 @@
         "s3_bucket": "eiffage-test",
         "s3_access_key": "MoqWL43ayrgZgKgCuLqT",
         "s3_secret_key": "lVfCiJLQ3dq1zd50mtufd0oQVo9B94O7gvWkLfGw"
-    }
+    },
+    "dbc_file": {}
 }

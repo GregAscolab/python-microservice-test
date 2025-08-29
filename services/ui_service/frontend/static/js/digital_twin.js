@@ -37,7 +37,7 @@ function initDigitalTwinsPage() {
 
         ConnectionManager.subscribe('digital_twin.data', (m) => {
             const data = ConnectionManager.jsonCodec.decode(m.data);
-            // console.log("Received digital twin data:", data);
+            console.log("Received digital twin data:", data);
 
             let camera;
 
