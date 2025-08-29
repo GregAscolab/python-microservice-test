@@ -27,11 +27,12 @@ class Part:
         self.dimensions = settings.get("dimensions", {})
         self.length = self.dimensions.get("length", 0)
         self.width = self.dimensions.get("width", 0)
-        self.offset = self.dimensions.get("offset", [0, 0, 0])
+        self.offset = self.dimensions.get("offset", {"x": 0, "y": 0, "z": 0})
+        self.angles_offset = settings.get("angles_offset", {"x": 0, "y": 0, "z": 0})
 
-        self.yawAngle = 0  # The part's current angle in degrees around z axis.
-        self.pitchAngle = 0  # The part's current angle in degrees around y axis.
         self.rollAngle = 0  # The part's current angle in degrees around x axis.
+        self.pitchAngle = 0  # The part's current angle in degrees around y axis.
+        self.yawAngle = 0  # The part's current angle in degrees around z axis.
         self.start_point = [0, 0, 0]
         self.end_point = [0, 0, 0]
         self.planEquation = [0, 0, 0, 0]
@@ -44,9 +45,9 @@ class Part:
         """
         # The start point is the parent's end point plus any offset.
         self.start_point = [
-            parent_end_point[0] + self.offset[0],
-            parent_end_point[1] + self.offset[1],
-            parent_end_point[2] + self.offset[2]
+            parent_end_point[0] + self.offset["x"],
+            parent_end_point[1] + self.offset["y"],
+            parent_end_point[2] + self.offset["z"]
         ]
 
         # The total angle is the sum of the parent's angle and this part's angle.
@@ -273,14 +274,14 @@ class Excavator:
         Updates the state of all excavator components from the full sensor state dictionary.
         """
         # Update part angles
-        self.turret.pitchAngle = sensor_state.get(self.signal_mapping.get("turret_angle_pitch"), 0)
-        self.turret.rollAngle = sensor_state.get(self.signal_mapping.get("turret_angle_roll"), 0)
-        self.boom.pitchAngle = sensor_state.get(self.signal_mapping.get("boom_angle_pitch"), 0)
-        self.boom.rollAngle = sensor_state.get(self.signal_mapping.get("boom_angle_roll"), 0)
-        self.jib.pitchAngle = sensor_state.get(self.signal_mapping.get("jib_angle_pitch"), 0)
-        self.jib.rollAngle = sensor_state.get(self.signal_mapping.get("jib_angle_roll"), 0)
-        self.bucket.pitchAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_pitch"), 0)
-        self.bucket.rollAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_roll"), 0)
+        self.turret.pitchAngle = sensor_state.get(self.signal_mapping.get("turret_angle_pitch"), 0) + self.turret.angles_offset["y"]
+        self.turret.rollAngle = sensor_state.get(self.signal_mapping.get("turret_angle_roll"), 0) + self.turret.angles_offset["x"]
+        self.boom.pitchAngle = sensor_state.get(self.signal_mapping.get("boom_angle_pitch"), 0) + self.boom.angles_offset["y"]
+        self.boom.rollAngle = sensor_state.get(self.signal_mapping.get("boom_angle_roll"), 0) + self.boom.angles_offset["x"]
+        self.jib.pitchAngle = sensor_state.get(self.signal_mapping.get("jib_angle_pitch"), 0) + self.jib.angles_offset["y"]
+        self.jib.rollAngle = sensor_state.get(self.signal_mapping.get("jib_angle_roll"), 0) + self.jib.angles_offset["x"]
+        self.bucket.pitchAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_pitch"), 0) + self.bucket.angles_offset["y"]
+        self.bucket.rollAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_roll"), 0) + self.bucket.angles_offset["x"]
 
         # Update cylinder pressures
         self.boom_cylinder.hp_pressure = sensor_state.get(self.signal_mapping.get("boom_hp"), 0)
