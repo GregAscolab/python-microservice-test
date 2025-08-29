@@ -24,7 +24,6 @@ class DigitalTwinService(Microservice):
         """This is called when the service starts."""
         self.logger.info("Digital Twin service starting up...")
         await self.get_settings()
-        self.logger.info(f"My settings: {self.settings}")
 
         self.excavator = Excavator(
             self.settings.get("excavator", {}),
