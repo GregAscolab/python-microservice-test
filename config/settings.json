@@ -18,6 +18,9 @@
     "dummy_service": {
         "update_interval": 5
     },
+    "gps_service": {
+        "update_interval": 5
+    },
     "digital_twin_service": {
         "update_interval": 0.05,
         "dbc_file": "config/db-full.dbc",
@@ -180,7 +183,7 @@
     },
     "global": {
         "nats_url": "nats://127.0.0.1:4222",
-        "hardware_platform": "owa5x",
+        "hardware_platform": "generic",
         "s3_endpoint_url": "http://dev.ascolab.fr:10000",
         "s3_bucket": "eiffage-test",
         "s3_access_key": "MoqWL43ayrgZgKgCuLqT",
