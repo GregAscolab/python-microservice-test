@@ -11,10 +11,10 @@ let resetButton;
 function handleResetClick() {
     console.log('Sending reset_counter command to dummy_service...');
     const command = {
-        command: 'reset_counter'
+        "command": 'reset_counter'
     };
     // Publish the command using the shared ConnectionManager
-    ConnectionManager.publish('commands.dummy_service', command);
+    ConnectionManager.publishJson('commands.dummy_service', command);
 }
 
 /**

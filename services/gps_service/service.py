@@ -26,6 +26,7 @@ class GpsService(Microservice):
         self.gps = None
         self.publisher_task = None
         self.update_pos_counter = 0
+        self.no_update_pos_counter = 0
         self.last_payload = {}
 
     async def _wait_for_owa_service(self, timeout=60.0, retry_delay=2.0):
@@ -135,10 +136,11 @@ class GpsService(Microservice):
 
     async def _gps_publisher_loop(self):
         """Periodically publishes GPS data."""
+        update_interval = self.settings.get("update_interval", 1)
         while True:
             try:
                 await self._publish_gps_data()
-                await asyncio.sleep(1)
+                await asyncio.sleep(update_interval)
             except asyncio.CancelledError:
                 self.logger.info("GPS publisher loop cancelled.")
                 break
@@ -165,8 +167,15 @@ class GpsService(Microservice):
         payload = {}
         if self.gps and self.use_owa_hardware:
             update_flag, _ = self.gps.getFullGPSPosition()
+
+            if (self.no_update_pos_counter % 60):
+                self.logger.info(f"GPS not updated for long time... force update")
+                self.no_update_pos_counter = 0
+                self.gps.gps_pos_ok = True
+
             # if self.gps.gps_pos_ok and update_flag:
-            if self.gps.gps_pos_ok:
+            if self.gps.gps_pos_ok :
+                self.no_update_pos_counter = 0
                 self.update_pos_counter += 1
                 payload = {
                     "type": "Feature",
@@ -176,7 +185,6 @@ class GpsService(Microservice):
                     },
                     "properties": {
                         "lastCoord": utils.getdict(self.gps.lastCoord),
-                        # "SV": utils.getdict(d)
                     }
                 }
 
@@ -202,7 +210,9 @@ class GpsService(Microservice):
                 if (self.update_pos_counter % (3*10) == 0):
                     self.update_pos_counter=0
             else:
+                self.no_update_pos_counter += 1
                 self.logger.debug(f"GPS not ready ({self.gps.gps_pos_ok}), or no change in position ({update_flag})")
+
         else:
             fake_lat = 45.5257585 + random.uniform(-0.001, 0.001)
             fake_lon = 4.9240768 + random.uniform(-0.001, 0.001)
@@ -240,4 +250,4 @@ class GpsService(Microservice):
         if payload:
             self.last_payload = payload
             await self.messaging_client.publish("gps", json.dumps(payload, indent=None, separators=(',',':')).encode())
-            self.logger.debug(f"Published GPS data: {payload}")
+            self.logger.info(f"Published GPS data: {payload}")

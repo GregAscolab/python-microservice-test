@@ -7,7 +7,7 @@ const angleTableBody = document.querySelector('#angleTable tbody');
 let gpsSub;
 let dataSub;
 const nameCache = new Map();
-const suffToTypeMap = new Map([["_b", "pressure"], ["_PFAng", "angle"]]);
+const suffToTypeMap = new Map([["_b", "pressure"], ["_PFAng", "angle"], ["_Euler", "angle"], ["_Quat", "angle"]]);
 const typeToUnitMap = new Map([["pressure", "bars"], ["angle", "deg"]]);
 
 function updateCell(sensorName, sensorValue) {

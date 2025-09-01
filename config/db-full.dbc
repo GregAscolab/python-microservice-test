@@ -51,25 +51,19 @@ BO_ 906 AIN5_8: 8 Vector__XXX
  SG_ A6_TOOTH_BP_b : 16|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
  SG_ A5_TOOTH_HP_b : 0|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
 
-BO_ 1162 AIN9_12: 8 Vector__XXX
- SG_ A12 : 48|16@1+ (1,0) [0|0] "" Vector__XXX
- SG_ A11 : 32|16@1+ (1,0) [0|0] "" Vector__XXX
- SG_ A10 : 16|16@1+ (1,0) [0|0] "" Vector__XXX
- SG_ A9 : 0|16@1+ (1,0) [0|0] "" Vector__XXX
-
 BO_ 400 PF_CHASSIS_Incl: 6 Vector__XXX
  SG_ PF_CHASSIS_InclY : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_InclX : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_Temp : 0|16@1- (1,0) [0|0] "" Vector__XXX
 
 BO_ 401 PF_CHASSIS_Acc: 8 Vector__XXX
- SG_ PF_CHASSIS_AccAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_CHASSIS_AccAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_AccZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_AccY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_AccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
 BO_ 657 PF_CHASSIS_RotRate: 8 Vector__XXX
- SG_ PF_CHASSIS_RotRateAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_CHASSIS_RotRateAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_RotRateZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_RotRateY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_RotRateX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
@@ -90,13 +84,15 @@ BO_ 402 PF_CHASSIS_LinAcc: 6 Vector__XXX
  SG_ PF_CHASSIS_LinAccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
 BO_ 658 PF_CHASSIS_PFAng: 8 Vector__XXX
- SG_ PF_CHASSIS_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_CHASSIS_PFAngGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_CHASSIS_PFAngAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
 
 BO_ 914 PF_CHASSIS_Euler: 8 Vector__XXX
- SG_ PF_CHASSIS_EulerAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_CHASSIS_EulerGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_CHASSIS_EulerAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_EulerZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_EulerY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_CHASSIS_EulerX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
@@ -117,13 +113,13 @@ BO_ 404 PF_BOOM_Incl: 6 Vector__XXX
  SG_ PF_BOOM_Temp : 0|16@1- (1,0) [0|0] "" Vector__XXX
 
 BO_ 405 PF_BOOM_Acc: 8 Vector__XXX
- SG_ PF_BOOM_AccAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BOOM_AccAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_AccZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_AccY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_AccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
 BO_ 661 PF_BOOM_RotRate: 8 Vector__XXX
- SG_ PF_BOOM_RotRateAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BOOM_RotRateAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_RotRateZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_RotRateY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_RotRateX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
@@ -144,13 +140,15 @@ BO_ 406 PF_BOOM_LinAcc: 6 Vector__XXX
  SG_ PF_BOOM_LinAccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
 BO_ 662 PF_BOOM_PFAng: 8 Vector__XXX
- SG_ PF_BOOM_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BOOM_PFAngGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BOOM_PFAngAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
 
 BO_ 918 PF_BOOM_Euler: 8 Vector__XXX
- SG_ PF_BOOM_EulerAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BOOM_EulerGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BOOM_EulerAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_EulerZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_EulerY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_EulerX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
@@ -171,13 +169,13 @@ BO_ 408 PF_BAL_Incl: 6 Vector__XXX
  SG_ PF_BAL_Temp : 0|16@1- (1,0) [0|0] "" Vector__XXX
 
 BO_ 409 PF_BAL_Acc: 8 Vector__XXX
- SG_ PF_BAL_AccAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BAL_AccAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_AccZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_AccY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_AccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
 BO_ 665 PF_BAL_RotRate: 8 Vector__XXX
- SG_ PF_BAL_RotRateAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BAL_RotRateAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_RotRateZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_RotRateY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_RotRateX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
@@ -198,13 +196,15 @@ BO_ 410 PF_BAL_LinAcc: 6 Vector__XXX
  SG_ PF_BAL_LinAccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
 BO_ 666 PF_BAL_PFAng: 8 Vector__XXX
- SG_ PF_BAL_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BAL_PFAngGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BAL_PFAngAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
 
 BO_ 922 PF_BAL_Euler: 8 Vector__XXX
- SG_ PF_BAL_EulerAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BAL_EulerGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BAL_EulerAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_EulerZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_EulerY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BAL_EulerX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
@@ -225,13 +225,13 @@ BO_ 412 PF_BUCKET_Incl: 6 Vector__XXX
  SG_ PF_BUCKET_Temp : 0|16@1- (1,0) [0|0] "" Vector__XXX
 
 BO_ 413 PF_BUCKET_Acc: 8 Vector__XXX
- SG_ PF_BUCKET_AccAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BUCKET_AccAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_AccZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_AccY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_AccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
 BO_ 669 PF_BUCKET_RotRate: 8 Vector__XXX
- SG_ PF_BUCKET_RotRateAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BUCKET_RotRateAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_RotRateZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_RotRateY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_RotRateX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
@@ -252,13 +252,15 @@ BO_ 414 PF_BUCKET_LinAcc: 6 Vector__XXX
  SG_ PF_BUCKET_LinAccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
 BO_ 670 PF_BUCKET_PFAng: 8 Vector__XXX
- SG_ PF_BUCKET_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BUCKET_PFAngGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BUCKET_PFAngAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
 
 BO_ 926 PF_BUCKET_Euler: 8 Vector__XXX
- SG_ PF_BUCKET_EulerAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BUCKET_EulerGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_BUCKET_EulerAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_EulerZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_EulerY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_EulerX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
