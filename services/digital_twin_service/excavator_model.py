@@ -36,6 +36,8 @@ class Sensor3DModel:
                                   Sera utilisé pour la multiplication des matrices.
             axis_mapping (dict): Mappage des angles d'entrée aux axes de rotation.
                                  Exemple: {'roll': 'Y', 'pitch': 'X', 'yaw': 'Z'}.
+            axis_reverse (dict): Indique si la valeur d'un angle doit être "inversé" pour le calcul 3D. Valeur 0=Non inversé, 1=Inversé
+                                 Exemple: {'roll': 1, 'pitch': 0, 'yaw': 0}
         """
         self.length = length
         self.width = width
@@ -537,41 +539,26 @@ class Excavator:
         """
         Updates the state of all excavator components from the full sensor state dictionary.
         """
-        # Update part angles
-        # self.turret.sensor.update_angles( sensor_state.get(self.signal_mapping.get("turret_angle_roll"), 0),
-        #                                   sensor_state.get(self.signal_mapping.get("turret_angle_pitch"), 0),
-        #                                   sensor_state.get(self.signal_mapping.get("turret_angle_yaw"), 0) )
+
+        self.turret.sensor.update_angles( sensor_state.get(self.signal_mapping.get("turret_angle_x"), 0),
+                                          sensor_state.get(self.signal_mapping.get("turret_angle_y"), 0),
+                                          sensor_state.get(self.signal_mapping.get("turret_angle_z"), 0),
+                                          sensor_state.get(self.signal_mapping.get("turret_angle_gf"), 0))
         
         self.boom.sensor.update_angles( sensor_state.get(self.signal_mapping.get("boom_angle_x"), 0),
                                         sensor_state.get(self.signal_mapping.get("boom_angle_y"), 0),
                                         sensor_state.get(self.signal_mapping.get("boom_angle_z"), 0),
                                         sensor_state.get(self.signal_mapping.get("boom_angle_gf"), 0))
         
-        # self.boom.sensor.update_angles_quaternion( sensor_state.get(self.signal_mapping.get("boom_angle_quatX"), 0),
-        #                                            sensor_state.get(self.signal_mapping.get("boom_angle_quatY"), 0),
-        #                                            sensor_state.get(self.signal_mapping.get("boom_angle_quatZ"), 0),
-        #                                            sensor_state.get(self.signal_mapping.get("boom_angle_quatW"), 1))
+        self.jib.sensor.update_angles( sensor_state.get(self.signal_mapping.get("jib_angle_x"), 0),
+                                       sensor_state.get(self.signal_mapping.get("jib_angle_y"), 0),
+                                       sensor_state.get(self.signal_mapping.get("jib_angle_z"), 0),
+                                       sensor_state.get(self.signal_mapping.get("jib_angle_gf"), 0))
         
-        # self.jib.sensor.update_angles( sensor_state.get(self.signal_mapping.get("jib_angle_roll"), 0),
-        #                                sensor_state.get(self.signal_mapping.get("jib_angle_pitch"), 0),
-        #                                sensor_state.get(self.signal_mapping.get("jib_angle_yaw"), 0) )
-        
-        # self.bucket.sensor.update_angles( sensor_state.get(self.signal_mapping.get("bucket_angle_roll"), 0),
-        #                                   sensor_state.get(self.signal_mapping.get("bucket_angle_pitch"), 0),
-        #                                   sensor_state.get(self.signal_mapping.get("bucket_angle_yaw"), 0) )
-
-        # self.turret.rollAngle = sensor_state.get(self.signal_mapping.get("turret_angle_roll"), 0) + self.turret.angles_offset["x"]
-        # self.turret.pitchAngle = sensor_state.get(self.signal_mapping.get("turret_angle_pitch"), 0) + self.turret.angles_offset["y"]
-        # self.turret.yawAngle = sensor_state.get(self.signal_mapping.get("turret_angle_yaw"), 0) + self.turret.angles_offset["z"]
-        # self.boom.rollAngle = sensor_state.get(self.signal_mapping.get("boom_angle_roll"), 0) + self.boom.angles_offset["x"]
-        # self.boom.pitchAngle = sensor_state.get(self.signal_mapping.get("boom_angle_pitch"), 0) + self.boom.angles_offset["y"]
-        # self.boom.yawAngle = sensor_state.get(self.signal_mapping.get("boom_angle_yaw"), 0) + self.boom.angles_offset["z"]
-        # self.jib.rollAngle = sensor_state.get(self.signal_mapping.get("jib_angle_roll"), 0) + self.jib.angles_offset["x"]
-        # self.jib.pitchAngle = sensor_state.get(self.signal_mapping.get("jib_angle_pitch"), 0) + self.jib.angles_offset["y"]
-        # self.jib.yawAngle = sensor_state.get(self.signal_mapping.get("jib_angle_yaw"), 0) + self.jib.angles_offset["z"]
-        # self.bucket.rollAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_roll"), 0) + self.bucket.angles_offset["x"]
-        # self.bucket.pitchAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_pitch"), 0) + self.bucket.angles_offset["y"]
-        # self.bucket.yawAngle = sensor_state.get(self.signal_mapping.get("bucket_angle_yaw"), 0) + self.bucket.angles_offset["z"]
+        self.bucket.sensor.update_angles( sensor_state.get(self.signal_mapping.get("bucket_angle_x"), 0),
+                                       sensor_state.get(self.signal_mapping.get("bucket_angle_y"), 0),
+                                       sensor_state.get(self.signal_mapping.get("bucket_angle_z"), 0),
+                                       sensor_state.get(self.signal_mapping.get("bucket_angle_gf"), 0))
 
         # Update cylinder pressures
         self.boom_cylinder.hp_pressure = sensor_state.get(self.signal_mapping.get("boom_hp"), 0)

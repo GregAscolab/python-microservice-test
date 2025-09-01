@@ -34,8 +34,18 @@
                     }
                 },
                 "angles_offset": {
-                    "roll": 0,
+                    "roll": -90.0,
                     "pitch": 0,
+                    "yaw": 0
+                },
+                "axis_mapping": {
+                    "roll": "X",
+                    "pitch": "Z",
+                    "yaw": "Y"
+                },
+                "axis_reverse": {
+                    "roll": 1,
+                    "pitch": 1,
                     "yaw": 0
                 }
             },
@@ -70,14 +80,54 @@
                 "dimensions": {
                     "length": 4,
                     "width": 1,
-                    "height": 1
+                    "height": 1,
+                    "offset": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                    }
+                },
+                "angles_offset": {
+                    "roll": -90.0,
+                    "pitch": 0,
+                    "yaw": 0
+                },
+                "axis_mapping": {
+                    "roll": "X",
+                    "pitch": "Z",
+                    "yaw": "Y"
+                },
+                "axis_reverse": {
+                    "roll": 1,
+                    "pitch": 1,
+                    "yaw": 0
                 }
             },
             "bucket": {
                 "dimensions": {
                     "length": 1,
                     "width": 1,
-                    "height": 1
+                    "height": 1,
+                    "offset": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                    }
+                },
+                "angles_offset": {
+                    "roll": -90.0,
+                    "pitch": 0,
+                    "yaw": 0
+                },
+                "axis_mapping": {
+                    "roll": "X",
+                    "pitch": "Z",
+                    "yaw": "Y"
+                },
+                "axis_reverse": {
+                    "roll": 1,
+                    "pitch": 1,
+                    "yaw": 0
                 }
             },
             "boom_cylinder": {
@@ -103,9 +153,9 @@
             }
         },
         "signal_mapping": {
-            "turret_angle_pitch": "PF_CHASSIS_PFAngX",
-            "turret_angle_roll": "PF_CHASSIS_PFAngY",
-            "turret_angle_yaw": "PF_CHASSIS_PFAngZ",
+            "turret_angle_y": "PF_CHASSIS_PFAngX",
+            "turret_angle_x": "PF_CHASSIS_PFAngY",
+            "turret_angle_z": "PF_CHASSIS_PFAngZ",
             "boom_angle_x": "PF_BOOM_PFAngX",
             "boom_angle_y": "PF_BOOM_PFAngY",
             "boom_angle_z": "PF_BOOM_PFAngZ",
@@ -114,12 +164,12 @@
             "boom_angle_quatY": "PF_BOOM_QuatY",
             "boom_angle_quatZ": "PF_BOOM_QuatZ",
             "boom_angle_quatW": "PF_BOOM_QuatW",
-            "jib_angle_pitch": "PF_BAL_PFAngX",
-            "jib_angle_roll": "PF_BAL_PFAngY",
-            "jib_angle_yaw": "PF_BAL_PFAngZ",
-            "bucket_angle_pitch": "PF_BUCKET_PFAngX",
-            "bucket_angle_roll": "PF_BUCKET_PFAngY",
-            "bucket_angle_yaw": "PF_BUCKET_PFAngZ",
+            "jib_angle_y": "PF_BAL_PFAngX",
+            "jib_angle_x": "PF_BAL_PFAngY",
+            "jib_angle_z": "PF_BAL_PFAngZ",
+            "bucket_angle_y": "PF_BUCKET_PFAngX",
+            "bucket_angle_x": "PF_BUCKET_PFAngY",
+            "bucket_angle_z": "PF_BUCKET_PFAngZ",
             "boom_hp": "A1_BOOM_HP_b",
             "boom_bp": "A2_BOOM_BP_b",
             "jib_hp": "A3_STICK_HP_b",
@@ -130,11 +180,10 @@
     },
     "global": {
         "nats_url": "nats://127.0.0.1:4222",
-        "hardware_platform": "generic",
+        "hardware_platform": "owa5x",
         "s3_endpoint_url": "http://dev.ascolab.fr:10000",
         "s3_bucket": "eiffage-test",
         "s3_access_key": "MoqWL43ayrgZgKgCuLqT",
         "s3_secret_key": "lVfCiJLQ3dq1zd50mtufd0oQVo9B94O7gvWkLfGw"
-    },
-    "dbc_file": {}
+    }
 }
