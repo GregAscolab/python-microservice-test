@@ -465,13 +465,16 @@ function cleanupComputePage() {
     if (domElements.page) {
         domElements.page.removeEventListener('click', handleUnregisterClick);
     }
-    if (domElements.btnToggleConfig) {
-        // Since the handler is an anonymous arrow function, we can't remove it.
-        // In a real-world, more complex app, we'd define it as a named function.
-        // For this case, it's acceptable as the page element is destroyed anyway.
-    }
+    // Note: The toggle button listener is not removed as it's an anonymous function.
+    // This is acceptable as the whole page context is destroyed on navigation.
 
-    // 3. Clear DOM element references
+    // 3. Clear dynamically generated content from the DOM
+    if (domElements.computedTableBody) domElements.computedTableBody.innerHTML = '';
+    if (domElements.sourceTablesContainer) domElements.sourceTablesContainer.innerHTML = '';
+    if (domElements.activeTriggers) domElements.activeTriggers.innerHTML = '';
+
+
+    // 4. Clear state and caches
     domElements = {};
 }
 
