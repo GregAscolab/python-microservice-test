@@ -251,6 +251,39 @@
                     <button id="btn-toggle-config" class="btn-toggle-config">☰ Config</button>
                 </div>
                 <div class="compute-main-container">
+                    <!-- Main Content Area -->
+                    <div class="compute-content-area">
+                        <!-- Live State Panel -->
+                        <div class="compute-panel live-state-panel">
+                            <h3>Live State</h3>
+                            <div id="compute-status-section">
+                                <p><strong>Service Status:</strong> <span id="compute-service-status">--</span></p>
+                                <div id="compute-active-triggers"></div>
+                            </div>
+                        </div>
+                        <!-- Results Panel -->
+                        <div class="compute-panel results-panel">
+                            <h4>Computed Values</h4>
+                            <div class="table-container">
+                                <table id="compute-computed-table" class="compute-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Output Name</th>
+                                            <th>Value</th>
+                                            <th>Type</th>
+                                            <th>Source</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <h4>Data Sources</h4>
+                            <div id="source-tables-container">
+                                <!-- JS will create tables here -->
+                            </div>
+                        </div>
+                    </div>
                     <!-- Configuration Panel (collapsible) -->
                     <div class="compute-panel config-panel" id="compute-config-panel">
                         <h3>Configuration</h3>
@@ -314,37 +347,19 @@
                             </form>
                         </div>
                     </div>
-                    <!-- Main Content Area -->
-                    <div class="compute-content-area">
-                        <!-- Live State Panel -->
-                        <div class="compute-panel live-state-panel">
-                            <h3>Live State</h3>
-                            <div id="compute-status-section">
-                                <p><strong>Service Status:</strong> <span id="compute-service-status">--</span></p>
-                                <div id="compute-active-triggers"></div>
-                            </div>
+                </div>
+                <!-- Generic Confirmation Modal -->
+                <div id="compute-confirm-modal" class="modal" style="display: none;">
+                    <div class="modal-content danger-theme">
+                        <div class="modal-header">
+                            <h2 id="compute-modal-title">Confirm Action</h2>
                         </div>
-                        <!-- Results Panel -->
-                        <div class="compute-panel results-panel">
-                            <h4>Computed Values</h4>
-                            <div class="table-container">
-                                <table id="compute-computed-table" class="compute-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Output Name</th>
-                                            <th>Value</th>
-                                            <th>Type</th>
-                                            <th>Source</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                            <h4>Data Sources</h4>
-                            <div id="source-tables-container">
-                                <!-- JS will create tables here -->
-                            </div>
+                        <div class="modal-body">
+                            <p id="compute-modal-text">Are you sure?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button id="compute-modal-cancel-btn" class="button">Cancel</button>
+                            <button id="compute-modal-confirm-btn" class="button danger">Confirm</button>
                         </div>
                     </div>
                 </div>

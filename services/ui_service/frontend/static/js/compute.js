@@ -261,10 +261,15 @@ function initComputePage() {
         activeTriggers: document.getElementById('compute-active-triggers'),
         computedTableBody: document.getElementById('compute-computed-table')?.querySelector('tbody'),
         sourceTablesContainer: document.getElementById('source-tables-container'),
+        modal: document.getElementById('compute-confirm-modal'),
+        modalTitle: document.getElementById('compute-modal-title'),
+        modalText: document.getElementById('compute-modal-text'),
+        modalCancelBtn: document.getElementById('compute-modal-cancel-btn'),
+        modalConfirmBtn: document.getElementById('compute-modal-confirm-btn'),
         lastState: { computations: [], triggers: [], computation_state: {} } // Initial empty state
     };
 
-    if (!domElements.computedTableBody || !domElements.sourceTablesContainer) {
+    if (!domElements.computedTableBody || !domElements.sourceTablesContainer || !domElements.modal) {
         console.error("Compute page UI elements not found! Cannot initialize page.");
         return;
     }
@@ -303,31 +308,76 @@ function initComputePage() {
 
     // 8. Add listener for responsive config toggle
     domElements.btnToggleConfig.addEventListener('click', () => {
-        domElements.configPanel.classList.toggle('open');
+        // On wide screens, we use a different class to shrink content
+        if (window.innerWidth > 1200) {
+            domElements.configPanel.classList.toggle('collapsed');
+        } else {
+            domElements.configPanel.classList.toggle('open');
+        }
+    });
+
+    // 9. Add listeners for the confirmation modal
+    domElements.modalCancelBtn.addEventListener('click', () => {
+        domElements.modal.style.display = 'none';
     });
 }
 
 /**
- * Handles clicks on the unregister buttons.
+ * Handles clicks on the unregister buttons by showing a confirmation modal.
  * @param {Event} event - The click event.
  */
-async function handleUnregisterClick(event) {
+function handleUnregisterClick(event) {
     const target = event.target;
+    let command = null;
+    let args = null;
+    let itemType = '';
+    let itemName = '';
+
     if (target.classList.contains('btn-unregister-comp')) {
-        const outputName = target.dataset.outputName;
-        console.log(`Sending unregister_computation for: ${outputName}`);
-        await ConnectionManager.request('commands.compute_service', {
-            command: 'unregister_computation',
-            args: { output_name: outputName }
-        });
+        itemName = target.dataset.outputName;
+        itemType = 'computation';
+        command = 'unregister_computation';
+        args = { output_name: itemName };
     } else if (target.classList.contains('btn-unregister-trigger')) {
-        const triggerName = target.dataset.triggerName;
-        console.log(`Sending unregister_trigger for: ${triggerName}`);
-        await ConnectionManager.request('commands.compute_service', {
-            command: 'unregister_trigger',
-            args: { name: triggerName }
-        });
+        itemName = target.dataset.triggerName;
+        itemType = 'trigger';
+        command = 'unregister_trigger';
+        args = { name: itemName };
     }
+
+    if (command) {
+        showConfirmationModal(
+            `Delete ${itemType}`,
+            `Are you sure you want to delete the ${itemType} "${itemName}"? This action cannot be undone.`,
+            () => {
+                console.log(`Sending ${command} for: ${itemName}`);
+                ConnectionManager.request('commands.compute_service', { command, ...args });
+            }
+        );
+    }
+}
+
+/**
+ * Shows the confirmation modal.
+ * @param {string} title - The title for the modal.
+ * @param {string} text - The confirmation text.
+ * @param {function} onConfirm - The callback function to execute if confirmed.
+ */
+function showConfirmationModal(title, text, onConfirm) {
+    domElements.modalTitle.textContent = title;
+    domElements.modalText.textContent = text;
+
+    // Clone and replace the confirm button to remove old event listeners
+    const newConfirmBtn = domElements.modalConfirmBtn.cloneNode(true);
+    domElements.modalConfirmBtn.parentNode.replaceChild(newConfirmBtn, domElements.modalConfirmBtn);
+    domElements.modalConfirmBtn = newConfirmBtn;
+
+    domElements.modalConfirmBtn.onclick = () => {
+        onConfirm();
+        domElements.modal.style.display = 'none';
+    };
+
+    domElements.modal.style.display = 'flex';
 }
 
 /**
