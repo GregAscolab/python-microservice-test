@@ -182,8 +182,7 @@
         }
     },
     "compute_service": {
-        "average_signal_name": "PF_EngineSpeed",
-        "engine_speed_threshold": 1500
+        "ui_publish_interval": 1.0
     },
     "global": {
         "nats_url": "nats://127.0.0.1:4222",
