@@ -5,31 +5,35 @@ let settings = {};
 let tabButtonsContainer;
 let tabContentContainer;
 let settingsSub;
+let reloadedSub;
+
+// --- UI Elements ---
+let exportBtn, importBtn, importFile, configSelect, loadConfigBtn;
 
 async function initSettingsPage() {
     console.log("Initializing Settings page...");
 
+    // Cache UI elements
     tabButtonsContainer = document.querySelector('#page-settings .tab-buttons');
     tabContentContainer = document.querySelector('#page-settings .tab-content');
+    exportBtn = document.getElementById('export-settings-btn');
+    importBtn = document.getElementById('import-settings-btn');
+    importFile = document.getElementById('import-settings-file');
+    configSelect = document.getElementById('config-files-select');
+    loadConfigBtn = document.getElementById('load-config-file-btn');
 
     if (!tabButtonsContainer || !tabContentContainer) return;
 
+    // Add event listeners
     tabButtonsContainer.addEventListener('click', onTabClick);
+    exportBtn.addEventListener('click', onExportSettings);
+    importBtn.addEventListener('click', () => importFile.click());
+    importFile.addEventListener('change', onImportSettings);
+    loadConfigBtn.addEventListener('click', onLoadConfigFile);
 
-    // Get initial settings
-    const nc = await ConnectionManager.getNatsConnection();
-    if (!nc) return;
-
-    try {
-        const response = await nc.request('settings.get.all', ConnectionManager.stringCodec.encode(''), { timeout: 2000 });
-        const settings = ConnectionManager.jsonCodec.decode(response.data);
-        if(settings) {
-            generateTabs(settings);
-        }
-    } catch(err) {
-        console.error("Failed to get settings:", err);
-    }
-
+    // Fetch initial data
+    await fetchAndRenderAllSettings();
+    await populateConfigFiles();
 
     // Subscribe to updates
     ConnectionManager.subscribe('settings.updated', (m) => {
@@ -38,6 +42,47 @@ async function initSettingsPage() {
     }).then(sub => {
         settingsSub = sub;
     });
+
+    ConnectionManager.subscribe('settings.reloaded', async () => {
+        console.log("Settings reloaded, refreshing UI...");
+        await fetchAndRenderAllSettings();
+        await populateConfigFiles();
+    }).then(sub => {
+        reloadedSub = sub;
+    });
+}
+
+async function fetchAndRenderAllSettings() {
+    try {
+        const nc = await ConnectionManager.getNatsConnection();
+        const response = await nc.request('settings.get.all', ConnectionManager.stringCodec.encode(''), { timeout: 2000 });
+        const settingsData = ConnectionManager.jsonCodec.decode(response.data);
+        settings = settingsData; // Store current settings
+        if (settings) {
+            generateTabs(settings);
+        }
+    } catch (err) {
+        console.error("Failed to get settings:", err);
+        tabContentContainer.innerHTML = `<p>Error loading settings. Please check the logs.</p>`;
+    }
+}
+
+async function populateConfigFiles() {
+    try {
+        const nc = await ConnectionManager.getNatsConnection();
+        const response = await nc.request('settings.list_configs', ConnectionManager.stringCodec.encode(''), { timeout: 2000 });
+        const files = ConnectionManager.jsonCodec.decode(response.data);
+
+        configSelect.innerHTML = ''; // Clear existing options
+        files.forEach(file => {
+            const option = document.createElement('option');
+            option.value = file;
+            option.textContent = file;
+            configSelect.appendChild(option);
+        });
+    } catch (err) {
+        console.error("Failed to list config files:", err);
+    }
 }
 
 function onTabClick(e) {
@@ -85,22 +130,23 @@ function updateSettings(data) {
     });
 }
 
-function loopInJson(group, groupName, tabContent, parent= null, level=1) {
+function loopInJson(group, groupName, tabContent, parent = null, level = 1) {
     Object.keys(group).forEach(settingName => {
-            const settingValue = group[settingName];
+        const settingValue = group[settingName];
 
-            if (typeof settingValue === 'object' && settingValue !== null) {
-                console.log(settingName + " is an object: ", settingValue);
-                const fieldDiv = document.createElement('div');
-                fieldDiv.className = 'setting-group-field level-'+level;
-                if (parent) {
-                    fieldDiv.id = `${parent.id}.${settingName}`;
-                }
-                else {
-                    fieldDiv.id = `${groupName}.${settingName}`;
-                }
+        if (typeof settingValue === 'object' && settingValue !== null) {
+            const fieldDiv = document.createElement('div');
+            fieldDiv.className = 'setting-group-field';
+            // Add level class for styling hook
+            fieldDiv.classList.add(`level-${level}`);
 
-                const title = document.createElement('h'+level);
+            if (parent) {
+                fieldDiv.id = `${parent.id}.${settingName}`;
+            } else {
+                fieldDiv.id = `${groupName}.${settingName}`;
+            }
+
+            const title = document.createElement(`h${Math.min(level + 1, 6)}`); // Use h2, h3, etc.
                 title.textContent = settingName;
 
                 fieldDiv.appendChild(title);
@@ -177,15 +223,72 @@ function generateTabs(settingsData) {
     });
 }
 
+function onExportSettings() {
+    window.location.href = '/api/settings/export';
+}
+
+async function onImportSettings(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('/api/settings/import', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (response.ok) {
+            alert('Settings file imported successfully. The page will now reload.');
+            // The settings.reloaded event will handle the UI refresh
+        } else {
+            const error = await response.json();
+            alert(`Error importing file: ${error.message}`);
+        }
+    } catch (err) {
+        console.error("Error uploading settings file:", err);
+        alert('An unexpected error occurred during import.');
+    } finally {
+        // Reset file input
+        importFile.value = '';
+    }
+}
+
+function onLoadConfigFile() {
+    const selectedFile = configSelect.value;
+    if (!selectedFile) {
+        alert("Please select a configuration file to load.");
+        return;
+    }
+
+    const command = {
+        command: "load_settings_from_file",
+        filename: selectedFile
+    };
+
+    ConnectionManager.publishJson('commands.settings_service', command);
+    alert(`Request to load '${selectedFile}' has been sent.`);
+}
+
 function cleanupSettingsPage() {
     console.log("Cleaning up Settings page...");
     if (settingsSub) {
         settingsSub.unsubscribe();
         settingsSub = null;
     }
+    if (reloadedSub) {
+        reloadedSub.unsubscribe();
+        reloadedSub = null;
+    }
     if (tabButtonsContainer) {
         tabButtonsContainer.removeEventListener('click', onTabClick);
     }
+    if (exportBtn) exportBtn.removeEventListener('click', onExportSettings);
+    if (importBtn) importBtn.removeEventListener('click', () => importFile.click());
+    if (importFile) importFile.removeEventListener('change', onImportSettings);
+    if (loadConfigBtn) loadConfigBtn.removeEventListener('click', onLoadConfigFile);
 }
 
 window.initSettingsPage = initSettingsPage;

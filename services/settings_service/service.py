@@ -1,6 +1,7 @@
 import json
 import sys
 import os
+from datetime import datetime
 from nats.aio.msg import Msg
 
 # Add the project root to the Python path
@@ -125,6 +126,64 @@ class SettingsService(Microservice):
         else:
             self.logger.error(f"Impossible to save the key:{key} with value:{value}!")
 
+    async def _handle_import_settings_command(self, data: str):
+        """Handles the 'import_settings' command."""
+        self.logger.info("Received import settings command.")
+        try:
+            # Backup the current settings file
+            if os.path.exists(self.settings_path):
+                timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+                backup_path = f"{self.settings_path}.{timestamp}.bak"
+                os.rename(self.settings_path, backup_path)
+                self.logger.info(f"Backed up current settings to {backup_path}")
+
+            # Write the new settings
+            with open(self.settings_path, 'w') as f:
+                # The data is expected to be a JSON string, so we parse and dump it
+                # to ensure it's well-formed and nicely formatted.
+                parsed_data = json.loads(data)
+                json.dump(parsed_data, f, indent=4)
+
+            self.logger.info("New settings file written successfully.")
+
+            # Reload settings and notify other services
+            await self._load_settings()
+            await self.messaging_client.publish("settings.reloaded", b'')
+            self.logger.info("Broadcasted settings.reloaded")
+
+        except Exception as e:
+            self.logger.error(f"Error importing settings: {e}", exc_info=True)
+
+    async def _handle_load_settings_from_file_command(self, filename: str):
+        """Handles the 'load_settings_from_file' command."""
+        self.logger.info(f"Received request to load settings from '{filename}'")
+
+        # Security: ensure the file is within the config directory
+        config_dir = os.path.abspath("config")
+        requested_path = os.path.abspath(os.path.join(config_dir, filename))
+
+        if not requested_path.startswith(config_dir) or not requested_path.endswith('.json'):
+            self.logger.warning(f"Attempted to access an unauthorized file: {filename}")
+            return
+
+        self.settings_path = os.path.join("config", filename)
+        await self._load_settings()
+        await self.messaging_client.publish("settings.reloaded", b'')
+        self.logger.info(f"Loaded settings from {self.settings_path} and broadcasted settings.reloaded")
+
+    async def _list_config_files_handler(self, msg: Msg):
+        """Handles requests for listing available .json config files."""
+        reply = msg.reply
+        try:
+            config_dir = "config"
+            files = [f for f in os.listdir(config_dir) if f.endswith('.json') and os.path.isfile(os.path.join(config_dir, f))]
+            response = json.dumps(files)
+            await self.messaging_client.publish(reply, response.encode())
+        except Exception as e:
+            self.logger.error(f"Error listing config files: {e}", exc_info=True)
+            # Optionally send an error response
+            await self.messaging_client.publish(reply, b'[]')
+
     async def _start_logic(self):
         """
         Connects, loads settings, and subscribes to requests and commands.
@@ -139,9 +198,12 @@ class SettingsService(Microservice):
         # Register handlers
         self.logger.info("Subscribing to settings requests...")
         await self.messaging_client.subscribe("settings.get.*", cb=self._settings_request_handler)
-        self.logger.info("Subscribed to 'settings.get.*'")
+        await self.messaging_client.subscribe("settings.list_configs", cb=self._list_config_files_handler)
+        self.logger.info("Subscribed to 'settings.get.*' and 'settings.list_configs'")
 
         self.command_handler.register_command("update_setting", self._handle_update_setting_command)
+        self.command_handler.register_command("import_settings", self._handle_import_settings_command)
+        self.command_handler.register_command("load_settings_from_file", self._handle_load_settings_from_file_command)
         await self._subscribe_to_commands()
 
     async def _stop_logic(self):

@@ -436,6 +436,23 @@ body.modal-open {
 }
 
 /* --- Settings Page Tabs --- */
+.settings-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    margin-bottom: 1em;
+    align-items: center;
+}
+
+.control-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
 .tabs {
     display: flex;
     flex-direction: column;
@@ -444,6 +461,7 @@ body.modal-open {
 
 .tab-buttons {
     display: flex;
+    flex-wrap: wrap; /* Allow buttons to wrap */
     flex-shrink: 0;
     border-bottom: 1px solid #ccc;
 }
@@ -487,11 +505,11 @@ body.modal-open {
     display: block; /* Show only the active one */
 }
 
-.setting-field .setting-group-field {
+.setting-field, .setting-group-field {
     margin-bottom: 15px;
 }
 
-.setting-field label, .setting-group-field label {
+.setting-field label {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
@@ -503,4 +521,45 @@ body.modal-open {
     box-sizing: border-box;
     border: 1px solid #ccc;
     border-radius: 4px;
+}
+
+/* Visual nesting for settings */
+.setting-group-field {
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+.setting-group-field h1,
+.setting-group-field h2,
+.setting-group-field h3,
+.setting-group-field h4,
+.setting-group-field h5,
+.setting-group-field h6 {
+    margin-top: 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 10px;
+}
+
+.setting-group-field.level-1 {
+    background-color: #f7f7f7;
+    border: 1px solid #e1e1e1;
+}
+
+.setting-group-field.level-2 {
+    background-color: #f0f0f0;
+    border: 1px solid #dcdcdc;
+}
+
+.setting-group-field.level-3 {
+    background-color: #e9e9e9;
+    border: 1px solid #d3d3d3;
+}
+
+/* Deeper levels can be styled similarly or with a generic rule */
+.setting-group-field.level-4,
+.setting-group-field.level-5 {
+    background-color: #e2e2e2;
+    border: 1px solid #c9c9c9;
 }
