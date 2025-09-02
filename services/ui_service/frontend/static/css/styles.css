@@ -610,7 +610,7 @@ body.modal-open {
 }
 .compute-table th {
     background-color: #e9ecef;
-    position: sticky;
+    /* position: sticky; */
     top: 0;
 }
 .compute-table tbody tr:nth-child(even) {
