@@ -250,4 +250,4 @@ class GpsService(Microservice):
         if payload:
             self.last_payload = payload
             await self.messaging_client.publish("gps", json.dumps(payload, indent=None, separators=(',',':')).encode())
-            self.logger.info(f"Published GPS data: {payload}")
+            self.logger.debug(f"Published GPS data: {payload}")
