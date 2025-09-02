@@ -181,6 +181,10 @@
             "bucket_bp": "A6_TOOTH_BP_b"
         }
     },
+    "compute_service": {
+        "average_signal_name": "PF_EngineSpeed",
+        "engine_speed_threshold": 1500
+    },
     "global": {
         "nats_url": "nats://127.0.0.1:4222",
         "hardware_platform": "generic",

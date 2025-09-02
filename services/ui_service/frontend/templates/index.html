@@ -27,6 +27,7 @@
                 <li><a href="/manager">Manager</a></li>
                 <li><a href="/dummy">Dummy</a></li>
                 <li><a href="/digital_twins">Digital Twin</a></li>
+                <li><a href="/compute">Compute</a></li>
             </ul>
         </nav>
         <main id="content">
@@ -244,6 +245,96 @@
                 <div id="digital-twin-container"></div>
             </div>
 
+            <div id="page-compute" class="page-content" style="display: none; flex-direction: column; gap: 20px;">
+                <div class="compute-container">
+
+                    <!-- Left Panel: Forms -->
+                    <div class="compute-panel forms-panel">
+                        <h3>Configuration</h3>
+
+                        <!-- Register Computation Form -->
+                        <div class="form-section">
+                            <h4>Register New Computation</h4>
+                            <form id="form-register-computation">
+                                <div class="form-group">
+                                    <label for="comp-source-signal">Input Signal:</label>
+                                    <select id="comp-source-signal" name="source_signal" required></select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="comp-type">Computation Type:</label>
+                                    <select id="comp-type" name="computation_type" required>
+                                        <option value="RunningAverage">Running Average</option>
+                                        <option value="Integrator">Integrator</option>
+                                        <option value="Differentiator">Differentiator</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="comp-output-name">Output Signal Name:</label>
+                                    <input type="text" id="comp-output-name" name="output_name" required pattern="[a-zA-Z0-9_]+">
+                                </div>
+                                <button type="submit">Register Computation</button>
+                            </form>
+                        </div>
+
+                        <!-- Register Trigger Form (Simplified) -->
+                        <div class="form-section">
+                            <h4>Register New Trigger</h4>
+                            <form id="form-register-trigger">
+                                <div class="form-group">
+                                    <label for="trigger-name">Trigger Name:</label>
+                                    <input type="text" id="trigger-name" name="name" required pattern="[a-zA-Z0-9_]+">
+                                </div>
+                                <div class="form-group">
+                                    <label for="trigger-source-signal">Condition Signal:</label>
+                                    <select id="trigger-source-signal" name="source_signal" required></select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="trigger-operator">Operator:</label>
+                                    <select id="trigger-operator" name="operator" required>
+                                        <option value=">">&gt;</option>
+                                        <option value="<">&lt;</option>
+                                        <option value="==">==</option>
+                                        <option value="!=">!=</option>
+                                        <option value=">=">&gt;=</option>
+                                        <option value="<=">&lt;=</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="trigger-value">Threshold Value:</label>
+                                    <input type="number" id="trigger-value" name="value" step="any" required>
+                                </div>
+                                <button type="submit">Register Trigger</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: Status and Results -->
+                    <div class="compute-panel results-panel">
+                        <h3>Live State</h3>
+                        <div id="compute-status-section">
+                            <p><strong>Service Status:</strong> <span id="compute-service-status">--</span></p>
+                            <p><strong>Active Triggers:</strong> <span id="compute-active-triggers">--</span></p>
+                        </div>
+                        <h4>Computed Values</h4>
+                        <div class="table-container">
+                            <table id="compute-results-table">
+                                <thead>
+                                    <tr>
+                                        <th>Signal Name</th>
+                                        <th>Value</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Rows will be populated by compute.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
         </main>
     </div>
     <footer>
@@ -271,5 +362,6 @@
     <script type="module" src="/static/js/manager.js"></script>
     <script type="module" src="/static/js/dummy.js"></script>
     <script type="module" src="/static/js/digital_twin.js"></script>
+    <script type="module" src="/static/js/compute.js"></script>
 </body>
 </html>
