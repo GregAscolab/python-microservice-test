@@ -9,6 +9,7 @@ The `compute_service` is a powerful microservice designed for real-time data pro
 -   **Generic Library**: A library of common stateful computations is provided.
 -   **Trigger System**: Define rules to trigger actions when specific data conditions are met.
 -   **Real-time UI**: A dedicated web interface to monitor the service and configure computations and triggers.
+-   **Persistence**: All registered computations and triggers are automatically saved and reloaded when the service restarts.
 
 ## Architecture and Data Flow
 

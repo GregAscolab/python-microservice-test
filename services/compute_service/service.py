@@ -37,6 +37,41 @@ class ComputeService(Microservice):
             '<=': operator.le,
         }
 
+    async def _save_configuration(self):
+        """Saves the current computations and triggers to the settings service."""
+        self.logger.info("Saving configuration to settings service...")
+
+        # Create serializable definitions of computations
+        comp_definitions = []
+        for source_signal, computations in self.active_computations.items():
+            for comp_info in computations:
+                comp_definitions.append({
+                    "source_signal": source_signal,
+                    "computation_type": type(comp_info['instance']).__name__,
+                    "output_name": comp_info['output_name']
+                })
+
+        # Save computations
+        await self.messaging_client.publish(
+            "commands.settings_service",
+            json.dumps({
+                "command": "update_setting_block",
+                "key": "compute_service.computations",
+                "value": comp_definitions
+            }).encode()
+        )
+
+        # Save triggers (they are already serializable)
+        await self.messaging_client.publish(
+            "commands.settings_service",
+            json.dumps({
+                "command": "update_setting_block",
+                "key": "compute_service.triggers",
+                "value": self.triggers
+            }).encode()
+        )
+        self.logger.info("Configuration save command sent.")
+
     async def _handle_register_computation(self, source_signal: str, computation_type: str, output_name: str, reply: str = ""):
         """Command handler to dynamically register a new computation."""
         response = {}
@@ -54,6 +89,9 @@ class ComputeService(Microservice):
 
         if reply:
             await self.messaging_client.publish(reply, json.dumps(response).encode())
+
+        if response.get("status") == "ok":
+            await self._save_configuration()
 
     async def _publish_status(self, status: str | None = None):
         """Publishes the service's current status."""
@@ -84,6 +122,9 @@ class ComputeService(Microservice):
         if reply:
             await self.messaging_client.publish(reply, json.dumps(response).encode())
 
+        if response.get("status") == "ok":
+            await self._save_configuration()
+
     async def _handle_unregister_computation(self, output_name: str, reply: str = ""):
         """Command handler to unregister a computation by its output name."""
         response = {}
@@ -111,6 +152,9 @@ class ComputeService(Microservice):
         if reply:
             await self.messaging_client.publish(reply, json.dumps(response).encode())
 
+        if response.get("status") == "ok":
+            await self._save_configuration()
+
     async def _handle_unregister_trigger(self, name: str, reply: str = ""):
         """Command handler to unregister a trigger by its name."""
         response = {}
@@ -127,6 +171,9 @@ class ComputeService(Microservice):
 
         if reply:
             await self.messaging_client.publish(reply, json.dumps(response).encode())
+
+        if response.get("status") == "ok":
+            await self._save_configuration()
 
     async def _handle_get_available_signals_request(self, reply: str = "", **kwargs):
         """Returns a list of all available signals for computation."""
@@ -147,6 +194,17 @@ class ComputeService(Microservice):
         self.command_handler.register_command("unregister_trigger", self._handle_unregister_trigger)
         self.command_handler.register_command("get_available_signals", self._handle_get_available_signals_request)
         await self._subscribe_to_commands()
+
+        # Load persisted configuration
+        self.logger.info("Loading persisted configuration from settings...")
+        persisted_computations = self.settings.get("computations", [])
+        for comp_def in persisted_computations:
+            await self._handle_register_computation(**comp_def)
+
+        persisted_triggers = self.settings.get("triggers", [])
+        for trigger_def in persisted_triggers:
+            await self._handle_register_trigger(trigger=trigger_def)
+        self.logger.info(f"Loaded {len(persisted_computations)} computations and {len(persisted_triggers)} triggers.")
 
         # Subscribe to data sources
         await self.messaging_client.subscribe("can_data", self._nats_data_handler("can_data"))

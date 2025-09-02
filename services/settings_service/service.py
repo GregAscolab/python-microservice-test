@@ -88,6 +88,30 @@ class SettingsService(Microservice):
             
 
 
+    def _set_nested_dict_block(self, val: any, dict_obj: dict, keys: list):
+        """Helper to set a value (including complex objects) in a nested dictionary."""
+        for key in keys[:-1]:
+            if type(dict_obj) is list:
+                key = int(key)
+            dict_obj = dict_obj.setdefault(key, {})
+
+        dict_obj[keys[-1]] = val
+        return True
+
+    async def _handle_update_setting_block_command(self, key: str, value: any):
+        """Handles the 'update_setting_block' command for complex values."""
+        self.logger.info(f"Received block update for setting '{key}'")
+
+        list_of_keys = key.split('.')
+        if self._set_nested_dict_block(value, self.all_settings, list_of_keys):
+            self._save_settings()
+            update_payload = {"key": key, "value": value}
+            await self.messaging_client.publish("settings.updated", json.dumps(update_payload, indent=None, separators=(',',':')).encode())
+            self.logger.info(f"Broadcasted block update for {key}")
+        else:
+            self.logger.error(f"Impossible to save the block key:{key}!")
+
+
     async def _handle_update_setting_command(self, key: str, value: any):
         """Handles the 'update_setting' command."""
         self.logger.info(f"Received update for setting '{key}' with value '{value}'")
@@ -142,6 +166,7 @@ class SettingsService(Microservice):
         self.logger.info("Subscribed to 'settings.get.*'")
 
         self.command_handler.register_command("update_setting", self._handle_update_setting_command)
+        self.command_handler.register_command("update_setting_block", self._handle_update_setting_block_command)
         await self._subscribe_to_commands()
 
     async def _stop_logic(self):
