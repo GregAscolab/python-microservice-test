@@ -181,6 +181,9 @@
             "bucket_bp": "A6_TOOTH_BP_b"
         }
     },
+    "compute_service": {
+        "ui_publish_interval": 1.0
+    },
     "global": {
         "nats_url": "nats://127.0.0.1:4222",
         "hardware_platform": "generic",

@@ -17,11 +17,8 @@ async function initSettingsPage() {
     tabButtonsContainer.addEventListener('click', onTabClick);
 
     // Get initial settings
-    const nc = await ConnectionManager.getNatsConnection();
-    if (!nc) return;
-
     try {
-        const response = await nc.request('settings.get.all', ConnectionManager.stringCodec.encode(''), { timeout: 2000 });
+        const response = await ConnectionManager.request('settings.get.all', '', 2000);
         const settings = ConnectionManager.jsonCodec.decode(response.data);
         if(settings) {
             generateTabs(settings);
