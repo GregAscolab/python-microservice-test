@@ -191,6 +191,18 @@
 
             <div id="page-settings" class="page-content" style="display: none;">
                 <h2>Settings</h2>
+                <div class="settings-controls">
+                    <div class="control-group">
+                        <button id="export-settings-btn">Export Settings</button>
+                        <button id="import-settings-btn">Import Settings</button>
+                        <input type="file" id="import-settings-file" style="display: none;" accept=".json">
+                    </div>
+                    <div class="control-group">
+                        <label for="config-files-select">Load from config:</label>
+                        <select id="config-files-select"></select>
+                        <button id="load-config-file-btn">Load</button>
+                    </div>
+                </div>
                 <div class="tabs">
                     <div class="tab-buttons"></div>
                     <div class="tab-content"></div>
