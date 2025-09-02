@@ -10,78 +10,131 @@ let domElements = {};
  * @param {object} state - The full state object from the compute_service.
  */
 function updateUI(state) {
-    if (!state || !domElements.computedTableBody || !domElements.sourcesTableBody) return;
+    if (!state || !domElements.computedTableBody || !domElements.sourceTablesContainer) return;
     domElements.lastState = state; // Store last state for categorization
 
-    // Update triggers list
-    updateTriggersList(state.triggers || []);
+    // Update triggers list with more detail
+    updateTriggersList(state.triggers || [], state.computation_state || {});
 
     // Get a set of all computed output names for easy lookup
     const computedNames = new Set((state.computations || []).map(c => c.output_name));
     const computationMap = new Map((state.computations || []).map(c => [c.output_name, c]));
 
-    // Clear existing table rows
-    domElements.computedTableBody.innerHTML = '';
-    domElements.sourcesTableBody.innerHTML = '';
-
-    // Populate tables based on whether the key is in the computed list
+    // Separate raw signals from computed signals
+    const rawSignals = {};
+    const computedSignals = {};
     for (const [key, value] of Object.entries(state.computation_state || {})) {
         if (computedNames.has(key)) {
-            // It's a computed value
-            const compDef = computationMap.get(key);
-            const row = domElements.computedTableBody.insertRow();
-            row.insertCell().textContent = key;
-            row.insertCell().textContent = typeof value === 'number' ? value.toFixed(3) : JSON.stringify(value);
-            row.insertCell().textContent = compDef.computation_type;
-            row.insertCell().textContent = compDef.source_signal;
-            const actionCell = row.insertCell();
-            const unregBtn = document.createElement('button');
-            unregBtn.textContent = 'Unregister';
-            unregBtn.className = 'btn-unregister btn-unregister-comp';
-            unregBtn.dataset.outputName = key;
-            actionCell.appendChild(unregBtn);
+            computedSignals[key] = value;
         } else {
-            // It's a raw source value
-            const row = domElements.sourcesTableBody.insertRow();
-            row.insertCell().textContent = key;
-            row.insertCell().textContent = typeof value === 'number' ? value.toFixed(3) : JSON.stringify(value);
+            rawSignals[key] = value;
+        }
+    }
+
+    // Populate computed values table
+    updateComputedTable(computedSignals, computationMap);
+
+    // Populate raw data source tables
+    updateSourceTables(rawSignals);
+}
+
+function updateComputedTable(computedSignals, computationMap) {
+    domElements.computedTableBody.innerHTML = '';
+    for (const [key, value] of Object.entries(computedSignals)) {
+        const compDef = computationMap.get(key);
+        const row = domElements.computedTableBody.insertRow();
+        row.insertCell().textContent = key;
+        row.insertCell().textContent = typeof value === 'number' ? value.toFixed(3) : JSON.stringify(value);
+        row.insertCell().textContent = compDef.computation_type;
+        row.insertCell().textContent = compDef.source_signal;
+        const actionCell = row.insertCell();
+        const unregBtn = document.createElement('button');
+        unregBtn.textContent = 'Unregister';
+        unregBtn.className = 'btn-unregister btn-unregister-comp';
+        unregBtn.dataset.outputName = key;
+        actionCell.appendChild(unregBtn);
+    }
+}
+
+function updateSourceTables(rawSignals) {
+    const groups = {
+        'CAN Data': {},
+        'Digital Twin': {},
+        'Other Sources': {}
+    };
+
+    // Categorize signals
+    for (const [key, value] of Object.entries(rawSignals)) {
+        if (key.startsWith('can_data.')) {
+            groups['CAN Data'][key] = value;
+        } else if (key.startsWith('digital_twin.')) {
+            groups['Digital Twin'][key] = value;
+        } else {
+            groups['Other Sources'][key] = value;
+        }
+    }
+
+    // Create a table for each group
+    domElements.sourceTablesContainer.innerHTML = '';
+    for (const [groupName, signals] of Object.entries(groups)) {
+        if (Object.keys(signals).length > 0) {
+            const h5 = document.createElement('h5');
+            h5.textContent = groupName;
+            const table = document.createElement('table');
+            table.className = 'compute-table';
+            table.innerHTML = `<thead><tr><th>Source Signal</th><th>Value</th></tr></thead>`;
+            const tbody = table.createTBody();
+            for (const [key, value] of Object.entries(signals)) {
+                const row = tbody.insertRow();
+                row.insertCell().textContent = key;
+                row.insertCell().textContent = typeof value === 'number' ? value.toFixed(3) : JSON.stringify(value);
+            }
+            domElements.sourceTablesContainer.appendChild(h5);
+            domElements.sourceTablesContainer.appendChild(table);
         }
     }
 }
 
-function updateTriggersList(triggers) {
+function updateTriggersList(triggers, computationState) {
     domElements.activeTriggers.innerHTML = '';
     if (triggers.length > 0) {
         triggers.forEach(trigger => {
             const triggerDiv = document.createElement('div');
-            triggerDiv.className = 'trigger-item';
+            triggerDiv.className = 'trigger-item-detailed';
 
+            const header = document.createElement('div');
+            header.className = 'trigger-header';
             const statusDot = document.createElement('span');
             statusDot.className = 'trigger-status-dot';
             statusDot.style.backgroundColor = trigger.is_currently_active ? 'limegreen' : 'tomato';
-
             const triggerName = document.createElement('span');
             triggerName.textContent = trigger.name;
-
-            const triggerTimestamp = document.createElement('span');
-            triggerTimestamp.className = 'trigger-timestamp';
-            triggerTimestamp.textContent = trigger.last_event_timestamp
-                ? `(Last event: ${new Date(trigger.last_event_timestamp).toLocaleTimeString()})`
-                : '(No events yet)';
-
             const unregBtn = document.createElement('button');
             unregBtn.textContent = 'x';
             unregBtn.className = 'btn-unregister btn-unregister-trigger';
             unregBtn.dataset.triggerName = trigger.name;
+            header.appendChild(statusDot);
+            header.appendChild(triggerName);
+            header.appendChild(unregBtn);
 
-            triggerDiv.appendChild(statusDot);
-            triggerDiv.appendChild(triggerName);
-            triggerDiv.appendChild(triggerTimestamp);
-            triggerDiv.appendChild(unregBtn);
+            const body = document.createElement('div');
+            body.className = 'trigger-body';
+            const conditions = trigger.conditions.map(c => {
+                const currentValue = computationState[c.name];
+                const formattedValue = typeof currentValue === 'number' ? currentValue.toFixed(2) : 'N/A';
+                return `${c.name} ${c.operator} ${c.value} (current: ${formattedValue})`;
+            }).join(', ');
+            body.innerHTML = `<p><strong>Conditions:</strong> ${conditions}</p>
+                              <p><strong>Last Event:</strong> ${trigger.last_event_timestamp ? new Date(trigger.last_event_timestamp).toLocaleTimeString() : 'None'}</p>`;
+
+            triggerDiv.appendChild(header);
+            triggerDiv.appendChild(body);
             domElements.activeTriggers.appendChild(triggerDiv);
         });
     } else {
-        domElements.activeTriggers.textContent = 'None';
+        const p = document.createElement('p');
+        p.textContent = 'No active triggers.';
+        domElements.activeTriggers.appendChild(p);
     }
 }
 
@@ -198,6 +251,8 @@ function initComputePage() {
     // 1. Get references to all DOM elements
     domElements = {
         page: document.getElementById('page-compute'),
+        configPanel: document.getElementById('compute-config-panel'),
+        btnToggleConfig: document.getElementById('btn-toggle-config'),
         formRegisterComp: document.getElementById('form-register-computation'),
         formRegisterTrigger: document.getElementById('form-register-trigger'),
         compSearchableSelect: document.getElementById('searchable-select-comp'),
@@ -205,11 +260,11 @@ function initComputePage() {
         serviceStatus: document.getElementById('compute-service-status'),
         activeTriggers: document.getElementById('compute-active-triggers'),
         computedTableBody: document.getElementById('compute-computed-table')?.querySelector('tbody'),
-        sourcesTableBody: document.getElementById('compute-sources-table')?.querySelector('tbody'),
+        sourceTablesContainer: document.getElementById('source-tables-container'),
         lastState: { computations: [], triggers: [], computation_state: {} } // Initial empty state
     };
 
-    if (!domElements.computedTableBody || !domElements.sourcesTableBody) {
+    if (!domElements.computedTableBody || !domElements.sourceTablesContainer) {
         console.error("Compute page UI elements not found! Cannot initialize page.");
         return;
     }
@@ -245,6 +300,11 @@ function initComputePage() {
     // 7. Set up searchable select components
     setupSearchableSelect(domElements.compSearchableSelect);
     setupSearchableSelect(domElements.triggerSearchableSelect);
+
+    // 8. Add listener for responsive config toggle
+    domElements.btnToggleConfig.addEventListener('click', () => {
+        domElements.configPanel.classList.toggle('open');
+    });
 }
 
 /**
@@ -364,6 +424,11 @@ function cleanupComputePage() {
     }
     if (domElements.page) {
         domElements.page.removeEventListener('click', handleUnregisterClick);
+    }
+    if (domElements.btnToggleConfig) {
+        // Since the handler is an anonymous arrow function, we can't remove it.
+        // In a real-world, more complex app, we'd define it as a named function.
+        // For this case, it's acceptable as the page element is destroyed anyway.
     }
 
     // 3. Clear DOM element references
