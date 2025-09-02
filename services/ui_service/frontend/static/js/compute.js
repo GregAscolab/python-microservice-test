@@ -197,33 +197,31 @@ async function handleRegisterTrigger(event) {
     const formData = new FormData(event.target);
     const formProps = Object.fromEntries(formData.entries());
 
-    // Construct the nested payload the backend expects
+    // Construct the payload with the trigger object at the top level
     const payload = {
         command: 'register_trigger',
-        args: {
-            trigger: {
-                name: formProps.name,
-                conditions: [{
-                    name: formProps.source_signal,
-                    operator: formProps.operator,
-                    value: parseFloat(formProps.value) // Ensure value is a number
-                }],
-                action: {
-                    // By default, create actions for state changes
-                    on_become_active: {
-                        type: "publish",
-                        subject: `compute.alert.${formProps.name}.active`
-                    },
-                    on_become_inactive: {
-                        type: "publish",
-                        subject: `compute.alert.${formProps.name}.inactive`
-                    }
+        trigger: {
+            name: formProps.name,
+            conditions: [{
+                name: formProps.source_signal,
+                operator: formProps.operator,
+                value: parseFloat(formProps.value) // Ensure value is a number
+            }],
+            action: {
+                // By default, create actions for state changes
+                on_become_active: {
+                    type: "publish",
+                    subject: `compute.alert.${formProps.name}.active`
+                },
+                on_become_inactive: {
+                    type: "publish",
+                    subject: `compute.alert.${formProps.name}.inactive`
                 }
             }
         }
     };
 
-    console.log("Sending register_trigger command:", payload.args);
+    console.log("Sending register_trigger command:", payload);
     try {
         const response = await ConnectionManager.request('commands.compute_service', payload);
         console.log("Response from register_trigger:", ConnectionManager.jsonCodec.decode(response.data));
@@ -239,12 +237,13 @@ async function handleRegisterTrigger(event) {
 async function handleRegisterComputation(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
+    const formProps = Object.fromEntries(formData.entries());
     const payload = {
         command: 'register_computation',
-        args: Object.fromEntries(formData.entries())
+        ...formProps // Unpack form properties into the top level of the payload
     };
 
-    console.log("Sending register_computation command:", payload.args);
+    console.log("Sending register_computation command:", payload);
     try {
         const response = await ConnectionManager.request('commands.compute_service', payload);
         const data = ConnectionManager.jsonCodec.decode(response.data);
