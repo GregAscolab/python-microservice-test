@@ -545,7 +545,7 @@ body.modal-open {
 }
 
 .config-panel.collapsed {
-    margin-right: -420px; /* Width + gap */
+    margin-right: -50px;
     min-width: 0;
     flex-basis: 0;
 }
