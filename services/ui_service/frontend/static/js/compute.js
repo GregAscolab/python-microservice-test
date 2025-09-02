@@ -12,19 +12,36 @@ let domElements = {};
 function updateUI(state) {
     if (!state || !domElements.resultsTableBody) return;
 
-    // Update triggers list with unregister buttons
+    // Update triggers list with state and unregister buttons
     domElements.activeTriggers.innerHTML = '';
     if (state.triggers && state.triggers.length > 0) {
-        state.triggers.forEach(triggerName => {
-            const triggerSpan = document.createElement('span');
-            triggerSpan.className = 'trigger-item';
-            triggerSpan.textContent = triggerName;
+        state.triggers.forEach(trigger => {
+            const triggerDiv = document.createElement('div');
+            triggerDiv.className = 'trigger-item';
+
+            const statusDot = document.createElement('span');
+            statusDot.className = 'trigger-status-dot';
+            statusDot.style.backgroundColor = trigger.is_currently_active ? 'limegreen' : 'tomato';
+
+            const triggerName = document.createElement('span');
+            triggerName.textContent = trigger.name;
+
+            const triggerTimestamp = document.createElement('span');
+            triggerTimestamp.className = 'trigger-timestamp';
+            triggerTimestamp.textContent = trigger.last_event_timestamp
+                ? `(Last event: ${new Date(trigger.last_event_timestamp).toLocaleTimeString()})`
+                : '(No events yet)';
+
             const unregBtn = document.createElement('button');
             unregBtn.textContent = 'x';
             unregBtn.className = 'btn-unregister btn-unregister-trigger';
-            unregBtn.dataset.triggerName = triggerName;
-            triggerSpan.appendChild(unregBtn);
-            domElements.activeTriggers.appendChild(triggerSpan);
+            unregBtn.dataset.triggerName = trigger.name;
+
+            triggerDiv.appendChild(statusDot);
+            triggerDiv.appendChild(triggerName);
+            triggerDiv.appendChild(triggerTimestamp);
+            triggerDiv.appendChild(unregBtn);
+            domElements.activeTriggers.appendChild(triggerDiv);
         });
     } else {
         domElements.activeTriggers.textContent = 'None';
@@ -192,8 +209,15 @@ async function handleRegisterTrigger(event) {
                     value: parseFloat(formProps.value) // Ensure value is a number
                 }],
                 action: {
-                    type: "publish", // Hardcoded for now, could be a form field
-                    subject: `compute.alert.${formProps.name}`
+                    // By default, create actions for state changes
+                    on_become_active: {
+                        type: "publish",
+                        subject: `compute.alert.${formProps.name}.active`
+                    },
+                    on_become_inactive: {
+                        type: "publish",
+                        subject: `compute.alert.${formProps.name}.inactive`
+                    }
                 }
             }
         }

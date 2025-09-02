@@ -40,14 +40,13 @@ class TestComputeServiceIntegration(unittest.TestCase):
 
     def test_register_computation_command(self):
         """Test the command handler for registering computations."""
-        args = {
-            "source_signal": "can.speed",
-            "computation_type": "RunningAverage",
-            "output_name": "speed_avg"
-        }
-
         async def run_test():
-            await self.service._handle_register_computation(reply="test.reply", **args)
+            await self.service._handle_register_computation(
+                reply="test.reply",
+                source_signal="can.speed",
+                computation_type="RunningAverage",
+                output_name="speed_avg"
+            )
 
             # Check that the computation was added
             self.assertIn("can.speed", self.service.active_computations)
@@ -102,30 +101,39 @@ class TestComputeServiceIntegration(unittest.TestCase):
 
         asyncio.run(run_test())
 
-    def test_trigger_registration_and_execution(self):
-        """Test trigger registration and the execution of its 'publish' action."""
+    def test_trigger_state_logic(self):
+        """Test stateful trigger logic (on_become_active, on_become_inactive)."""
         trigger_def = {
-            "name": "test_trigger",
+            "name": "stateful_trigger",
             "conditions": [{"name": "some_signal", "operator": ">", "value": 50}],
-            "action": {"type": "publish", "subject": "test.alert"}
+            "action": {
+                "on_become_active": {"type": "publish", "subject": "test.active"},
+                "on_become_inactive": {"type": "publish", "subject": "test.inactive"}
+            }
         }
 
         async def run_test():
             # Register the trigger
-            await self.service._handle_register_trigger(reply="test.reply", trigger=trigger_def)
-            self.assertIn(trigger_def, self.service.triggers)
-            self.service.messaging_client.publish.assert_called_with("test.reply", unittest.mock.ANY)
-            self.service.messaging_client.publish.reset_mock()
+            await self.service._handle_register_trigger(trigger=trigger_def)
 
-            # Process data that does NOT meet the condition
+            # 1. Initially inactive, process data that keeps it inactive
             await self.service._process_data("some_signal", 40, 0)
-            # Publish should not be called for the trigger action
             self.service.messaging_client.publish.assert_not_called()
 
-            # Process data that DOES meet the condition
+            # 2. Process data that makes it become active
             await self.service._process_data("some_signal", 60, 1)
-            # Publish should be called for the trigger action
-            self.service.messaging_client.publish.assert_any_call("test.alert", unittest.mock.ANY)
+            self.service.messaging_client.publish.assert_called_once_with("test.active", unittest.mock.ANY)
+            self.assertTrue(self.service.triggers[0]['is_currently_active'])
+            self.service.messaging_client.publish.reset_mock()
+
+            # 3. Process data that keeps it active - no new action should fire
+            await self.service._process_data("some_signal", 70, 2)
+            self.service.messaging_client.publish.assert_not_called()
+
+            # 4. Process data that makes it become inactive
+            await self.service._process_data("some_signal", 30, 3)
+            self.service.messaging_client.publish.assert_called_once_with("test.inactive", unittest.mock.ANY)
+            self.assertFalse(self.service.triggers[0]['is_currently_active'])
 
         asyncio.run(run_test())
 

@@ -568,3 +568,35 @@ body.modal-open {
 #compute-results-table tbody tr:nth-child(even) {
     background-color: #f8f9fa;
 }
+
+.trigger-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px;
+    border-radius: 4px;
+}
+.trigger-item:hover {
+    background-color: #e9ecef;
+}
+
+.trigger-status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.trigger-timestamp {
+    font-size: 0.8em;
+    color: #6c757d;
+    margin-left: auto;
+}
+
+.btn-unregister-trigger {
+    padding: 2px 6px;
+    font-size: 0.8em;
+    line-height: 1;
+    margin-left: 5px;
+}

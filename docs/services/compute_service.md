@@ -110,9 +110,9 @@ You can register a new computation dynamically using the UI or by sending a NATS
     -   `computation_type`: The class name of the computation to use (e.g., `RunningAverage`).
     -   `output_name`: The name under which the result will be stored and published.
 
-### Registering a Trigger
+### Registering a Stateful Trigger
 
-Triggers execute an action when a set of conditions is met.
+Triggers are stateful and can execute different actions based on their state. A trigger has an internal state (`active` or `inactive`) and executes actions when that state changes.
 
 -   **Subject**: `commands.compute_service`
 -   **Payload**:
@@ -126,17 +126,27 @@ Triggers execute an action when a set of conditions is met.
             { "name": "oil_temp", "operator": ">", "value": 100 }
           ],
           "action": {
-            "type": "publish",
-            "subject": "alerts.temperature",
-            "payload": {"level": "critical"}
+            "on_become_active": {
+              "type": "publish",
+              "subject": "alerts.temperature.active"
+            },
+            "on_become_inactive": {
+              "type": "publish",
+              "subject": "alerts.temperature.inactive"
+            }
           }
         }
       }
     }
     ```
-    -   `name`: A unique name for the trigger.
-    -   `conditions`: A list of conditions that must all be true.
-    -   `action`: The action to perform. Currently, only `{"type": "publish"}` is supported. It requires a NATS `subject` and an optional `payload`.
+-   **`name`**: A unique name for the trigger.
+-   **`conditions`**: A list of conditions that must all be true for the trigger to be considered active.
+-   **`action`**: A dictionary of actions to perform for different state events.
+    -   `on_become_active`: Executed once when the trigger's conditions change from false to true.
+    -   `on_become_inactive`: Executed once when the trigger's conditions change from true to false.
+    -   `on_is_active`: (Optional) Executed on every evaluation cycle that the trigger remains active.
+    -   `on_is_inactive`: (Optional) Executed on every evaluation cycle that the trigger remains inactive.
+-   Each action must have a `type`. Currently, only `"publish"` is supported, which requires a NATS `subject` and an optional `payload`.
 
 ### Unregistering
 

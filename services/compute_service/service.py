@@ -37,13 +37,9 @@ class ComputeService(Microservice):
             '<=': operator.le,
         }
 
-    async def _handle_register_computation(self, reply: str = "", **args):
+    async def _handle_register_computation(self, source_signal: str, computation_type: str, output_name: str, reply: str = ""):
         """Command handler to dynamically register a new computation."""
-        source_signal = args.get("source_signal")
-        computation_type = args.get("computation_type")
-        output_name = args.get("output_name")
         response = {}
-
         if not all([source_signal, computation_type, output_name]):
             response = {"status": "error", "message": "Missing 'source_signal', 'computation_type', or 'output_name'."}
         elif computation_type not in self.available_computations:
@@ -51,7 +47,7 @@ class ComputeService(Microservice):
         else:
             computation_class = self.available_computations[computation_type]
             computation_instance = computation_class()
-            computation_to_store = { "instance": computation_instance, "output_name": output_name }
+            computation_to_store = {"instance": computation_instance, "output_name": output_name}
             self.active_computations[source_signal].append(computation_to_store)
             self.logger.info(f"Registered new computation: '{output_name}' ({computation_type}) on source '{source_signal}'.")
             response = {"status": "ok", "message": "Computation registered successfully."}
@@ -68,71 +64,71 @@ class ComputeService(Microservice):
         await self.messaging_client.publish(f"compute.status", json.dumps(status_payload).encode())
         self.logger.info(f"Published status: {self.status}")
 
-    async def _handle_register_trigger(self, reply: str = "", **args):
+    async def _handle_register_trigger(self, trigger: dict, reply: str = ""):
         """Command handler to dynamically register a new trigger."""
-        trigger = args.get("trigger")
         response = {}
-
         if not trigger or 'name' not in trigger or 'conditions' not in trigger or 'action' not in trigger:
             response = {"status": "error", "message": "Invalid trigger structure. Required fields: name, conditions, action."}
-        elif 'type' not in trigger['action'] or 'subject' not in trigger['action']:
-            response = {"status": "error", "message": "Invalid action structure. Required fields: type, subject."}
         else:
+            # Initialize the trigger's state
+            trigger['is_currently_active'] = False
+            trigger['last_event_timestamp'] = None
+
+            # Remove any existing trigger with the same name and add the new one
             self.triggers = [t for t in self.triggers if t.get('name') != trigger.get('name')]
             self.triggers.append(trigger)
+
             self.logger.info(f"Registered trigger: {trigger.get('name')}")
             response = {"status": "ok", "message": "Trigger registered successfully."}
 
         if reply:
             await self.messaging_client.publish(reply, json.dumps(response).encode())
 
-    async def _handle_unregister_computation(self, reply: str = "", **args):
+    async def _handle_unregister_computation(self, output_name: str, reply: str = ""):
         """Command handler to unregister a computation by its output name."""
-        output_name_to_remove = args.get("output_name")
         response = {}
-        if not output_name_to_remove:
+        if not output_name:
             response = {"status": "error", "message": "Missing 'output_name'."}
         else:
             found = False
             for source_signal, computations in self.active_computations.items():
                 initial_len = len(computations)
                 self.active_computations[source_signal] = [
-                    comp for comp in computations if comp.get("output_name") != output_name_to_remove
+                    comp for comp in computations if comp.get("output_name") != output_name
                 ]
                 if len(self.active_computations[source_signal]) < initial_len:
                     found = True
                     break
 
             if found:
-                if output_name_to_remove in self.computation_state:
-                    del self.computation_state[output_name_to_remove]
-                self.logger.info(f"Unregistered computation with output: {output_name_to_remove}")
+                if output_name in self.computation_state:
+                    del self.computation_state[output_name]
+                self.logger.info(f"Unregistered computation with output: {output_name}")
                 response = {"status": "ok", "message": "Computation unregistered."}
             else:
-                response = {"status": "error", "message": f"Computation with output '{output_name_to_remove}' not found."}
+                response = {"status": "error", "message": f"Computation with output '{output_name}' not found."}
 
         if reply:
             await self.messaging_client.publish(reply, json.dumps(response).encode())
 
-    async def _handle_unregister_trigger(self, reply: str = "", **args):
+    async def _handle_unregister_trigger(self, name: str, reply: str = ""):
         """Command handler to unregister a trigger by its name."""
-        trigger_name_to_remove = args.get("name")
         response = {}
-        if not trigger_name_to_remove:
+        if not name:
             response = {"status": "error", "message": "Missing trigger 'name'."}
         else:
             initial_len = len(self.triggers)
-            self.triggers = [t for t in self.triggers if t.get('name') != trigger_name_to_remove]
+            self.triggers = [t for t in self.triggers if t.get('name') != name]
             if len(self.triggers) < initial_len:
-                self.logger.info(f"Unregistered trigger: {trigger_name_to_remove}")
+                self.logger.info(f"Unregistered trigger: {name}")
                 response = {"status": "ok", "message": "Trigger unregistered."}
             else:
-                response = {"status": "error", "message": f"Trigger '{trigger_name_to_remove}' not found."}
+                response = {"status": "error", "message": f"Trigger '{name}' not found."}
 
         if reply:
             await self.messaging_client.publish(reply, json.dumps(response).encode())
 
-    async def _handle_get_available_signals_request(self, reply: str = "", **args):
+    async def _handle_get_available_signals_request(self, reply: str = "", **kwargs):
         """Returns a list of all available signals for computation."""
         response = {"status": "ok", "signals": list(self.computation_state.keys())}
         if reply:
@@ -167,10 +163,10 @@ class ComputeService(Microservice):
         publish_interval = self.settings.get("ui_publish_interval", 1.0)
         while True:
             try:
-                # In the future, we can add trigger status here as well
+                # The payload now includes the full trigger objects with their state
                 payload = {
                     "computation_state": self.computation_state,
-                    "triggers": [t.get("name", "Unnamed") for t in self.triggers] # Just names for now
+                    "triggers": self.triggers
                 }
                 await self.messaging_client.publish(f"compute.state.full", json.dumps(payload).encode())
                 await asyncio.sleep(publish_interval)
@@ -240,51 +236,62 @@ class ComputeService(Microservice):
         await self._evaluate_triggers()
 
 
+    async def _execute_trigger_action(self, trigger_name: str, action: dict):
+        """Executes a single trigger action, e.g., publishing a NATS message."""
+        if not action or 'type' not in action:
+            return
+
+        action_type = action.get("type")
+        if action_type == "publish":
+            subject = action.get("subject")
+            if not subject:
+                self.logger.warning(f"Trigger '{trigger_name}': 'publish' action is missing a 'subject'.")
+                return
+
+            payload = action.get("payload", {"trigger_name": trigger_name, "timestamp": datetime.now().isoformat()})
+            await self.messaging_client.publish(subject, json.dumps(payload).encode())
+            self.logger.info(f"Trigger '{trigger_name}' action: Published to {subject}")
+        # Other action types could be implemented here
+
     async def _evaluate_triggers(self):
         """Evaluate all registered triggers against the current computation state."""
-        # This method remains largely the same, but we might want to enhance it later
-        # to handle stateful triggers (e.g., only fire once).
         for trigger in self.triggers:
             try:
-                conditions_met = []
+                all_conditions_met = True
                 for condition in trigger.get("conditions", []):
                     signal_name = condition.get("name")
-                    operator_str = condition.get("operator")
-                    threshold_value = condition.get("value")
+                    op_func = self.operator_map.get(condition.get("operator"))
 
-                    if signal_name not in self.computation_state:
-                        conditions_met.append(False)
-                        continue # A condition can't be met if the signal doesn't exist yet
+                    if signal_name not in self.computation_state or not op_func:
+                        all_conditions_met = False
+                        break
 
                     current_value = self.computation_state[signal_name]
-                    op_func = self.operator_map.get(operator_str)
+                    threshold_value = condition.get("value")
+                    if not op_func(current_value, threshold_value):
+                        all_conditions_met = False
+                        break
 
-                    if op_func is None:
-                        self.logger.warning(f"Trigger '{trigger.get('name')}': Invalid operator '{operator_str}'")
-                        conditions_met.append(False)
-                        continue
+                was_active = trigger.get('is_currently_active', False)
 
-                    conditions_met.append(op_func(current_value, threshold_value))
+                # State change detection
+                if all_conditions_met and not was_active:
+                    trigger['is_currently_active'] = True
+                    trigger['last_event_timestamp'] = datetime.now().isoformat()
+                    self.logger.info(f"Trigger '{trigger['name']}' became ACTIVE.")
+                    await self._execute_trigger_action(trigger['name'], trigger['action'].get('on_become_active'))
 
-                if all(conditions_met):
-                    self.logger.info(f"Trigger '{trigger.get('name')}' conditions met. Executing action.")
-                    action = trigger.get("action")
+                elif not all_conditions_met and was_active:
+                    trigger['is_currently_active'] = False
+                    trigger['last_event_timestamp'] = datetime.now().isoformat()
+                    self.logger.info(f"Trigger '{trigger['name']}' became INACTIVE.")
+                    await self._execute_trigger_action(trigger['name'], trigger['action'].get('on_become_inactive'))
 
-                    if action.get("type") == "publish":
-                        subject = action.get("subject")
-                        # Use a provided payload or create a default one
-                        payload = action.get("payload", {
-                            "trigger_name": trigger.get('name'),
-                            "timestamp": datetime.now().isoformat()
-                        })
+                elif all_conditions_met and was_active:
+                    await self._execute_trigger_action(trigger['name'], trigger['action'].get('on_is_active'))
 
-                        if subject:
-                            await self.messaging_client.publish(subject, json.dumps(payload).encode())
-                            self.logger.info(f"Trigger action: Published to {subject}")
-                        else:
-                            self.logger.warning(f"Trigger '{trigger.get('name')}': 'publish' action is missing a 'subject'.")
-
-                    # Here we could add other action types like "run_command", etc.
+                elif not all_conditions_met and not was_active:
+                    await self._execute_trigger_action(trigger['name'], trigger['action'].get('on_is_inactive'))
 
             except Exception as e:
                 self.logger.error(f"Error evaluating trigger '{trigger.get('name', 'Unnamed')}': {e}", exc_info=True)
