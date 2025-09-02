@@ -22,7 +22,7 @@
         "update_interval": 5
     },
     "digital_twin_service": {
-        "update_interval": 0.05,
+        "update_interval": 1,
         "dbc_file": "config/db-full.dbc",
         "excavator": {
             "turret": {
@@ -37,14 +37,14 @@
                     }
                 },
                 "angles_offset": {
-                    "roll": -90.0,
+                    "roll": 0,
                     "pitch": 0,
                     "yaw": 0
                 },
                 "axis_mapping": {
-                    "roll": "X",
-                    "pitch": "Z",
-                    "yaw": "Y"
+                    "roll": "Y",
+                    "pitch": "X",
+                    "yaw": "Z"
                 },
                 "axis_reverse": {
                     "roll": 1,
@@ -64,14 +64,14 @@
                     }
                 },
                 "angles_offset": {
-                    "roll": -90.0,
+                    "roll": 0,
                     "pitch": 0,
                     "yaw": 0
                 },
                 "axis_mapping": {
-                    "roll": "X",
-                    "pitch": "Z",
-                    "yaw": "Y"
+                    "roll": "Y",
+                    "pitch": "X",
+                    "yaw": "Z"
                 },
                 "axis_reverse": {
                     "roll": 1,
@@ -91,14 +91,14 @@
                     }
                 },
                 "angles_offset": {
-                    "roll": -90.0,
+                    "roll": 0,
                     "pitch": 0,
                     "yaw": 0
                 },
                 "axis_mapping": {
-                    "roll": "X",
-                    "pitch": "Z",
-                    "yaw": "Y"
+                    "roll": "Y",
+                    "pitch": "X",
+                    "yaw": "Z"
                 },
                 "axis_reverse": {
                     "roll": 1,
@@ -118,14 +118,14 @@
                     }
                 },
                 "angles_offset": {
-                    "roll": -90.0,
+                    "roll": 0,
                     "pitch": 0,
                     "yaw": 0
                 },
                 "axis_mapping": {
-                    "roll": "X",
-                    "pitch": "Z",
-                    "yaw": "Y"
+                    "roll": "Y",
+                    "pitch": "X",
+                    "yaw": "Z"
                 },
                 "axis_reverse": {
                     "roll": 1,
@@ -156,8 +156,8 @@
             }
         },
         "signal_mapping": {
-            "turret_angle_y": "PF_CHASSIS_PFAngX",
-            "turret_angle_x": "PF_CHASSIS_PFAngY",
+            "turret_angle_y": "PF_CHASSIS_PFAngY",
+            "turret_angle_x": "PF_CHASSIS_PFAngX",
             "turret_angle_z": "PF_CHASSIS_PFAngZ",
             "boom_angle_x": "PF_BOOM_PFAngX",
             "boom_angle_y": "PF_BOOM_PFAngY",
@@ -167,11 +167,11 @@
             "boom_angle_quatY": "PF_BOOM_QuatY",
             "boom_angle_quatZ": "PF_BOOM_QuatZ",
             "boom_angle_quatW": "PF_BOOM_QuatW",
-            "jib_angle_y": "PF_BAL_PFAngX",
-            "jib_angle_x": "PF_BAL_PFAngY",
+            "jib_angle_y": "PF_BAL_PFAngY",
+            "jib_angle_x": "PF_BAL_PFAngX",
             "jib_angle_z": "PF_BAL_PFAngZ",
-            "bucket_angle_y": "PF_BUCKET_PFAngX",
-            "bucket_angle_x": "PF_BUCKET_PFAngY",
+            "bucket_angle_y": "PF_BUCKET_PFAngY",
+            "bucket_angle_x": "PF_BUCKET_PFAngX",
             "bucket_angle_z": "PF_BUCKET_PFAngZ",
             "boom_hp": "A1_BOOM_HP_b",
             "boom_bp": "A2_BOOM_BP_b",
@@ -180,6 +180,89 @@
             "bucket_hp": "A5_TOOTH_HP_b",
             "bucket_bp": "A6_TOOTH_BP_b"
         }
+    },
+    "compute_service": {
+        "ui_publish_interval": 1.0,
+        "computations": [
+            {
+                "source_signal": "can_data.PF_CHASSIS_PFAngY",
+                "computation_type": "RunningAverage",
+                "output_name": "ChassisYAvg"
+            },
+            {
+                "source_signal": "can_data.PF_BUCKET_PFAngX",
+                "computation_type": "Differentiator",
+                "output_name": "BXAvg"
+            }
+        ],
+        "triggers": [
+            {
+                "name": "ChassisYHorizontal",
+                "conditions": [
+                    {
+                        "name": "can_data.PF_CHASSIS_PFAngY",
+                        "operator": "<=",
+                        "value": 5
+                    }
+                ],
+                "action": {
+                    "on_become_active": {
+                        "type": "publish",
+                        "subject": "compute.alert.ChassisYHorizontal.active"
+                    },
+                    "on_become_inactive": {
+                        "type": "publish",
+                        "subject": "compute.alert.ChassisYHorizontal.inactive"
+                    }
+                },
+                "is_currently_active": true,
+                "last_event_timestamp": "2025-09-02T16:12:50.373363"
+            },
+            {
+                "name": "BALTrigger",
+                "conditions": [
+                    {
+                        "name": "can_data.PF_BAL_PFAngX",
+                        "operator": ">=",
+                        "value": 10
+                    }
+                ],
+                "action": {
+                    "on_become_active": {
+                        "type": "publish",
+                        "subject": "compute.alert.BALTrigger.active"
+                    },
+                    "on_become_inactive": {
+                        "type": "publish",
+                        "subject": "compute.alert.BALTrigger.inactive"
+                    }
+                },
+                "is_currently_active": false,
+                "last_event_timestamp": "2025-09-02T16:13:52.850665"
+            },
+            {
+                "name": "trigtest",
+                "conditions": [
+                    {
+                        "name": "can_data.PF_BOOM_AccY",
+                        "operator": "<",
+                        "value": 0.5
+                    }
+                ],
+                "action": {
+                    "on_become_active": {
+                        "type": "publish",
+                        "subject": "compute.alert.trigtest.active"
+                    },
+                    "on_become_inactive": {
+                        "type": "publish",
+                        "subject": "compute.alert.trigtest.inactive"
+                    }
+                },
+                "is_currently_active": false,
+                "last_event_timestamp": null
+            }
+        ]
     },
     "global": {
         "nats_url": "nats://127.0.0.1:4222",

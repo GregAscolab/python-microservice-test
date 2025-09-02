@@ -131,6 +131,16 @@ const ConnectionManager = {
         nc.publish(subject, this.jsonCodec.encode(data));
     },
 
+    async request(subject, data, timeout = 1000) {
+        const nc = await this.getNatsConnection();
+        if (!nc) {
+            console.error("Cannot make request, NATS connection not available");
+            throw new Error("NATS connection not available");
+        }
+        const payload = this.jsonCodec.encode(data);
+        return await nc.request(subject, payload, { timeout });
+    },
+
     updateGlobalStatus: function() {
         let status = "offline";
         if (this.isOnline) {

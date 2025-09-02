@@ -1,5 +1,5 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, UploadFile, File
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import exceptions as JinjaExceptions
@@ -23,6 +23,7 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "frontend", "static")
 TEMPLATES_DIR = os.path.join(APP_DIR, "frontend", "templates")
 # Use an absolute path for the main log directory as well
+CONFIG_DIR = os.path.abspath("config")
 LOGS_DIR = os.path.abspath("logs")
 CAN_LOGS_DIR = os.path.abspath("can_logs")
 APP_LOGS_DIR = os.path.abspath("app_logs")
@@ -163,6 +164,47 @@ async def download_file(service_name:str, file_path_b64: str):
 class FileToConvert(BaseModel):
     name: str
     folder: str
+
+@router.get("/api/settings/export")
+async def export_settings():
+    settings_path = os.path.join(CONFIG_DIR, "settings.json")
+    if os.path.exists(settings_path):
+        return FileResponse(settings_path, filename="settings.json", media_type="application/json")
+    return HTMLResponse("Settings file not found.", status_code=404)
+
+@router.post("/api/settings/import")
+async def import_settings(request: Request, file: UploadFile = File(...)):
+    service = get_service(request)
+    try:
+        # Read the content of the uploaded file
+        content = await file.read()
+
+        # The content is in bytes, decode it to a string
+        content_str = content.decode('utf-8')
+
+        # Basic validation: check if it's valid JSON
+        try:
+            json.loads(content_str)
+        except json.JSONDecodeError:
+            return JSONResponse(status_code=400, content={"message": "Invalid JSON file."})
+
+        # Create the command payload
+        command = {
+            "command": "import_settings",
+            "data": content_str
+        }
+
+        # Publish the command to the settings service
+        await service.messaging_client.publish(
+            "commands.settings_service",
+            json.dumps(command).encode()
+        )
+
+        return {"status": "success", "message": "Settings import initiated."}
+
+    except Exception as e:
+        service.logger.error(f"Error importing settings file: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"message": "Failed to import settings."})
 
 @router.post("/api/convert")
 async def convert_file(file_content: FileToConvert, request: Request):

@@ -27,6 +27,7 @@
                 <li><a href="/manager">Manager</a></li>
                 <li><a href="/dummy">Dummy</a></li>
                 <li><a href="/digital_twins">Digital Twin</a></li>
+                <li><a href="/compute">Compute</a></li>
             </ul>
         </nav>
         <main id="content">
@@ -190,6 +191,18 @@
 
             <div id="page-settings" class="page-content" style="display: none;">
                 <h2>Settings</h2>
+                <div class="settings-controls">
+                    <div class="control-group">
+                        <button id="export-settings-btn">Export Settings</button>
+                        <button id="import-settings-btn">Import Settings</button>
+                        <input type="file" id="import-settings-file" style="display: none;" accept=".json">
+                    </div>
+                    <div class="control-group">
+                        <label for="config-files-select">Load from config:</label>
+                        <select id="config-files-select"></select>
+                        <button id="load-config-file-btn">Load</button>
+                    </div>
+                </div>
                 <div class="tabs">
                     <div class="tab-buttons"></div>
                     <div class="tab-content"></div>
@@ -244,6 +257,126 @@
                 <div id="digital-twin-container"></div>
             </div>
 
+            <div id="page-compute" class="page-content">
+                <div class="compute-header">
+                    <h2>Compute Service</h2>
+                    <button id="btn-toggle-config" class="btn-toggle-config">☰ Config</button>
+                </div>
+                <div class="compute-main-container">
+                    <!-- Main Content Area -->
+                    <div class="compute-content-area">
+                        <!-- Live State Panel -->
+                        <div class="compute-panel live-state-panel">
+                            <h3>Live State</h3>
+                            <div id="compute-status-section">
+                                <p><strong>Service Status:</strong> <span id="compute-service-status">--</span></p>
+                                <div id="compute-active-triggers"></div>
+                            </div>
+                        </div>
+                        <!-- Results Panel -->
+                        <div class="compute-panel results-panel">
+                            <h4>Computed Values</h4>
+                            <div class="table-container">
+                                <table id="compute-computed-table" class="compute-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Output Name</th>
+                                            <th>Value</th>
+                                            <th>Type</th>
+                                            <th>Source</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <h4>Data Sources</h4>
+                            <div id="source-tables-container">
+                                <!-- JS will create tables here -->
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Configuration Panel (collapsible) -->
+                    <div class="compute-panel config-panel" id="compute-config-panel">
+                        <h3>Configuration</h3>
+                        <div class="form-section">
+                            <h4>Register New Computation</h4>
+                            <form id="form-register-computation">
+                                <div class="form-group">
+                                    <label>Input Signal:</label>
+                                    <div class="searchable-select" id="searchable-select-comp">
+                                        <input type="text" class="search-input" placeholder="Search signals...">
+                                        <div class="options-container"></div>
+                                        <input type="hidden" name="source_signal" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Computation Type:</label>
+                                    <select name="computation_type" required>
+                                        <option value="RunningAverage">Running Average</option>
+                                        <option value="Integrator">Integrator</option>
+                                        <option value="Differentiator">Differentiator</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Output Signal Name:</label>
+                                    <input type="text" name="output_name" required pattern="[a-zA-Z0-9_]+">
+                                </div>
+                                <button type="submit">Register Computation</button>
+                            </form>
+                        </div>
+                        <div class="form-section">
+                            <h4>Register New Trigger</h4>
+                            <form id="form-register-trigger">
+                                <div class="form-group">
+                                    <label>Trigger Name:</label>
+                                    <input type="text" name="name" required pattern="[a-zA-Z0-9_]+">
+                                </div>
+                                <div class="form-group">
+                                    <label>Condition Signal:</label>
+                                    <div class="searchable-select" id="searchable-select-trigger">
+                                        <input type="text" class="search-input" placeholder="Search signals...">
+                                        <div class="options-container"></div>
+                                        <input type="hidden" name="source_signal" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Operator:</label>
+                                    <select name="operator" required>
+                                        <option value=">">&gt;</option>
+                                        <option value="<">&lt;</option>
+                                        <option value="==">==</option>
+                                        <option value="!=">!=</option>
+                                        <option value=">=">&gt;=</option>
+                                        <option value="<=">&lt;=</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Threshold Value:</label>
+                                    <input type="number" name="value" step="any" required>
+                                </div>
+                                <button type="submit">Register Trigger</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <!-- Generic Confirmation Modal -->
+                <div id="compute-confirm-modal" class="modal" style="display: none;">
+                    <div class="modal-content danger-theme">
+                        <div class="modal-header">
+                            <h2 id="compute-modal-title">Confirm Action</h2>
+                        </div>
+                        <div class="modal-body">
+                            <p id="compute-modal-text">Are you sure?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button id="compute-modal-cancel-btn" class="button">Cancel</button>
+                            <button id="compute-modal-confirm-btn" class="button danger">Confirm</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
     <footer>
@@ -271,5 +404,6 @@
     <script type="module" src="/static/js/manager.js"></script>
     <script type="module" src="/static/js/dummy.js"></script>
     <script type="module" src="/static/js/digital_twin.js"></script>
+    <script type="module" src="/static/js/compute.js"></script>
 </body>
 </html>
