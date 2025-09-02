@@ -600,3 +600,51 @@ body.modal-open {
     line-height: 1;
     margin-left: 5px;
 }
+
+/* --- Searchable Select Component --- */
+.searchable-select {
+    position: relative;
+    width: 100%;
+}
+
+.searchable-select .search-input {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.searchable-select .options-container {
+    display: none;
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    width: 100%;
+    z-index: 10;
+}
+
+.searchable-select.open .options-container {
+    display: block;
+}
+
+.searchable-select .option,
+.searchable-select .optgroup-label {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.searchable-select .option:hover {
+    background-color: #f0f0f0;
+}
+
+.searchable-select .optgroup-label {
+    font-weight: bold;
+    background-color: #e9ecef;
+    color: #495057;
+    cursor: default;
+}

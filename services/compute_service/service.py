@@ -221,10 +221,20 @@ class ComputeService(Microservice):
         publish_interval = self.settings.get("ui_publish_interval", 1.0)
         while True:
             try:
-                # The payload now includes the full trigger objects with their state
+                # Create serializable definitions of computations for the UI
+                comp_definitions = []
+                for source_signal, computations in self.active_computations.items():
+                    for comp_info in computations:
+                        comp_definitions.append({
+                            "source_signal": source_signal,
+                            "computation_type": type(comp_info['instance']).__name__,
+                            "output_name": comp_info['output_name']
+                        })
+
                 payload = {
                     "computation_state": self.computation_state,
-                    "triggers": self.triggers
+                    "triggers": self.triggers,
+                    "computations": comp_definitions # Add definitions to the payload
                 }
                 await self.messaging_client.publish(f"compute.state.full", json.dumps(payload).encode())
                 await asyncio.sleep(publish_interval)

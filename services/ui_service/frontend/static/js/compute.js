@@ -10,12 +10,49 @@ let domElements = {};
  * @param {object} state - The full state object from the compute_service.
  */
 function updateUI(state) {
-    if (!state || !domElements.resultsTableBody) return;
+    if (!state || !domElements.computedTableBody || !domElements.sourcesTableBody) return;
+    domElements.lastState = state; // Store last state for categorization
 
-    // Update triggers list with state and unregister buttons
+    // Update triggers list
+    updateTriggersList(state.triggers || []);
+
+    // Get a set of all computed output names for easy lookup
+    const computedNames = new Set((state.computations || []).map(c => c.output_name));
+    const computationMap = new Map((state.computations || []).map(c => [c.output_name, c]));
+
+    // Clear existing table rows
+    domElements.computedTableBody.innerHTML = '';
+    domElements.sourcesTableBody.innerHTML = '';
+
+    // Populate tables based on whether the key is in the computed list
+    for (const [key, value] of Object.entries(state.computation_state || {})) {
+        if (computedNames.has(key)) {
+            // It's a computed value
+            const compDef = computationMap.get(key);
+            const row = domElements.computedTableBody.insertRow();
+            row.insertCell().textContent = key;
+            row.insertCell().textContent = typeof value === 'number' ? value.toFixed(3) : JSON.stringify(value);
+            row.insertCell().textContent = compDef.computation_type;
+            row.insertCell().textContent = compDef.source_signal;
+            const actionCell = row.insertCell();
+            const unregBtn = document.createElement('button');
+            unregBtn.textContent = 'Unregister';
+            unregBtn.className = 'btn-unregister btn-unregister-comp';
+            unregBtn.dataset.outputName = key;
+            actionCell.appendChild(unregBtn);
+        } else {
+            // It's a raw source value
+            const row = domElements.sourcesTableBody.insertRow();
+            row.insertCell().textContent = key;
+            row.insertCell().textContent = typeof value === 'number' ? value.toFixed(3) : JSON.stringify(value);
+        }
+    }
+}
+
+function updateTriggersList(triggers) {
     domElements.activeTriggers.innerHTML = '';
-    if (state.triggers && state.triggers.length > 0) {
-        state.triggers.forEach(trigger => {
+    if (triggers.length > 0) {
+        triggers.forEach(trigger => {
             const triggerDiv = document.createElement('div');
             triggerDiv.className = 'trigger-item';
 
@@ -46,29 +83,6 @@ function updateUI(state) {
     } else {
         domElements.activeTriggers.textContent = 'None';
     }
-
-    // Update results table with unregister buttons
-    const stateEntries = Object.entries(state.computation_state);
-    domElements.resultsTableBody.innerHTML = '';
-    for (const [key, value] of stateEntries) {
-        const row = domElements.resultsTableBody.insertRow();
-        const cellKey = row.insertCell();
-        const cellValue = row.insertCell();
-        const cellAction = row.insertCell();
-
-        cellKey.textContent = key;
-        cellValue.textContent = typeof value === 'number' ? value.toFixed(2) : JSON.stringify(value);
-
-        // Add unregister button only for computed signals (which have an underscore)
-        // This is a heuristic to avoid unregistering raw CAN signals etc.
-        if (key.includes('_')) {
-            const unregBtn = document.createElement('button');
-            unregBtn.textContent = 'Unregister';
-            unregBtn.className = 'btn-unregister btn-unregister-comp';
-            unregBtn.dataset.outputName = key;
-            cellAction.appendChild(unregBtn);
-        }
-    }
 }
 
 /**
@@ -89,25 +103,87 @@ async function fetchAvailableSignals() {
 }
 
 /**
- * Updates the signal dropdowns with a new list of signals.
+ * Updates the signal dropdowns with a new list of signals, grouped by source.
  * @param {string[]} signals - An array of signal names.
  */
 function updateSignalDropdowns(signals) {
-    const dropdowns = [domElements.compSourceSignal, domElements.triggerSourceSignal];
-    dropdowns.forEach(dropdown => {
-        if (!dropdown) return;
-        // Preserve the currently selected value if it still exists
-        const selectedValue = dropdown.value;
-        dropdown.innerHTML = ''; // Clear existing options
-        signals.sort().forEach(signal => {
-            const option = document.createElement('option');
-            option.value = signal;
-            option.textContent = signal;
-            dropdown.appendChild(option);
+    const groups = {
+        'Computed Values': [],
+        'CAN Data': [],
+        'Digital Twin': [],
+        'Other': []
+    };
+
+    // Categorize signals into groups
+    const computedNames = new Set((domElements.lastState.computations || []).map(c => c.output_name));
+    signals.forEach(signal => {
+        if (computedNames.has(signal)) {
+            groups['Computed Values'].push(signal);
+        } else if (signal.startsWith('can_data.')) {
+            groups['CAN Data'].push(signal);
+        } else if (signal.startsWith('digital_twin.')) {
+            groups['Digital Twin'].push(signal);
+        } else {
+            groups['Other'].push(signal);
+        }
+    });
+
+    // Populate both searchable select components
+    populateSearchableSelect(domElements.compSearchableSelect, groups);
+    populateSearchableSelect(domElements.triggerSearchableSelect, groups);
+}
+
+function populateSearchableSelect(container, groups) {
+    const optionsContainer = container.querySelector('.options-container');
+    optionsContainer.innerHTML = ''; // Clear existing options
+
+    for (const [groupName, signalList] of Object.entries(groups)) {
+        if (signalList.length > 0) {
+            const groupLabel = document.createElement('div');
+            groupLabel.className = 'optgroup-label';
+            groupLabel.textContent = groupName;
+            optionsContainer.appendChild(groupLabel);
+
+            signalList.sort().forEach(signal => {
+                const option = document.createElement('div');
+                option.className = 'option';
+                option.dataset.value = signal;
+                option.textContent = signal;
+                optionsContainer.appendChild(option);
+            });
+        }
+    }
+}
+
+function setupSearchableSelect(container) {
+    const searchInput = container.querySelector('.search-input');
+    const optionsContainer = container.querySelector('.options-container');
+    const hiddenInput = container.querySelector('input[type="hidden"]');
+
+    // Show/hide dropdown
+    searchInput.addEventListener('focus', () => container.classList.add('open'));
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            container.classList.remove('open');
+        }
+    });
+
+    // Filter options on search
+    searchInput.addEventListener('keyup', () => {
+        const filter = searchInput.value.toLowerCase();
+        optionsContainer.querySelectorAll('.option').forEach(option => {
+            const text = option.textContent.toLowerCase();
+            option.style.display = text.includes(filter) ? '' : 'none';
         });
-        // Restore selection
-        if (signals.includes(selectedValue)) {
-            dropdown.value = selectedValue;
+    });
+
+    // Handle option selection
+    optionsContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('option')) {
+            const value = e.target.dataset.value;
+            searchInput.value = value;
+            hiddenInput.value = value;
+            container.classList.remove('open');
         }
     });
 }
@@ -124,14 +200,16 @@ function initComputePage() {
         page: document.getElementById('page-compute'),
         formRegisterComp: document.getElementById('form-register-computation'),
         formRegisterTrigger: document.getElementById('form-register-trigger'),
-        compSourceSignal: document.getElementById('comp-source-signal'),
-        triggerSourceSignal: document.getElementById('trigger-source-signal'),
+        compSearchableSelect: document.getElementById('searchable-select-comp'),
+        triggerSearchableSelect: document.getElementById('searchable-select-trigger'),
         serviceStatus: document.getElementById('compute-service-status'),
         activeTriggers: document.getElementById('compute-active-triggers'),
-        resultsTableBody: document.getElementById('compute-results-table')?.querySelector('tbody'),
+        computedTableBody: document.getElementById('compute-computed-table')?.querySelector('tbody'),
+        sourcesTableBody: document.getElementById('compute-sources-table')?.querySelector('tbody'),
+        lastState: { computations: [], triggers: [], computation_state: {} } // Initial empty state
     };
 
-    if (!domElements.resultsTableBody) {
+    if (!domElements.computedTableBody || !domElements.sourcesTableBody) {
         console.error("Compute page UI elements not found! Cannot initialize page.");
         return;
     }
@@ -163,6 +241,10 @@ function initComputePage() {
 
     // 6. Add a single click listener for unregister buttons (event delegation)
     domElements.page.addEventListener('click', handleUnregisterClick);
+
+    // 7. Set up searchable select components
+    setupSearchableSelect(domElements.compSearchableSelect);
+    setupSearchableSelect(domElements.triggerSearchableSelect);
 }
 
 /**
