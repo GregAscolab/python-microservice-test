@@ -37,31 +37,27 @@ class ComputeService(Microservice):
             '<=': operator.le,
         }
 
-    async def _handle_register_computation(self, args):
+    async def _handle_register_computation(self, reply: str = "", **args):
         """Command handler to dynamically register a new computation."""
         source_signal = args.get("source_signal")
         computation_type = args.get("computation_type")
         output_name = args.get("output_name")
+        response = {}
 
         if not all([source_signal, computation_type, output_name]):
-            return {"status": "error", "message": "Missing 'source_signal', 'computation_type', or 'output_name'."}
+            response = {"status": "error", "message": "Missing 'source_signal', 'computation_type', or 'output_name'."}
+        elif computation_type not in self.available_computations:
+            response = {"status": "error", "message": f"Unknown computation type: {computation_type}"}
+        else:
+            computation_class = self.available_computations[computation_type]
+            computation_instance = computation_class()
+            computation_to_store = { "instance": computation_instance, "output_name": output_name }
+            self.active_computations[source_signal].append(computation_to_store)
+            self.logger.info(f"Registered new computation: '{output_name}' ({computation_type}) on source '{source_signal}'.")
+            response = {"status": "ok", "message": "Computation registered successfully."}
 
-        if computation_type not in self.available_computations:
-            return {"status": "error", "message": f"Unknown computation type: {computation_type}"}
-
-        # Create a new instance of the requested computation class
-        computation_class = self.available_computations[computation_type]
-        computation_instance = computation_class()
-
-        # Store it with its output name for later use
-        computation_to_store = {
-            "instance": computation_instance,
-            "output_name": output_name
-        }
-
-        self.active_computations[source_signal].append(computation_to_store)
-        self.logger.info(f"Registered new computation: '{output_name}' ({computation_type}) on source '{source_signal}'.")
-        return {"status": "ok", "message": "Computation registered successfully."}
+        if reply:
+            await self.messaging_client.publish(reply, json.dumps(response).encode())
 
     async def _publish_status(self, status: str | None = None):
         """Publishes the service's current status."""
@@ -72,67 +68,75 @@ class ComputeService(Microservice):
         await self.messaging_client.publish(f"compute.status", json.dumps(status_payload).encode())
         self.logger.info(f"Published status: {self.status}")
 
-    async def _handle_register_trigger(self, args):
+    async def _handle_register_trigger(self, reply: str = "", **args):
         """Command handler to dynamically register a new trigger."""
         trigger = args.get("trigger")
+        response = {}
+
         if not trigger or 'name' not in trigger or 'conditions' not in trigger or 'action' not in trigger:
-            return {"status": "error", "message": "Invalid trigger structure. Required fields: name, conditions, action."}
+            response = {"status": "error", "message": "Invalid trigger structure. Required fields: name, conditions, action."}
+        elif 'type' not in trigger['action'] or 'subject' not in trigger['action']:
+            response = {"status": "error", "message": "Invalid action structure. Required fields: type, subject."}
+        else:
+            self.triggers = [t for t in self.triggers if t.get('name') != trigger.get('name')]
+            self.triggers.append(trigger)
+            self.logger.info(f"Registered trigger: {trigger.get('name')}")
+            response = {"status": "ok", "message": "Trigger registered successfully."}
 
-        # Simple validation of the action block
-        action = trigger['action']
-        if 'type' not in action or 'subject' not in action:
-            return {"status": "error", "message": "Invalid action structure. Required fields: type, subject."}
+        if reply:
+            await self.messaging_client.publish(reply, json.dumps(response).encode())
 
-        # To prevent duplicate trigger names, we can replace existing ones.
-        self.triggers = [t for t in self.triggers if t.get('name') != trigger.get('name')]
-        self.triggers.append(trigger)
-
-        self.logger.info(f"Registered trigger: {trigger.get('name')}")
-        return {"status": "ok", "message": "Trigger registered successfully."}
-
-    async def _handle_unregister_computation(self, args):
+    async def _handle_unregister_computation(self, reply: str = "", **args):
         """Command handler to unregister a computation by its output name."""
         output_name_to_remove = args.get("output_name")
+        response = {}
         if not output_name_to_remove:
-            return {"status": "error", "message": "Missing 'output_name'."}
-
-        found = False
-        for source_signal, computations in self.active_computations.items():
-            initial_len = len(computations)
-            self.active_computations[source_signal] = [
-                comp for comp in computations if comp.get("output_name") != output_name_to_remove
-            ]
-            if len(self.active_computations[source_signal]) < initial_len:
-                found = True
-                break # Assuming output names are unique, we can stop
-
-        if found:
-            # Also remove the final value from the main state dictionary
-            if output_name_to_remove in self.computation_state:
-                del self.computation_state[output_name_to_remove]
-            self.logger.info(f"Unregistered computation with output: {output_name_to_remove}")
-            return {"status": "ok", "message": "Computation unregistered."}
+            response = {"status": "error", "message": "Missing 'output_name'."}
         else:
-            return {"status": "error", "message": f"Computation with output '{output_name_to_remove}' not found."}
+            found = False
+            for source_signal, computations in self.active_computations.items():
+                initial_len = len(computations)
+                self.active_computations[source_signal] = [
+                    comp for comp in computations if comp.get("output_name") != output_name_to_remove
+                ]
+                if len(self.active_computations[source_signal]) < initial_len:
+                    found = True
+                    break
 
-    async def _handle_unregister_trigger(self, args):
+            if found:
+                if output_name_to_remove in self.computation_state:
+                    del self.computation_state[output_name_to_remove]
+                self.logger.info(f"Unregistered computation with output: {output_name_to_remove}")
+                response = {"status": "ok", "message": "Computation unregistered."}
+            else:
+                response = {"status": "error", "message": f"Computation with output '{output_name_to_remove}' not found."}
+
+        if reply:
+            await self.messaging_client.publish(reply, json.dumps(response).encode())
+
+    async def _handle_unregister_trigger(self, reply: str = "", **args):
         """Command handler to unregister a trigger by its name."""
         trigger_name_to_remove = args.get("name")
+        response = {}
         if not trigger_name_to_remove:
-            return {"status": "error", "message": "Missing trigger 'name'."}
-
-        initial_len = len(self.triggers)
-        self.triggers = [t for t in self.triggers if t.get('name') != trigger_name_to_remove]
-
-        if len(self.triggers) < initial_len:
-            self.logger.info(f"Unregistered trigger: {trigger_name_to_remove}")
-            return {"status": "ok", "message": "Trigger unregistered."}
+            response = {"status": "error", "message": "Missing trigger 'name'."}
         else:
-            return {"status": "error", "message": f"Trigger '{trigger_name_to_remove}' not found."}
+            initial_len = len(self.triggers)
+            self.triggers = [t for t in self.triggers if t.get('name') != trigger_name_to_remove]
+            if len(self.triggers) < initial_len:
+                self.logger.info(f"Unregistered trigger: {trigger_name_to_remove}")
+                response = {"status": "ok", "message": "Trigger unregistered."}
+            else:
+                response = {"status": "error", "message": f"Trigger '{trigger_name_to_remove}' not found."}
 
-    async def _handle_get_available_signals(self, args):
+        if reply:
+            await self.messaging_client.publish(reply, json.dumps(response).encode())
+
+    async def _handle_get_available_signals_request(self, reply: str = "", **args):
         """Returns a list of all available signals for computation."""
-        return {"status": "ok", "signals": list(self.computation_state.keys())}
+        response = {"status": "ok", "signals": list(self.computation_state.keys())}
+        if reply:
+            await self.messaging_client.publish(reply, json.dumps(response).encode())
 
     async def _start_logic(self):
         """This is called when the service starts."""
@@ -145,7 +149,7 @@ class ComputeService(Microservice):
         self.command_handler.register_command("unregister_computation", self._handle_unregister_computation)
         self.command_handler.register_command("register_trigger", self._handle_register_trigger)
         self.command_handler.register_command("unregister_trigger", self._handle_unregister_trigger)
-        self.command_handler.register_command("get_available_signals", self._handle_get_available_signals)
+        self.command_handler.register_command("get_available_signals", self._handle_get_available_signals_request)
         await self._subscribe_to_commands()
 
         # Subscribe to data sources

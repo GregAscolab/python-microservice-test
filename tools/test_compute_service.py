@@ -47,14 +47,19 @@ class TestComputeServiceIntegration(unittest.TestCase):
         }
 
         async def run_test():
-            response = await self.service._handle_register_computation(args)
-            self.assertEqual(response['status'], 'ok')
+            await self.service._handle_register_computation(reply="test.reply", **args)
 
             # Check that the computation was added
             self.assertIn("can.speed", self.service.active_computations)
             comp_info = self.service.active_computations["can.speed"][0]
             self.assertEqual(comp_info['output_name'], 'speed_avg')
             self.assertIsInstance(comp_info['instance'], RunningAverage)
+
+            # Check that a success response was published
+            self.service.messaging_client.publish.assert_called_with(
+                "test.reply",
+                unittest.mock.ANY
+            )
 
         asyncio.run(run_test())
 
@@ -63,18 +68,18 @@ class TestComputeServiceIntegration(unittest.TestCase):
 
         async def run_test():
             # 1. Register an average computation on can.speed
-            await self.service._handle_register_computation({
-                "source_signal": "can.speed",
-                "computation_type": "RunningAverage",
-                "output_name": "speed_avg"
-            })
+            await self.service._handle_register_computation(
+                source_signal="can.speed",
+                computation_type="RunningAverage",
+                output_name="speed_avg"
+            )
 
             # 2. Register a derivative on the output of the average
-            await self.service._handle_register_computation({
-                "source_signal": "speed_avg",
-                "computation_type": "Differentiator",
-                "output_name": "speed_acceleration"
-            })
+            await self.service._handle_register_computation(
+                source_signal="speed_avg",
+                computation_type="Differentiator",
+                output_name="speed_acceleration"
+            )
 
             # 3. Process first data point for can.speed
             await self.service._process_data("can.speed", 10, 0)
@@ -107,21 +112,20 @@ class TestComputeServiceIntegration(unittest.TestCase):
 
         async def run_test():
             # Register the trigger
-            await self.service._handle_register_trigger({"trigger": trigger_def})
+            await self.service._handle_register_trigger(reply="test.reply", trigger=trigger_def)
             self.assertIn(trigger_def, self.service.triggers)
+            self.service.messaging_client.publish.assert_called_with("test.reply", unittest.mock.ANY)
+            self.service.messaging_client.publish.reset_mock()
 
             # Process data that does NOT meet the condition
             await self.service._process_data("some_signal", 40, 0)
-            # Publish should not be called for the trigger
+            # Publish should not be called for the trigger action
             self.service.messaging_client.publish.assert_not_called()
 
             # Process data that DOES meet the condition
             await self.service._process_data("some_signal", 60, 1)
             # Publish should be called for the trigger action
-            self.service.messaging_client.publish.assert_called_with(
-                "test.alert",
-                unittest.mock.ANY # We don't care about the exact payload here
-            )
+            self.service.messaging_client.publish.assert_any_call("test.alert", unittest.mock.ANY)
 
         asyncio.run(run_test())
 
@@ -129,24 +133,28 @@ class TestComputeServiceIntegration(unittest.TestCase):
         """Test unregistering computations and triggers."""
         async def run_test():
             # Register a computation and a trigger
-            await self.service._handle_register_computation({
-                "source_signal": "can.temp",
-                "computation_type": "RunningAverage",
-                "output_name": "temp_avg"
-            })
-            await self.service._handle_register_trigger({"trigger": {
+            await self.service._handle_register_computation(
+                reply="r1",
+                source_signal="can.temp",
+                computation_type="RunningAverage",
+                output_name="temp_avg"
+            )
+            await self.service._handle_register_trigger(reply="r2", trigger={
                 "name": "temp_trigger",
                 "conditions": [{"name": "temp_avg", "operator": ">", "value": 100}],
                 "action": {"type": "publish", "subject": "temp.alert"}
-            }})
+            })
 
             # Verify they exist
             self.assertTrue(any(c['output_name'] == 'temp_avg' for c in self.service.active_computations['can.temp']))
             self.assertTrue(any(t['name'] == 'temp_trigger' for t in self.service.triggers))
 
-            # Unregister them
-            await self.service._handle_unregister_computation({"output_name": "temp_avg"})
-            await self.service._handle_unregister_trigger({"name": "temp_trigger"})
+            # Unregister them and check for success replies
+            await self.service._handle_unregister_computation(reply="r3", output_name="temp_avg")
+            self.service.messaging_client.publish.assert_any_call("r3", unittest.mock.ANY)
+
+            await self.service._handle_unregister_trigger(reply="r4", name="temp_trigger")
+            self.service.messaging_client.publish.assert_any_call("r4", unittest.mock.ANY)
 
             # Verify they are gone
             self.assertFalse(any(c['output_name'] == 'temp_avg' for c in self.service.active_computations.get('can.temp', [])))
