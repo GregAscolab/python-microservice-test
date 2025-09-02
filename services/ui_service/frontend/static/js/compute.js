@@ -11,88 +11,76 @@ let domElements = {};
  */
 function updateUI(state) {
     if (!state || !domElements.computedTableBody || !domElements.sourceTablesContainer) return;
-    domElements.lastState = state; // Store last state for categorization
+    domElements.lastState = state;
 
-    // Update triggers list with more detail
+    const allSignalKeys = new Set(Object.keys(state.computation_state || {}));
+    const computedSignalsMap = new Map((state.computations || []).map(c => [c.output_name, c]));
+
+    // Prune cache of signals that no longer exist
+    for (const signalName in domElements.cellCache) {
+        if (!allSignalKeys.has(signalName)) {
+            domElements.cellCache[signalName].row.remove();
+            delete domElements.cellCache[signalName];
+        }
+    }
+
+    // Update triggers and tables
     updateTriggersList(state.triggers || [], state.computation_state || {});
-
-    // Get a set of all computed output names for easy lookup
-    const computedNames = new Set((state.computations || []).map(c => c.output_name));
-    const computationMap = new Map((state.computations || []).map(c => [c.output_name, c]));
-
-    // Separate raw signals from computed signals
-    const rawSignals = {};
-    const computedSignals = {};
     for (const [key, value] of Object.entries(state.computation_state || {})) {
-        if (computedNames.has(key)) {
-            computedSignals[key] = value;
+        const isComputed = computedSignalsMap.has(key);
+        if (domElements.cellCache[key]) {
+            // Update existing cell
+            domElements.cellCache[key].valueCell.textContent = typeof value === 'number' ? value.toFixed(3) : JSON.stringify(value);
         } else {
-            rawSignals[key] = value;
-        }
-    }
-
-    // Populate computed values table
-    updateComputedTable(computedSignals, computationMap);
-
-    // Populate raw data source tables
-    updateSourceTables(rawSignals);
-}
-
-function updateComputedTable(computedSignals, computationMap) {
-    domElements.computedTableBody.innerHTML = '';
-    for (const [key, value] of Object.entries(computedSignals)) {
-        const compDef = computationMap.get(key);
-        const row = domElements.computedTableBody.insertRow();
-        row.insertCell().textContent = key;
-        row.insertCell().textContent = typeof value === 'number' ? value.toFixed(3) : JSON.stringify(value);
-        row.insertCell().textContent = compDef.computation_type;
-        row.insertCell().textContent = compDef.source_signal;
-        const actionCell = row.insertCell();
-        const unregBtn = document.createElement('button');
-        unregBtn.textContent = 'Unregister';
-        unregBtn.className = 'btn-unregister btn-unregister-comp';
-        unregBtn.dataset.outputName = key;
-        actionCell.appendChild(unregBtn);
-    }
-}
-
-function updateSourceTables(rawSignals) {
-    const groups = {
-        'CAN Data': {},
-        'Digital Twin': {},
-        'Other Sources': {}
-    };
-
-    // Categorize signals
-    for (const [key, value] of Object.entries(rawSignals)) {
-        if (key.startsWith('can_data.')) {
-            groups['CAN Data'][key] = value;
-        } else if (key.startsWith('digital_twin.')) {
-            groups['Digital Twin'][key] = value;
-        } else {
-            groups['Other Sources'][key] = value;
-        }
-    }
-
-    // Create a table for each group
-    domElements.sourceTablesContainer.innerHTML = '';
-    for (const [groupName, signals] of Object.entries(groups)) {
-        if (Object.keys(signals).length > 0) {
-            const h5 = document.createElement('h5');
-            h5.textContent = groupName;
-            const table = document.createElement('table');
-            table.className = 'compute-table';
-            table.innerHTML = `<thead><tr><th>Source Signal</th><th>Value</th></tr></thead>`;
-            const tbody = table.createTBody();
-            for (const [key, value] of Object.entries(signals)) {
-                const row = tbody.insertRow();
+            // Create new row and cache cells
+            if (isComputed) {
+                const compDef = computedSignalsMap.get(key);
+                const row = domElements.computedTableBody.insertRow();
                 row.insertCell().textContent = key;
-                row.insertCell().textContent = typeof value === 'number' ? value.toFixed(3) : JSON.stringify(value);
+                const valueCell = row.insertCell();
+                valueCell.textContent = typeof value === 'number' ? value.toFixed(3) : JSON.stringify(value);
+                row.insertCell().textContent = compDef.computation_type;
+                row.insertCell().textContent = compDef.source_signal;
+                const actionCell = row.insertCell();
+                const unregBtn = document.createElement('button');
+                unregBtn.textContent = 'Unregister';
+                unregBtn.className = 'btn-unregister btn-unregister-comp';
+                unregBtn.dataset.outputName = key;
+                actionCell.appendChild(unregBtn);
+                domElements.cellCache[key] = { row, valueCell };
+            } else {
+                const groupName = getSignalGroup(key);
+                const table = getOrCreateSourceTable(groupName);
+                const row = table.insertRow();
+                row.insertCell().textContent = key;
+                const valueCell = row.insertCell();
+                valueCell.textContent = typeof value === 'number' ? value.toFixed(3) : JSON.stringify(value);
+                domElements.cellCache[key] = { row, valueCell };
             }
-            domElements.sourceTablesContainer.appendChild(h5);
-            domElements.sourceTablesContainer.appendChild(table);
         }
     }
+}
+
+function getSignalGroup(signalName) {
+    if (signalName.startsWith('can_data.')) return 'CAN Data';
+    if (signalName.startsWith('digital_twin.')) return 'Digital Twin';
+    return 'Other Sources';
+}
+
+function getOrCreateSourceTable(groupName) {
+    if (domElements.tableCache[groupName]) {
+        return domElements.tableCache[groupName];
+    }
+    const h5 = document.createElement('h5');
+    h5.textContent = groupName;
+    const table = document.createElement('table');
+    table.className = 'compute-table';
+    table.innerHTML = `<thead><tr><th>Source Signal</th><th>Value</th></tr></thead>`;
+    const tbody = table.createTBody();
+    domElements.sourceTablesContainer.appendChild(h5);
+    domElements.sourceTablesContainer.appendChild(table);
+    domElements.tableCache[groupName] = tbody;
+    return tbody;
 }
 
 function updateTriggersList(triggers, computationState) {
@@ -266,7 +254,9 @@ function initComputePage() {
         modalText: document.getElementById('compute-modal-text'),
         modalCancelBtn: document.getElementById('compute-modal-cancel-btn'),
         modalConfirmBtn: document.getElementById('compute-modal-confirm-btn'),
-        lastState: { computations: [], triggers: [], computation_state: {} } // Initial empty state
+        lastState: { computations: [], triggers: [], computation_state: {} }, // Initial empty state
+        cellCache: {}, // To store references to value cells <td>
+        tableCache: {}, // To store references to source tables
     };
 
     if (!domElements.computedTableBody || !domElements.sourceTablesContainer || !domElements.modal) {
