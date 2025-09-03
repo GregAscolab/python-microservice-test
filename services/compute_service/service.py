@@ -206,10 +206,9 @@ class ComputeService(Microservice):
             await self._handle_register_trigger(trigger=trigger_def)
         self.logger.info(f"Loaded {len(persisted_computations)} computations and {len(persisted_triggers)} triggers.")
 
-        # Subscribe to data sources
-        await self.messaging_client.subscribe("can_data", self._nats_data_handler("can_data"))
-        await self.messaging_client.subscribe("digital_twin.data", self._nats_data_handler("digital_twin.data"))
-        self.logger.info("Subscribed to data sources.")
+        # Subscribe to all service data feeds
+        await self.messaging_client.subscribe("*.data", self._nats_data_handler())
+        self.logger.info("Subscribed to all data sources via '*.data'.")
 
         # Start the periodic state publisher
         self.state_publisher_task = asyncio.create_task(self._publish_full_state_loop())
@@ -245,28 +244,33 @@ class ComputeService(Microservice):
                 self.logger.error(f"Error in state publisher loop: {e}", exc_info=True)
                 await asyncio.sleep(publish_interval) # Wait before retrying
 
-    def _nats_data_handler(self, nats_source: str):
-        """Returns an async function to handle incoming NATS messages."""
+    def _nats_data_handler(self):
+        """Returns an async function to handle incoming NATS messages from any service."""
         async def handler(msg):
+            # Extract the source service name from the NATS subject
+            # e.g., "gps.data" -> "gps"
+            nats_source = msg.subject.split('.')[0]
+
             try:
                 data = json.loads(msg.data.decode())
 
-                # For CAN-like data with a 'name' field
+                # For data with a 'name' and 'value' field (e.g., from CAN bus)
                 if 'name' in data and 'value' in data:
                     signal_name = f"{nats_source}.{data['name']}"
                     value = data['value']
+                    # Use provided timestamp or current time
                     timestamp = data.get('ts', datetime.now().timestamp() * 1000) / 1000.0
                     await self._process_data(signal_name, value, timestamp)
-                # For other data (like digital twin)
+                # For other data structures (e.g., from digital twin, gps)
                 else:
-                    # This will process the entire JSON object as a single "value"
-                    # which might be useful for some computations (e.g., a trigger on a complex object)
-                    await self._process_data(nats_source, data, datetime.now().timestamp())
+                    # This allows computations on the entire data object.
+                    # The signal name becomes the NATS source, e.g., "gps.data".
+                    await self._process_data(msg.subject, data, datetime.now().timestamp())
 
             except json.JSONDecodeError:
-                self.logger.error(f"Failed to decode JSON from source '{nats_source}'")
+                self.logger.error(f"Failed to decode JSON from subject '{msg.subject}'")
             except Exception as e:
-                self.logger.error(f"Error in NATS data handler for '{nats_source}': {e}", exc_info=True)
+                self.logger.error(f"Error in NATS data handler for subject '{msg.subject}': {e}", exc_info=True)
         return handler
 
     async def _process_data(self, signal_name: str, value: any, timestamp: float):
