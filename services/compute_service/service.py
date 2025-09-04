@@ -206,10 +206,9 @@ class ComputeService(Microservice):
             await self._handle_register_trigger(trigger=trigger_def)
         self.logger.info(f"Loaded {len(persisted_computations)} computations and {len(persisted_triggers)} triggers.")
 
-        # Subscribe to data sources
-        await self.messaging_client.subscribe("can_data", self._nats_data_handler("can_data"))
-        await self.messaging_client.subscribe("digital_twin.data", self._nats_data_handler("digital_twin.data"))
-        self.logger.info("Subscribed to data sources.")
+        # Subscribe to all individual data points from all services
+        await self.messaging_client.subscribe("*.data.>", self._nats_data_handler())
+        self.logger.info("Subscribed to all data points via '*.data.>'.")
 
         # Start the periodic state publisher
         self.state_publisher_task = asyncio.create_task(self._publish_full_state_loop())
@@ -245,28 +244,45 @@ class ComputeService(Microservice):
                 self.logger.error(f"Error in state publisher loop: {e}", exc_info=True)
                 await asyncio.sleep(publish_interval) # Wait before retrying
 
-    def _nats_data_handler(self, nats_source: str):
-        """Returns an async function to handle incoming NATS messages."""
+    def _nats_data_handler(self):
+        """
+        Returns an async function to handle incoming NATS messages. It attempts
+        to parse messages in two formats, in order:
+        1. A JSON object like: {"value": <data>, "ts": <optional_timestamp>}
+        2. A raw, float-convertible value.
+        """
         async def handler(msg):
+            signal_name = msg.subject
+
+            # --- Try parsing as JSON dictionary ---
             try:
                 data = json.loads(msg.data.decode())
-
-                # For CAN-like data with a 'name' field
-                if 'name' in data and 'value' in data:
-                    signal_name = f"{nats_source}.{data['name']}"
+                if isinstance(data, dict) and 'value' in data:
                     value = data['value']
-                    timestamp = data.get('ts', datetime.now().timestamp() * 1000) / 1000.0
+                    timestamp = data.get('ts', datetime.now().timestamp())
                     await self._process_data(signal_name, value, timestamp)
-                # For other data (like digital twin)
-                else:
-                    # This will process the entire JSON object as a single "value"
-                    # which might be useful for some computations (e.g., a trigger on a complex object)
-                    await self._process_data(nats_source, data, datetime.now().timestamp())
-
-            except json.JSONDecodeError:
-                self.logger.error(f"Failed to decode JSON from source '{nats_source}'")
+                    return  # Success, we are done.
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                # This is expected for raw values, so we fall through.
+                pass
             except Exception as e:
-                self.logger.error(f"Error in NATS data handler for '{nats_source}': {e}", exc_info=True)
+                # Any other exception during JSON parsing is a real error.
+                self.logger.error(f"Unexpected error parsing JSON on '{signal_name}': {e}")
+                return
+
+            # --- If JSON parsing did not return, try parsing as raw float ---
+            try:
+                value = float(msg.data.decode())
+                timestamp = datetime.now().timestamp()
+                await self._process_data(signal_name, value, timestamp)
+                return  # Success, we are done.
+            except (ValueError, UnicodeDecodeError):
+                # This means it's not a valid float either.
+                pass
+
+            # --- If all parsing attempts fail ---
+            self.logger.warning(f"Message on '{signal_name}' is not in a recognized format: {msg.data!r}")
+
         return handler
 
     async def _process_data(self, signal_name: str, value: any, timestamp: float):
