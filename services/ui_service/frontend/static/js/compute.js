@@ -62,9 +62,31 @@ function updateUI(state) {
 }
 
 function getSignalGroup(signalName) {
-    if (signalName.startsWith('can_data.')) return 'CAN Data';
-    if (signalName.startsWith('digital_twin.')) return 'Digital Twin';
-    return 'Other Sources';
+    // Split the signalName string at the first '.'
+    const parts = signalName.split('.');
+
+    if (parts[1] === "data") {
+
+        // Get the first part of the split string
+        let groupName = parts[0];
+
+        // Replace underscores with spaces
+        groupName = groupName.replace(/_/g, ' ');
+
+        // Capitalize the first letter of each word
+        const words = groupName.split(' ');
+        const capitalizedWords = words.map(word => {
+            if (word.length > 0) {
+                return word.charAt(0).toUpperCase() + word.slice(1);
+            }
+            return '';
+        });
+
+        return capitalizedWords.join(' ');
+    }
+    else {
+        return "Others"
+    }
 }
 
 function getOrCreateSourceTable(groupName) {
@@ -148,24 +170,23 @@ async function fetchAvailableSignals() {
  * @param {string[]} signals - An array of signal names.
  */
 function updateSignalDropdowns(signals) {
-    const groups = {
-        'Computed Values': [],
-        'CAN Data': [],
-        'Digital Twin': [],
-        'Other': []
-    };
+    const groups = {};
 
-    // Categorize signals into groups
     const computedNames = new Set((domElements.lastState.computations || []).map(c => c.output_name));
     signals.forEach(signal => {
         if (computedNames.has(signal)) {
+            // Check if the group for 'Computed Values' already exists, if not, create it
+            if (!groups['Computed Values']) {
+                groups['Computed Values'] = [];
+            }
             groups['Computed Values'].push(signal);
-        } else if (signal.startsWith('can_data.')) {
-            groups['CAN Data'].push(signal);
-        } else if (signal.startsWith('digital_twin.')) {
-            groups['Digital Twin'].push(signal);
         } else {
-            groups['Other'].push(signal);
+            const groupName = getSignalGroup(signal);
+            // Check if the group for the dynamic name already exists, if not, create it
+            if (!groups[groupName]) {
+                groups[groupName] = [];
+            }
+            groups[groupName].push(signal);
         }
     });
 
