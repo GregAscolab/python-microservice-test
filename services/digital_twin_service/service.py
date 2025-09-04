@@ -51,8 +51,8 @@ class DigitalTwinService(Microservice):
             self.logger.warning("No dbc_file configured for digital_twin_service.")
 
         # Subscribe to all CAN data signals
-        await self.messaging_client.subscribe("can.data.*", self._handle_can_data)
-        self.logger.info("Subscribed to all CAN data signals via 'can.data.*'")
+        await self.messaging_client.subscribe("can.data.>", self._handle_can_data)
+        self.logger.info("Subscribed to all CAN data signals via 'can.data.>'")
 
         self.command_handler.register_command("get_height", self._handle_get_height)
         self.command_handler.register_command("get_radius", self._handle_get_radius)
