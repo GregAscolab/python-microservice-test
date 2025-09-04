@@ -98,9 +98,7 @@ class DigitalTwinService(Microservice):
                 await self._publish_data_recursively(new_subject, value, timestamp)
             else:
                 try:
-                    # Ensure value is a float for consistency
-                    numeric_value = float(value)
-                    payload = {"value": numeric_value, "ts": timestamp}
+                    payload = {"value": value, "ts": timestamp}
                     await self.messaging_client.publish(new_subject, json.dumps(payload).encode())
                 except (ValueError, TypeError):
                     self.logger.warning(f"Could not convert value for '{new_subject}' to float. Skipping.")
