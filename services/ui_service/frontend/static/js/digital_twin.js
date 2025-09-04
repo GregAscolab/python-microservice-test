@@ -77,7 +77,7 @@ function initDigitalTwinsPage() {
         // Debounce the drawing function to avoid excessive re-renders
         const debouncedDrawModel = _.debounce(drawModel, 100);
 
-        ConnectionManager.subscribe('digital_twin.data.*', (m) => {
+        ConnectionManager.subscribe('digital_twin.data.>', (m) => {
             const subjectParts = m.subject.split('.');
             // Remove "digital_twin" and "data" from the path
             const path = subjectParts.slice(2);

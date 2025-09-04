@@ -207,8 +207,8 @@ class ComputeService(Microservice):
         self.logger.info(f"Loaded {len(persisted_computations)} computations and {len(persisted_triggers)} triggers.")
 
         # Subscribe to all individual data points from all services
-        await self.messaging_client.subscribe("*.data.*", self._nats_data_handler())
-        self.logger.info("Subscribed to all data points via '*.data.*'.")
+        await self.messaging_client.subscribe("*.data.>", self._nats_data_handler())
+        self.logger.info("Subscribed to all data points via '*.data.>'.")
 
         # Start the periodic state publisher
         self.state_publisher_task = asyncio.create_task(self._publish_full_state_loop())

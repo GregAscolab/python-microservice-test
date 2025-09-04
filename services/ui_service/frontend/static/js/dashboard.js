@@ -58,14 +58,14 @@ function initDashboardPage() {
         }
     }
 
-    ConnectionManager.subscribe('gps.data.*', (m) => {
+    ConnectionManager.subscribe('gps.data.>', (m) => {
         const subject = m.subject;
         const data = ConnectionManager.jsonCodec.decode(m.data);
         const value = data.value;
 
-        if (subject.endsWith('.latitude')) {
+        if (subject.endsWith('.coordinates.1')) { // Latitude
             lastLat = value;
-        } else if (subject.endsWith('.longitude')) {
+        } else if (subject.endsWith('.coordinates.0')) { // Longitude
             lastLon = value;
         }
         updateMap(); // Attempt to update map on each new piece of data

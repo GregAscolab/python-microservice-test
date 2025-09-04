@@ -50,8 +50,9 @@ class DigitalTwinService(Microservice):
         else:
             self.logger.warning("No dbc_file configured for digital_twin_service.")
 
-        # Subscribe to can_data
-        await self.messaging_client.subscribe("can_data", self._handle_can_data)
+        # Subscribe to all CAN data signals
+        await self.messaging_client.subscribe("can.data.*", self._handle_can_data)
+        self.logger.info("Subscribed to all CAN data signals via 'can.data.*'")
 
         self.command_handler.register_command("get_height", self._handle_get_height)
         self.command_handler.register_command("get_radius", self._handle_get_radius)
@@ -68,14 +69,26 @@ class DigitalTwinService(Microservice):
             self.publisher_task.cancel()
 
     async def _handle_can_data(self, msg):
+        """Handles incoming CAN data messages and updates the internal sensor state."""
         try:
-            data = json.loads(msg.data.decode())
-            sensor_name = data.get("name")
+            # The sensor name is the last part of the subject, e.g., "can.data.EngineSpeed" -> "EngineSpeed"
+            sensor_name = msg.subject.split('.')[-1]
+
             if sensor_name in self.sensor_state:
-                self.sensor_state[sensor_name] = data.get("value")
-                self.logger.debug(f"Updated sensor {sensor_name} to {data.get('value')}")
+                # The new payload is a JSON object with a "value" key
+                data = json.loads(msg.data.decode())
+                value = data.get("value")
+                if value is not None:
+                    self.sensor_state[sensor_name] = value
+                    self.logger.debug(f"Updated sensor {sensor_name} to {value}")
+                else:
+                    self.logger.warning(f"Received message for {sensor_name} but 'value' key was missing.")
         except json.JSONDecodeError:
-            self.logger.error("Failed to decode CAN data message")
+            self.logger.error(f"Failed to decode JSON from subject '{msg.subject}'")
+        except IndexError:
+            self.logger.error(f"Could not extract sensor name from subject '{msg.subject}'")
+        except Exception as e:
+            self.logger.error(f"Error handling CAN data for subject '{msg.subject}': {e}", exc_info=True)
 
     async def _publish_data_recursively(self, base_subject: str, data: dict, timestamp: float):
         """Recursively publishes nested dictionary data."""
