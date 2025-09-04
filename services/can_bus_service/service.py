@@ -100,13 +100,27 @@ class CanBusService(Microservice):
                 if not self.db: continue
                 try:
                     decoded = self.db.decode_message(msg.arbitration_id, msg.data)
-                    for name, value in decoded.items():
-                        current_time = int(msg.timestamp * 1000)
-                        payload = {'name': name, 'value': round(float(value), 3), 'ts': current_time}
-                        await self.messaging_client.publish(f"can_data", json.dumps(payload, indent=None, separators=(',',':')).encode())
-                        self.logger.debug(f"Published decoded signal: {payload}")
-                except Exception:
-                    pass
+                    for name, signal_value in decoded.items():
+                        # Standardized subject for each signal
+                        subject = f"can.data.{name}"
+
+                        # Standardized payload
+                        payload = {
+                            "value": round(float(signal_value), 4),
+                            "ts": msg.timestamp
+                        }
+
+                        await self.messaging_client.publish(
+                            subject,
+                            json.dumps(payload).encode()
+                        )
+                        self.logger.debug(f"Published to {subject}: {payload}")
+                except KeyError:
+                    # This happens when the arbitration ID is not in the DBC file
+                    self.logger.debug(f"Message with ID {msg.arbitration_id} not found in DBC file.")
+                except Exception as e:
+                    # Catch other potential errors during decoding or publishing
+                    self.logger.warning(f"Error processing message {msg.arbitration_id}: {e}")
         except asyncio.CancelledError:
             self.logger.info("Message listener cancelled.")
         finally:

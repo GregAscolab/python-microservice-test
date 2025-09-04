@@ -40,21 +40,44 @@ function initDashboardPage() {
     geoJSONLayer = L.geoJSON().addTo(map);
 
     // --- NATS for GPS Data ---
-    ConnectionManager.subscribe('gps', (m) => {
-        var data = ConnectionManager.jsonCodec.decode(m.data);
-        if (data && geoJSONLayer) {
+    let lastLat = null;
+    let lastLon = null;
+
+    function updateMap() {
+        if (lastLat !== null && lastLon !== null && geoJSONLayer && map) {
+            const geoJsonPoint = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [lastLon, lastLat]
+                }
+            };
             geoJSONLayer.clearLayers();
-            geoJSONLayer.addData(data);
-            map.fitBounds(geoJSONLayer.getBounds());
+            geoJSONLayer.addData(geoJsonPoint);
+            map.setView([lastLat, lastLon], map.getZoom()); // More stable than fitBounds
         }
+    }
+
+    ConnectionManager.subscribe('gps.data.*', (m) => {
+        const subject = m.subject;
+        const data = ConnectionManager.jsonCodec.decode(m.data);
+        const value = data.value;
+
+        if (subject.endsWith('.latitude')) {
+            lastLat = value;
+        } else if (subject.endsWith('.longitude')) {
+            lastLon = value;
+        }
+        updateMap(); // Attempt to update map on each new piece of data
     }).then(sub => {
         gpsSub = sub;
     });
 
     // --- NATS for Sensor Data ---
-    ConnectionManager.subscribe('can_data', (m) => {
+    ConnectionManager.subscribe('can.data.*', (m) => {
+        const subjectParts = m.subject.split('.');
+        const sensorName = subjectParts[subjectParts.length - 1]; // Get the last part of the subject
         const data = ConnectionManager.jsonCodec.decode(m.data);
-        const sensorName = data.name;
         const sensorValue = data.value;
 
         if (!nameCache.has(sensorName)) {
@@ -63,19 +86,16 @@ function initDashboardPage() {
             for (let [key, value] of suffToTypeMap) {
                 if (sensorName.includes(key)) {
                     targetTable = (value === 'pressure') ? pressureTableBody : angleTableBody;
-                    unit = typeToUnitMap.get(value);
+                    unit = typeToUnitMap.get(value) || data.unit || "";
                     break;
                 }
             }
             if (targetTable) {
                 const row = targetTable.insertRow();
                 row.id = sensorName;
-                row.innerHTML = `<td>${sensorName}</td><td id=${sensorName}_val>${sensorValue}</td><td>${unit}</td>`;
+                row.innerHTML = `<td>${sensorName}</td><td id="${sensorName}_val">${sensorValue}</td><td>${unit}</td>`;
             }
-        } else {
-            // updateCell(sensorName, sensorValue)
         }
-
         nameCache.set(sensorName, sensorValue);
     }).then(sub => {
         dataSub = sub;

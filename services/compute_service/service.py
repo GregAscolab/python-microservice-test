@@ -206,9 +206,9 @@ class ComputeService(Microservice):
             await self._handle_register_trigger(trigger=trigger_def)
         self.logger.info(f"Loaded {len(persisted_computations)} computations and {len(persisted_triggers)} triggers.")
 
-        # Subscribe to all service data feeds
-        await self.messaging_client.subscribe("*.data", self._nats_data_handler())
-        self.logger.info("Subscribed to all data sources via '*.data'.")
+        # Subscribe to all individual data points from all services
+        await self.messaging_client.subscribe("*.data.*", self._nats_data_handler())
+        self.logger.info("Subscribed to all data points via '*.data.*'.")
 
         # Start the periodic state publisher
         self.state_publisher_task = asyncio.create_task(self._publish_full_state_loop())
@@ -245,32 +245,44 @@ class ComputeService(Microservice):
                 await asyncio.sleep(publish_interval) # Wait before retrying
 
     def _nats_data_handler(self):
-        """Returns an async function to handle incoming NATS messages from any service."""
+        """
+        Returns an async function to handle incoming NATS messages. It attempts
+        to parse messages in two formats, in order:
+        1. A JSON object like: {"value": <data>, "ts": <optional_timestamp>}
+        2. A raw, float-convertible value.
+        """
         async def handler(msg):
-            # Extract the source service name from the NATS subject
-            # e.g., "gps.data" -> "gps"
-            nats_source = msg.subject.split('.')[0]
+            signal_name = msg.subject
 
+            # --- Try parsing as JSON dictionary ---
             try:
                 data = json.loads(msg.data.decode())
-
-                # For data with a 'name' and 'value' field (e.g., from CAN bus)
-                if 'name' in data and 'value' in data:
-                    signal_name = f"{nats_source}.{data['name']}"
+                if isinstance(data, dict) and 'value' in data:
                     value = data['value']
-                    # Use provided timestamp or current time
-                    timestamp = data.get('ts', datetime.now().timestamp() * 1000) / 1000.0
+                    timestamp = data.get('ts', datetime.now().timestamp())
                     await self._process_data(signal_name, value, timestamp)
-                # For other data structures (e.g., from digital twin, gps)
-                else:
-                    # This allows computations on the entire data object.
-                    # The signal name becomes the NATS source, e.g., "gps.data".
-                    await self._process_data(msg.subject, data, datetime.now().timestamp())
-
-            except json.JSONDecodeError:
-                self.logger.error(f"Failed to decode JSON from subject '{msg.subject}'")
+                    return  # Success, we are done.
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                # This is expected for raw values, so we fall through.
+                pass
             except Exception as e:
-                self.logger.error(f"Error in NATS data handler for subject '{msg.subject}': {e}", exc_info=True)
+                # Any other exception during JSON parsing is a real error.
+                self.logger.error(f"Unexpected error parsing JSON on '{signal_name}': {e}")
+                return
+
+            # --- If JSON parsing did not return, try parsing as raw float ---
+            try:
+                value = float(msg.data.decode())
+                timestamp = datetime.now().timestamp()
+                await self._process_data(signal_name, value, timestamp)
+                return  # Success, we are done.
+            except (ValueError, UnicodeDecodeError):
+                # This means it's not a valid float either.
+                pass
+
+            # --- If all parsing attempts fail ---
+            self.logger.warning(f"Message on '{signal_name}' is not in a recognized format: {msg.data!r}")
+
         return handler
 
     async def _process_data(self, signal_name: str, value: any, timestamp: float):

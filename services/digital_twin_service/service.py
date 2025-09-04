@@ -77,24 +77,45 @@ class DigitalTwinService(Microservice):
         except json.JSONDecodeError:
             self.logger.error("Failed to decode CAN data message")
 
+    async def _publish_data_recursively(self, base_subject: str, data: dict, timestamp: float):
+        """Recursively publishes nested dictionary data."""
+        for key, value in data.items():
+            new_subject = f"{base_subject}.{key}"
+            if isinstance(value, dict):
+                await self._publish_data_recursively(new_subject, value, timestamp)
+            else:
+                try:
+                    # Ensure value is a float for consistency
+                    numeric_value = float(value)
+                    payload = {"value": numeric_value, "ts": timestamp}
+                    await self.messaging_client.publish(new_subject, json.dumps(payload).encode())
+                except (ValueError, TypeError):
+                    self.logger.warning(f"Could not convert value for '{new_subject}' to float. Skipping.")
+
     async def _publish_data(self):
         update_interval = self.settings.get("update_interval", 1)
         while True:
-            # self.logger.info(f"publishdata")
             try:
                 if self.excavator:
-                    # Update model and get representation in one call
+                    # Update model and get its data representation
                     self.excavator.update_from_sensors(self.sensor_state)
-                    payload = self.excavator.get_3d_representation()
-                    await self.messaging_client.publish(
-                        "digital_twin.data",
-                        json.dumps(payload).encode()
-                    )
-                    self.logger.debug(f"Published digital twin data: {payload}")
-                    await asyncio.sleep(update_interval)
+                    model_data = self.excavator.get_3d_representation()
+
+                    # Get a single timestamp for this entire update cycle
+                    timestamp = datetime.now().timestamp()
+
+                    # Recursively publish all data points
+                    await self._publish_data_recursively("digital_twin.data", model_data, timestamp)
+
+                    self.logger.debug("Finished publishing digital twin data.")
+
+                await asyncio.sleep(update_interval)
             except asyncio.CancelledError:
                 self.logger.info("Publisher task was cancelled.")
                 break
+            except Exception as e:
+                self.logger.error(f"Error in publisher loop: {e}", exc_info=True)
+                await asyncio.sleep(5) # Avoid fast error loops
 
     async def _handle_get_height(self):
         if self.excavator:
