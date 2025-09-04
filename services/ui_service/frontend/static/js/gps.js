@@ -33,19 +33,52 @@ function initGpsPage() {
     };
     Plotly.newPlot(skyviewDiv, [], layout);
 
-    // --- NATS Connection ---
-    ConnectionManager.subscribe('gps', (m) => {
-        const data = ConnectionManager.jsonCodec.decode(m.data);
-        if (data && data.geometry && data.geometry.type === 'Point') {
-            const coords = data.geometry.coordinates;
-            const latLng = [coords[1], coords[0]];
-            if(marker) marker.setLatLng(latLng);
-            if(map) map.setView(latLng, map.getZoom());
-            updateGpsTable(data.properties, gpsTableBody);
-            if (data.properties && data.properties.SV) {
-                updateSkyviewChart(data.properties.SV);
+    let gpsState = {}; // Local cache for the entire GPS data structure
+
+    // Helper to set a value in a nested object based on a path array
+    function setNestedValue(obj, path, value) {
+        let schema = obj;
+        for (let i = 0; i < path.length - 1; i++) {
+            const key = path[i];
+            if (!schema[key]) {
+                schema[key] = (typeof path[i+1] === 'number') ? [] : {};
             }
+            schema = schema[key];
         }
+        schema[path[path.length - 1]] = value;
+    }
+
+    function updateUI() {
+        if (!gpsState || !gpsTableBody || !map || !marker) return;
+
+        // Update Map
+        const lat = gpsState.geometry?.coordinates?.[1];
+        const lon = gpsState.geometry?.coordinates?.[0];
+        if (lat !== undefined && lon !== undefined) {
+            const latLng = [lat, lon];
+            marker.setLatLng(latLng);
+            map.setView(latLng, map.getZoom());
+        }
+
+        // Update Table
+        if (gpsState.properties) {
+            updateGpsTable(gpsState.properties, gpsTableBody);
+        }
+
+        // Update Skyview
+        if (gpsState.properties?.SV) {
+            updateSkyviewChart(gpsState.properties.SV);
+        }
+    }
+
+    const debouncedUpdateUI = _.debounce(updateUI, 200);
+
+    // --- NATS Connection ---
+    ConnectionManager.subscribe('gps.data.>', (m) => {
+        const subjectParts = m.subject.split('.').slice(2); // Remove 'gps.data'
+        const data = ConnectionManager.jsonCodec.decode(m.data);
+        setNestedValue(gpsState, subjectParts, data.value);
+        debouncedUpdateUI();
     }).then(sub => {
         gpsSub = sub;
     });
