@@ -7,8 +7,8 @@
         "port": 8000
     },
     "can_bus_service": {
-        "interface": "virtual",
-        "channel": "vcan0",
+        "interface": "pcan",
+        "channel": "",
         "bitrate": 500000,
         "log_file_format": ".blf",
         "log_dir": "can_logs",
@@ -215,8 +215,8 @@
                         "subject": "compute.alert.ChassisYHorizontal.inactive"
                     }
                 },
-                "is_currently_active": true,
-                "last_event_timestamp": "2025-09-02T16:12:50.373363"
+                "is_currently_active": false,
+                "last_event_timestamp": null
             },
             {
                 "name": "BALTrigger",
@@ -238,7 +238,7 @@
                     }
                 },
                 "is_currently_active": false,
-                "last_event_timestamp": "2025-09-02T16:13:52.850665"
+                "last_event_timestamp": null
             },
             {
                 "name": "trigtest",
