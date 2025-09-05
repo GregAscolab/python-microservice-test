@@ -1,6 +1,40 @@
 import math
 import logging
 
+class Point:
+    """Represents a point in 3D space."""
+    def __init__(self, x=0.0, y=0.0, z=0.0):
+        self.x = x
+        self.y = y
+        self.z = z
+
+    def to_list(self):
+        """Returns the point as a list [x, y, z]."""
+        return [self.x, self.y, self.z]
+
+    def __repr__(self):
+        return f"Point(x={self.x}, y={self.y}, z={self.z})"
+
+class Angle:
+    """Represents angles in degrees."""
+    def __init__(self, roll=0.0, pitch=0.0, yaw=0.0):
+        self.roll = roll
+        self.pitch = pitch
+        self.yaw = yaw
+
+    def __repr__(self):
+        return f"Angle(roll={self.roll}, pitch={self.pitch}, yaw={self.yaw})"
+
+class Dimension:
+    """Represents the dimensions of a part."""
+    def __init__(self, length=0.0, width=0.0, height=0.0):
+        self.length = length
+        self.width = width
+        self.height = height
+
+    def __repr__(self):
+        return f"Dimension(length={self.length}, width={self.width}, height={self.height})"
+
 # --- Coordinate System Documentation ---
 # The 3D coordinate system is defined as follows:
 # - The origin (0, 0, 0) is at the center of the chassis, on the ground.
@@ -253,18 +287,31 @@ class Part:
         # 'length': The distance between the start pivot point and the end pivot point of the part.
         # 'offset': An [x, y, z] translation from the parent's end point to this part's start point.
         #           This is useful for parts that are not directly connected at the same pivot.
-        self.dimensions = settings.get("dimensions", {})
-        self.length = self.dimensions.get("length", 0)
-        self.width = self.dimensions.get("width", 0)
-        self.height = self.dimensions.get("height", 0)
-        self.offset = self.dimensions.get("offset", {"x": 0, "y": 0, "z": 0})
-        self.angles_offset = settings.get("angles_offset", {"roll": 0, "pitch": 0, "yaw": 0})
 
-        self.rollAngle = 0  # The part's current angle in degrees around x axis.
-        self.pitchAngle = 0  # The part's current angle in degrees around y axis.
-        self.yawAngle = 0  # The part's current angle in degrees around z axis.
-        self.start_point = [0, 0, 0]
-        self.end_point = [0, 0, 0]
+        dimensions_settings = settings.get("dimensions", {})
+        self.dimensions = Dimension(
+            length=dimensions_settings.get("length", 0),
+            width=dimensions_settings.get("width", 0),
+            height=dimensions_settings.get("height", 0)
+        )
+
+        offset_settings = settings.get("offset", {"x": 0, "y": 0, "z": 0})
+        self.offset = Point(
+            x=offset_settings.get("x", 0),
+            y=offset_settings.get("y", 0),
+            z=offset_settings.get("z", 0)
+        )
+
+        angles_offset_settings = settings.get("angles_offset", {"roll": 0, "pitch": 0, "yaw": 0})
+        self.angles_offset = Angle(
+            roll=angles_offset_settings.get("roll", 0),
+            pitch=angles_offset_settings.get("pitch", 0),
+            yaw=angles_offset_settings.get("yaw", 0)
+        )
+
+        self.angle = Angle()
+        self.start_point = Point()
+        self.end_point = Point()
         self.planEquation = [0, 0, 0, 0]
         self.planPoints = []
         self.planPlotlySurface = []
@@ -273,59 +320,64 @@ class Part:
         am = settings.get("axis_mapping",{'roll': 'X', 'pitch': 'Y', 'yaw': 'Z'})
         self.logger.info(f"{self.name} axis_mapping={am}")
 
-        self.sensor = Sensor3DModel(self.length, self.width, self.height, [self.length/2, self.width/2, self.height/2],
-                                    roll_offset=self.angles_offset["roll"],
-                                    pitch_offset=self.angles_offset["pitch"],
-                                    yaw_offset=self.angles_offset["yaw"],
-                                    axis_mapping=settings.get("axis_mapping",{'roll': 'X', 'pitch': 'Y', 'yaw': 'Z'}),
-                                    axis_reverse=settings.get("axis_reverse",{'roll': 0, 'pitch': 0, 'yaw': 0}))
+        self.sensor = Sensor3DModel(
+            self.dimensions.length, self.dimensions.width, self.dimensions.height,
+            [self.dimensions.length / 2, self.dimensions.width / 2, self.dimensions.height / 2],
+            roll_offset=self.angles_offset.roll,
+            pitch_offset=self.angles_offset.pitch,
+            yaw_offset=self.angles_offset.yaw,
+            axis_mapping=settings.get("axis_mapping",{'roll': 'X', 'pitch': 'Y', 'yaw': 'Z'}),
+            axis_reverse=settings.get("axis_reverse",{'roll': 0, 'pitch': 0, 'yaw': 0})
+        )
 
-    def update_kinematics(self, parent_end_point=[0, 0, 0], parent_angle=0):
+    def update_kinematics(self, parent_end_point=None, parent_angle=0):
         """
         Calculates the start and end points of this part in the global 3D reference.
         """
-        # The start point is the parent's end point plus any offset.
-        self.start_point = [
-            parent_end_point[0] + self.offset["x"],
-            parent_end_point[1] + self.offset["y"],
-            parent_end_point[2] + self.offset["z"]
-        ]
+        if parent_end_point is None:
+            parent_end_point = Point()
 
-        self.rollAngle = self.sensor.roll
-        self.pitchAngle = self.sensor.pitch
-        self.yawAngle = self.sensor.yaw
+        # The start point is the parent's end point plus any offset.
+        self.start_point = Point(
+            parent_end_point.x + self.offset.x,
+            parent_end_point.y + self.offset.y,
+            parent_end_point.z + self.offset.z
+        )
+
+        self.angle.roll = self.sensor.roll
+        self.angle.pitch = self.sensor.pitch
+        self.angle.yaw = self.sensor.yaw
 
         # The total angle is the sum of the parent's angle and this part's angle.
-        # total_angle_rad = math.radians(parent_angle + self.angle)
-        total_angle_rad = math.radians(self.pitchAngle)
+        # total_angle_rad = math.radians(parent_angle + self.angle.pitch)
+        total_angle_rad = math.radians(self.angle.pitch)
 
         # Calculate the end point based on the start point, length, and angle.
-        self.end_point = [
-            self.start_point[0] + self.length * math.cos(total_angle_rad),
-            self.start_point[1], # No change in Y for pitch
-            self.start_point[2] + self.length * math.sin(total_angle_rad)
-        ]
+        self.end_point = Point(
+            self.start_point.x + self.dimensions.length * math.cos(total_angle_rad),
+            self.start_point.y, # No change in Y for pitch
+            self.start_point.z + self.dimensions.length * math.sin(total_angle_rad)
+        )
 
         # Calculate the plan equation
-        # if self.rollAngle != 0 and self.yawAngle!=0 :
+        # if self.angle.roll != 0 and self.angle.yaw !=0 :
         if True:
-            xc = (self.end_point[0] - self.start_point[0]) / 2 + self.start_point[0]
-            yc = (self.end_point[1] - self.start_point[1]) / 2 + self.start_point[1]
-            zc = (self.end_point[2] - self.start_point[2]) / 2 + self.start_point[2]
+            xc = (self.end_point.x - self.start_point.x) / 2 + self.start_point.x
+            yc = (self.end_point.y - self.start_point.y) / 2 + self.start_point.y
+            zc = (self.end_point.z - self.start_point.z) / 2 + self.start_point.z
             center_point = [xc, yc, zc]
         else:
             center_point = None
 
-        #     self.planPoints = self.calculate_plane_points(self.rollAngle, self.pitchAngle, self.yawAngle, self.length, self.width, center_point)
         self.planPoints = self.sensor.calculate_3d_points(center_point)
 
     def get_height(self):
         """Returns the maximum height (Z coordinate) of the part."""
-        return max(self.start_point[2], self.end_point[2])
+        return max(self.start_point.z, self.end_point.z)
 
     def get_radius(self):
         """Returns the horizontal distance (in the X-Y plane) of the part's end point from the origin."""
-        return math.sqrt(self.end_point[0]**2 + self.end_point[1]**2)
+        return math.sqrt(self.end_point.x**2 + self.end_point.y**2)
     
     def __calculate_plane_equation_from_angles(self, roll_deg, pitch_deg, yaw_deg, point_on_plane):
         """
@@ -580,12 +632,12 @@ class Excavator:
 
         # Now update the rest of the parts, which are affected by the turret's rotation
         current_parent_end_point = self.turret.end_point
-        current_parent_angle = self.turret.pitchAngle
+        current_parent_angle = self.turret.angle.pitch
 
         for part in [self.boom, self.jib, self.bucket]:
             part.update_kinematics(current_parent_end_point, current_parent_angle)
             current_parent_end_point = part.end_point
-            current_parent_angle += part.pitchAngle
+            current_parent_angle += part.angle.pitch
 
     def get_3d_representation(self):
         """
@@ -593,7 +645,10 @@ class Excavator:
         """
         representation = {}
         for part in self.parts:
-            representation[part.name] = {"points":[part.start_point, part.end_point], "plan": part.planPoints}
+            representation[part.name] = {
+                "points": [part.start_point.to_list(), part.end_point.to_list()],
+                "plan": part.planPoints
+            }
         return representation
 
     def get_height(self):
