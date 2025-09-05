@@ -22,6 +22,7 @@ class ComputeService(Microservice):
         self.status = "INITIALIZING"
         # Maps an input signal name (e.g., "can_data.PF_EngineSpeed") to a list of computation instances.
         self.active_computations = defaultdict(list)
+        self.doNotUseSignals = list()
 
         self.available_computations = {
             "RunningAverage": RunningAverage,
@@ -254,6 +255,9 @@ class ComputeService(Microservice):
         async def handler(msg):
             signal_name = msg.subject
 
+            if signal_name in self.doNotUseSignals :
+                return handler
+
             # --- Try parsing as JSON dictionary ---
             try:
                 data = json.loads(msg.data.decode())
@@ -282,6 +286,8 @@ class ComputeService(Microservice):
 
             # --- If all parsing attempts fail ---
             self.logger.warning(f"Message on '{signal_name}' is not in a recognized format: {msg.data!r}")
+            # Register the message in the "DoNotUse" message, and don't warn again...
+            self.doNotUseSignals.append(signal_name)
 
         return handler
 
