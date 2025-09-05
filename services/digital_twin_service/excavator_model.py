@@ -326,6 +326,16 @@ class Part:
     def get_radius(self):
         """Returns the horizontal distance (in the X-Y plane) of the part's end point from the origin."""
         return math.sqrt(self.end_point[0]**2 + self.end_point[1]**2)
+
+    def get_part_data(self):
+        """Returns a dictionary with the current state of the part."""
+        return {
+            "rollAngle": self.rollAngle,
+            "pitchAngle": self.pitchAngle,
+            "yawAngle": self.yawAngle,
+            "start_point": self.start_point,
+            "end_point": self.end_point,
+        }
     
     def __calculate_plane_equation_from_angles(self, roll_deg, pitch_deg, yaw_deg, point_on_plane):
         """

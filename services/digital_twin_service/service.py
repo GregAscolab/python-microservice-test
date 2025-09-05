@@ -20,6 +20,7 @@ class DigitalTwinService(Microservice):
         self.excavator = None
         self.db = None
         self.sensor_state = {}
+        self.last_part_states = {}
         # self.logger.setLevel(logging.DEBUG)
         # for handler in self.logger.handlers:
         #     handler.setLevel(logging.DEBUG)
@@ -49,6 +50,11 @@ class DigitalTwinService(Microservice):
                 self.logger.error(f"DBC file not found at {dbc_file}")
         else:
             self.logger.warning("No dbc_file configured for digital_twin_service.")
+
+        # Initialize last part states
+        self.excavator.update_from_sensors(self.sensor_state) # initial update
+        for part in self.excavator.parts:
+            self.last_part_states[part.name] = part.get_part_data()
 
         # Subscribe to all CAN data signals
         await self.messaging_client.subscribe("can.data.>", self._handle_can_data)
@@ -108,9 +114,32 @@ class DigitalTwinService(Microservice):
         while True:
             try:
                 if self.excavator:
-                    # Update model and get its data representation
+                    # Update the model with the latest sensor data
                     self.excavator.update_from_sensors(self.sensor_state)
+
+                    # Check for part state changes and publish them
+                    for part in self.excavator.parts:
+                        current_state = part.get_part_data()
+                        last_state = self.last_part_states.get(part.name, {})
+                        
+                        if current_state != last_state:
+                            self.logger.debug(f"State changed for part {part.name}")
+                            for key, value in current_state.items():
+                                if last_state.get(key) != value:
+                                    subject = f"digital_twin.data.excavator.{part.name}.{key}"
+                                    payload = json.dumps(value)
+                                    await self.messaging_client.publish(subject, payload.encode())
+                                    self.logger.debug(f"Published to {subject}: {payload}")
+                            
+                            self.last_part_states[part.name] = current_state
+
+                    # Publish the 3D representation
                     model_data = self.excavator.get_3d_representation()
+                    await self.messaging_client.publish(
+                        "digital_twin.data.3D",
+                        json.dumps(model_data).encode()
+                    )
+                    self.logger.debug(f"Published digital twin 3D data")
 
                     # Get a single timestamp for this entire update cycle
                     timestamp = datetime.now().timestamp()
@@ -118,7 +147,6 @@ class DigitalTwinService(Microservice):
                     # Recursively publish all data points
                     await self._publish_data_recursively("digital_twin.data", model_data, timestamp)
 
-                    self.logger.debug("Finished publishing digital twin data.")
 
                 await asyncio.sleep(update_interval)
             except asyncio.CancelledError:
