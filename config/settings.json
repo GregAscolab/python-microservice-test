@@ -185,14 +185,29 @@
         "ui_publish_interval": 1.0,
         "computations": [
             {
-                "source_signal": "can_data.PF_CHASSIS_PFAngY",
+                "source_signal": "can.data.PF_CHASSIS_PFAngY",
                 "computation_type": "RunningAverage",
                 "output_name": "ChassisYAvg"
             },
             {
-                "source_signal": "can_data.PF_BUCKET_PFAngX",
+                "source_signal": "can.data.PF_BUCKET_PFAngX",
                 "computation_type": "Differentiator",
                 "output_name": "BXAvg"
+            },
+            {
+                "source_signal": "can.data.A1_BOOM_HP_b",
+                "computation_type": "RunningAverage",
+                "output_name": "avghp"
+            },
+            {
+                "source_signal": "avghp",
+                "computation_type": "RunningAverage",
+                "output_name": "avg2Hp"
+            },
+            {
+                "source_signal": "digital_twin.data.excavator.boom.pitchAngle",
+                "computation_type": "RunningAverage",
+                "output_name": "avg"
             }
         ],
         "triggers": [
@@ -200,7 +215,7 @@
                 "name": "ChassisYHorizontal",
                 "conditions": [
                     {
-                        "name": "can_data.PF_CHASSIS_PFAngY",
+                        "name": "can.data.PF_CHASSIS_PFAngY",
                         "operator": "<=",
                         "value": 5
                     }
@@ -215,14 +230,14 @@
                         "subject": "compute.alert.ChassisYHorizontal.inactive"
                     }
                 },
-                "is_currently_active": true,
-                "last_event_timestamp": "2025-09-02T16:12:50.373363"
+                "is_currently_active": false,
+                "last_event_timestamp": null
             },
             {
                 "name": "BALTrigger",
                 "conditions": [
                     {
-                        "name": "can_data.PF_BAL_PFAngX",
+                        "name": "can.data.PF_BAL_PFAngX",
                         "operator": ">=",
                         "value": 10
                     }
@@ -238,25 +253,25 @@
                     }
                 },
                 "is_currently_active": false,
-                "last_event_timestamp": "2025-09-02T16:13:52.850665"
+                "last_event_timestamp": null
             },
             {
-                "name": "trigtest",
+                "name": "avgBoomPitchLimit",
                 "conditions": [
                     {
-                        "name": "can_data.PF_BOOM_AccY",
-                        "operator": "<",
-                        "value": 0.5
+                        "name": "avg",
+                        "operator": ">",
+                        "value": 5
                     }
                 ],
                 "action": {
                     "on_become_active": {
                         "type": "publish",
-                        "subject": "compute.alert.trigtest.active"
+                        "subject": "compute.alert.avgBoomPitchLimit.active"
                     },
                     "on_become_inactive": {
                         "type": "publish",
-                        "subject": "compute.alert.trigtest.inactive"
+                        "subject": "compute.alert.avgBoomPitchLimit.inactive"
                     }
                 },
                 "is_currently_active": false,
