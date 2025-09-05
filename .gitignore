@@ -2,6 +2,7 @@
 can_logs/
 app_logs/
 *.blf
+*.parquet
 
 # Python
 __pycache__/
