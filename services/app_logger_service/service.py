@@ -72,7 +72,7 @@ class AppLoggerService(Microservice):
         }
         await self.messaging_client.publish("app_logger.status", json.dumps(status).encode())
 
-    async def _handle_start(self):
+    async def _handle_start(self, hardness: str = "", testName: str = "", comments: str = ""):
         if self.is_running:
             self.logger.warning("Logger is already running.")
             return
@@ -87,8 +87,30 @@ class AppLoggerService(Microservice):
         self.log_data = {
             "startDate": self.start_date.isoformat(),
             "startPosition": None,
-            "canBusLogs": []
+            "canBusLogs": [],
+            "hardness": hardness,
+            "testName": testName,
+            "comments": comments,
+            "dbcFile": None
         }
+
+        # Get DBC file name from can_bus_service settings
+        try:
+            can_bus_settings_msg = await self.messaging_client.request(
+                "settings.get.can_bus_service",
+                b'',
+                timeout=5.0
+            )
+            can_bus_settings = json.loads(can_bus_settings_msg.data)
+            dbc_file_path = can_bus_settings.get("dbc_file")
+            if dbc_file_path:
+                self.log_data["dbcFile"] = os.path.basename(dbc_file_path)
+                self.logger.info(f"Using DBC file: {self.log_data['dbcFile']}")
+        except asyncio.TimeoutError:
+            self.logger.error("Request to settings_service for can_bus_service settings timed out.")
+        except Exception as e:
+            self.logger.error(f"Error getting can_bus_service settings: {e}", exc_info=True)
+
 
         # Get GPS position
         try:

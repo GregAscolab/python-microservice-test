@@ -35,7 +35,18 @@ async function initAppLoggerPage() {
 function onToggleRecording() {
     isRecording = !isRecording;
     const command = isRecording ? 'start' : 'stop';
-    ConnectionManager.publishJson('commands.app_logger_service', { command: command });
+
+    const payload = {
+        command: command
+    };
+
+    if (isRecording) {
+        payload.hardness = document.getElementById('hardness-input').value;
+        payload.testName = document.getElementById('testName-input').value;
+        payload.comments = document.getElementById('comments-input').value;
+    }
+
+    ConnectionManager.publishJson('commands.app_logger_service', payload);
 
     const button = document.getElementById('toggleRecording-app-logger');
     const spinner = document.getElementById('recorderSpin-app-logger');
