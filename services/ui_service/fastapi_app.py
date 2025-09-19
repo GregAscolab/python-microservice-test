@@ -22,12 +22,13 @@ from common.microservice import Microservice
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "frontend", "static")
 TEMPLATES_DIR = os.path.join(APP_DIR, "frontend", "templates")
+FAVICON_PATH = os.path.join(APP_DIR, "frontend", "static", "images", "favicon.ico")
 # Use an absolute path for the main log directory as well
 CONFIG_DIR = os.path.abspath("config")
 LOGS_DIR = os.path.abspath("logs")
 CAN_LOGS_DIR = os.path.abspath("can_logs")
 APP_LOGS_DIR = os.path.abspath("app_logs")
-FAVICON_PATH = os.path.join(APP_DIR, "frontend", "static", "images", "favicon.ico")
+CERT_PATH = os.path.abspath(os.path.join(".","..","..","cert", "localhost.crt"))
 
 # We use an APIRouter now, which will be included by the main app in service.py
 router = APIRouter()
@@ -40,6 +41,12 @@ templates.env.filters["b64encode"] = b64encode
 # --- Helper function to get the parent service ---
 def get_service(request: Request) -> Microservice:
     return request.app.state.service
+
+@router.get('/cert', include_in_schema=False)
+async def certificat(request : Request):
+    service = get_service(request)
+    service.logger.error(f"CERT_PATH={CERT_PATH}")
+    return FileResponse(CERT_PATH)
 
 @router.get('/favicon.ico', include_in_schema=False)
 async def favicon():

@@ -1,6 +1,9 @@
 # App specific
 can_logs/
 app_logs/
+s3_downloads/
+logs/
+jules-scratch/
 *.blf
 *.parquet
 
