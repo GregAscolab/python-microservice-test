@@ -1,0 +1,9 @@
+[Match]
+Name=canfd1
+
+[CAN]
+BitRate=500K
+#FDMode=yes
+#DataBitRate=2M
+RestartSec=100ms
+#ListenOnly=yes

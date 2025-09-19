@@ -1,0 +1,19 @@
+[Unit]
+Description = ascolab-iot, Ascolab IoT application service
+
+Wants = pmsrv.service redis-server.service nats-server.service
+After = pmsrv-ready.service redis-server.service nats-server.service
+
+[Service]
+User=root
+Type=forking
+ExecStartPre=/bin/sleep 1
+ExecStart   = /data/ascolab/run_env_python/app/startApp.sh start
+ExecStop    = /data/ascolab/run_env_python/app/startApp.sh stop
+
+Restart=always
+RestartSec=10
+KillMode=mixed
+
+[Install]
+WantedBy    = multi-user.target
