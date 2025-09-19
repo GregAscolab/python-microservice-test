@@ -59,8 +59,8 @@ class UiService(Microservice):
             # --- HTTPS/SSL Configuration ---
             # To enable HTTPS, generate certs with `mkcert localhost 127.0.0.1 ::1`
             # and uncomment the two lines below.
-            ssl_keyfile=os.path.abspath(os.path.join(".","..","..","cert", "localhost.key")),
-            ssl_certfile=os.path.abspath(os.path.join(".","..","..","cert", "localhost.crt")),
+            ssl_keyfile=os.path.abspath(os.path.join("/","device","ascolab","cert","localhost.key")),
+            ssl_certfile=os.path.abspath(os.path.join("/","device","ascolab","cert","localhost.crt")),
         )
         self.logger.info(f"Web server config= {config.host}:{config.port}, key={config.ssl_keyfile}, cert={config.ssl_certfile}")
         self.server = uvicorn.Server(config)
