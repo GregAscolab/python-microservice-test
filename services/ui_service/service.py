@@ -62,10 +62,11 @@ class UiService(Microservice):
             ssl_keyfile=os.path.abspath(os.path.join(".","..","..","cert", "localhost.key")),
             ssl_certfile=os.path.abspath(os.path.join(".","..","..","cert", "localhost.crt")),
         )
+        self.logger.info(f"Web server config= {config.host}:{config.port}, key={config.ssl_keyfile}, cert={config.ssl_certfile}")
         self.server = uvicorn.Server(config)
 
         self.fastapi_task = asyncio.create_task(self.server.serve())
-        self.logger.info(f"FastAPI server started on http://{config.host}:{config.port}")
+        self.logger.info(f"FastAPI server started on https://{config.host}:{config.port}")
 
     async def _stop_logic(self):
         self.logger.info("Stopping FastAPI server...")
