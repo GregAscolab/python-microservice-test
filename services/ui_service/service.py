@@ -54,13 +54,13 @@ class UiService(Microservice):
         config = uvicorn.Config(
             app=self.app,
             host=self.settings.get("host", "0.0.0.0"),
-            port=self.settings.get("port", 8000),
+            port=self.settings.get("port", 8443),
             log_config=None,
             # --- HTTPS/SSL Configuration ---
             # To enable HTTPS, generate certs with `mkcert localhost 127.0.0.1 ::1`
             # and uncomment the two lines below.
-            # ssl_keyfile="./localhost+2-key.pem",
-            # ssl_certfile="./localhost+2.pem",
+            ssl_keyfile=os.path.abspath(os.path.join(".","..","..","cert", "localhost.key")),
+            ssl_certfile=os.path.abspath(os.path.join(".","..","..","cert", "localhost.crt")),
         )
         self.server = uvicorn.Server(config)
 
