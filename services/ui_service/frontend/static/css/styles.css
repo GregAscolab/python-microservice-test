@@ -800,14 +800,14 @@ body.modal-open {
 
 /* --- Responsive Media Query --- */
 @media (max-width: 1200px) {
-    .compute-main-container {
+    .compute-main-container, .log_container {
         flex-direction: row; /* Keep as row */
         position: relative;
     }
-    .compute-content-area {
+    .compute-content-area, .loader-container {
         flex-grow: 1; /* Allow content to take full width */
     }
-    .config-panel {
+    .config-panel, #files-panel {
         position: absolute; /* Overlay on top of content */
         right: -100%; /* Hide off-screen */
         top: 0;
@@ -819,7 +819,7 @@ body.modal-open {
         box-shadow: -2px 0 5px rgba(0,0,0,0.1);
         transition: right 0.3s ease;
     }
-    .config-panel.open {
+    .config-panel.open, #files-panel.open {
         right: 0; /* Slide in */
     }
 }

@@ -149,13 +149,16 @@
             </div>
 
             <div id="page-logger" class="page-content" style="display: none;">
-                <h2>CAN Logger</h2>
+                <div class="logger-header">
+                    <h2>CAN Logger</h2>
+                    <button id="btn-toggle-files" class="btn-toggle-config">☰ Files</button>
+                </div>
                 <div class="controls">
                    <button id="toggleRecording-logger">Start Recording</button>
                    <div id="recorderSpin-logger" class="recorderSpin" style="display: none;"></div>
                 </div>
                 <div class="log_container">
-                    <div id="files-panel">
+                    <div id="files-panel" class="config-panel">
                         <h3 id="logger-current-path">Contenu du dossier : /</h3>
                         <!-- Extension filter can be added back later if needed -->
                         <table id="filenameTable">

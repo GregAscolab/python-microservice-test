@@ -14,6 +14,8 @@ function initLoggerPage() {
         modalText: document.getElementById('generic-modal-text'),
         modalCancelBtn: document.getElementById('generic-modal-cancel-btn'),
         modalConfirmBtn: document.getElementById('generic-modal-confirm-btn'),
+        toggleFilesBtn: document.getElementById('btn-toggle-files'),
+        filesPanel: document.getElementById('files-panel'),
     };
 
     // --- NATS Connections ---
@@ -25,15 +27,19 @@ function initLoggerPage() {
 
     // --- DOM Elements & Listeners ---
     const toggleRecordingButton = document.getElementById('toggleRecording-logger');
-    const fileTableBody = document.querySelector('#filenameTable tbody');
-    const fileTableHeader = document.querySelector('#filenameTable thead tr');
+    const fileTable = document.getElementById('filenameTable');
+    fileTable.classList.add('compute-table'); // Add consistent styling
+    const fileTableBody = fileTable.querySelector('tbody');
+    const fileTableHeader = fileTable.querySelector('thead tr');
 
     fileTableHeader.innerHTML = '<th>Nom</th><th>Taille</th><th>Status</th><th>Actions</th>';
 
     toggleRecordingButton.addEventListener('click', onToggleRecording);
     fileTableBody.addEventListener('click', onFileTableClick);
     domElements.modalCancelBtn.addEventListener('click', () => domElements.modal.style.display = 'none');
-
+    domElements.toggleFilesBtn.addEventListener('click', () => {
+        domElements.filesPanel.classList.toggle('open');
+    });
 
     // --- Initial Load ---
     fetchAndDisplayFiles("");
@@ -65,8 +71,8 @@ function onFileTableClick(e) {
         const status = target.closest('tr').dataset.status;
         triggerConversion(file, path, status);
     } else if (target.classList.contains('view-plot-btn')) {
-        const convertedPath = target.dataset.convertedPath;
-        downloadAndDisplayPlot(convertedPath);
+        const b64convertedPath = target.dataset.b64convertedPath;
+        downloadAndDisplayPlot(b64convertedPath);
     }
 }
 
@@ -144,7 +150,7 @@ async function fetchAndDisplayFiles(path) {
                         <a href="/api/download/logger/${b64FullPath}" class="download-btn" title="Download BLF">⬇️ BLF</a>
                         ${item.status === 'converted' ? `
                             <a href="/api/download-converted/${b64ConvertedPath}" class="download-btn" title="Download JSON">⬇️ JSON</a>
-                            <button class="view-plot-btn" data-converted-path="${convertedFullPath}">View Plot</button>
+                            <button class="view-plot-btn" data-b64converted-path="${b64ConvertedPath}">View Plot</button>
                         ` : ''}
                     </td>
                 </tr>`;
@@ -242,30 +248,31 @@ async function convertFile(file, folder, force = false) {
     }
 }
 
-async function downloadAndDisplayPlot(convertedPath) {
+async function downloadAndDisplayPlot(b64convertedPath) {
     const plotlyPanel = document.getElementById('plotly-panel');
     const loader = document.getElementById('loader');
     const logStatus = document.getElementById('log-status');
+    const decodedFilename = atob(b64convertedPath);
 
     plotlyPanel.style.display = "none";
     plotlyPanel.innerHTML = '';
     loader.style.display = "flex";
-    logStatus.innerHTML = `Loading ${convertedPath}...`;
+    logStatus.innerHTML = `Loading ${decodedFilename}...`;
 
     try {
-        const response = await fetch(`/api/converted-files/${convertedPath}`);
+        const response = await fetch(`/api/converted-files/${b64convertedPath}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
         loader.style.display = "none";
-        logStatus.innerHTML = convertedPath;
+        logStatus.innerHTML = decodedFilename;
         displayPlot(data);
         plotlyPanel.style.display = "flex";
     } catch (error) {
         console.error("Error fetching or displaying plot:", error);
         loader.style.display = "none";
-        logStatus.innerHTML = `Error loading ${convertedPath}.`;
+        logStatus.innerHTML = `Error loading ${decodedFilename}.`;
     }
 }
 

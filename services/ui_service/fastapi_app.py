@@ -117,9 +117,10 @@ async def list_files(request: Request, service_name:str, path: str = ""):
         service.logger.error(f"Error listing files for service '{service_name}' path '{path}': {e}")
         return HTMLResponse(content=json.dumps({"error": str(e)}), status_code=500, media_type="application/json")
 
-@router.get("/api/converted-files/{file_path:path}")
-async def get_converted_file(file_path: str):
+@router.get("/api/converted-files/{file_path_b64:path}")
+async def get_converted_file(file_path_b64: str):
     try:
+        file_path = base64.b64decode(file_path_b64.encode("utf-8")).decode("utf-8")
         safe_path = os.path.normpath(os.path.join(CONVERTED_LOGS_DIR, file_path))
         if not safe_path.startswith(CONVERTED_LOGS_DIR):
             return JSONResponse(content={"error": "Forbidden"}, status_code=403)
