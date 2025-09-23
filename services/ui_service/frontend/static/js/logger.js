@@ -3,9 +3,18 @@ import ConnectionManager from './connection_manager.js';
 let convertSub;
 let isRecording = false;
 let currentPath = "";
+let domElements = {};
 
 function initLoggerPage() {
     console.log("Initializing Logger page...");
+
+    domElements = {
+        modal: document.getElementById('generic-confirm-modal'),
+        modalTitle: document.getElementById('generic-modal-title'),
+        modalText: document.getElementById('generic-modal-text'),
+        modalCancelBtn: document.getElementById('generic-modal-cancel-btn'),
+        modalConfirmBtn: document.getElementById('generic-modal-confirm-btn'),
+    };
 
     // --- NATS Connections ---
     ConnectionManager.subscribe('conversion.results', (m) => {
@@ -19,10 +28,12 @@ function initLoggerPage() {
     const fileTableBody = document.querySelector('#filenameTable tbody');
     const fileTableHeader = document.querySelector('#filenameTable thead tr');
 
-    fileTableHeader.innerHTML = '<th>Nom</th><th>Taille</th><th>Status</th><th>Download</th>';
+    fileTableHeader.innerHTML = '<th>Nom</th><th>Taille</th><th>Status</th><th>Actions</th>';
 
     toggleRecordingButton.addEventListener('click', onToggleRecording);
     fileTableBody.addEventListener('click', onFileTableClick);
+    domElements.modalCancelBtn.addEventListener('click', () => domElements.modal.style.display = 'none');
+
 
     // --- Initial Load ---
     fetchAndDisplayFiles("");
@@ -53,40 +64,44 @@ function onFileTableClick(e) {
         const file = target.dataset.file;
         const status = target.closest('tr').dataset.status;
         triggerConversion(file, path, status);
-    } else if (target.classList.contains('status-icon')) {
-        const status = target.dataset.status;
-        if (status === 'converted') {
-            const path = target.dataset.path;
-            const filename = target.dataset.filename;
-            downloadAndDisplayPlot(filename, path);
-        }
+    } else if (target.classList.contains('view-plot-btn')) {
+        const convertedPath = target.dataset.convertedPath;
+        downloadAndDisplayPlot(convertedPath);
     }
 }
 
 function onConvertMessage(m) {
     const data = ConnectionManager.jsonCodec.decode(m.data);
     const filename = data.filename;
-    const statusCell = document.querySelector(`tr[data-filename="${filename}"] .status-cell`);
 
-    if (!statusCell) return;
+    // We need to refetch to get the updated actions (like download button)
+    if (data.status === "success") {
+        fetchAndDisplayFiles(currentPath);
+        return;
+    }
+
+    const row = document.querySelector(`tr[data-filename="${filename}"]`);
+    if (!row) return;
+    const statusCell = row.querySelector('.status-cell');
 
     switch (data.status) {
         case "started":
             statusCell.innerHTML = getStatusIcon("converting", filename);
             break;
-        case "success":
-            statusCell.innerHTML = getStatusIcon("converted", filename, currentPath);
-            break;
         case "error":
             statusCell.innerHTML = getStatusIcon("error", filename);
-            alert(`Error converting ${filename}: ${data.message}`);
+            showConfirmationModal("Conversion Error", `Error converting ${filename}: ${data.message}`, () => {}, true);
             break;
         case "already_converted":
+             // This is now handled by the UI before calling convert, but we can have a fallback
+            row.dataset.status = "converted";
             statusCell.innerHTML = getStatusIcon("converted", filename, currentPath);
-            alert(`${filename} is already converted. Click on the file name to force a new conversion.`);
             break;
         case "busy":
-            alert("Converter service is busy. Please try again later.");
+            showConfirmationModal("Converter Busy", "Converter service is busy. Please try again later.", () => {}, true);
+            // Revert status on the UI
+            const originalStatus = row.dataset.status;
+            statusCell.innerHTML = getStatusIcon(originalStatus, filename, currentPath);
             break;
     }
 }
@@ -114,12 +129,24 @@ async function fetchAndDisplayFiles(path) {
             if (item.type === 'dir') {
                 fileTableBody.insertAdjacentHTML('beforeend', `<tr><td class="dir-link" data-path="${path ? path + '/' : ''}${item.name}">${item.name}/</td><td></td><td></td><td></td></tr>`);
             } else {
-                const b64path = btoa((path ? path + '/' : '') + item.name);
+                const fullPath = (path ? path + '/' : '') + item.name;
+                const b64FullPath = btoa(fullPath);
+
+                const jsonFilename = item.name.replace('.blf', '.json');
+                const convertedFullPath = path ? `${path}/${jsonFilename}` : jsonFilename;
+                const b64ConvertedPath = btoa(convertedFullPath);
+
                 const row = `<tr class="file-row" data-filename="${item.name}" data-status="${item.status}" data-ext="${item.name.split('.').pop()}">
                     <td class="file-link" data-path="${path}" data-file="${item.name}">${item.name}</td>
                     <td>${formatFileSize(item.size)}</td>
-                    <td class="status-cell">${getStatusIcon(item.status, item.name, path)}</td>
-                    <td><a href="/api/download/logger/${b64path}" class="download-btn">⬇️</a></td>
+                    <td class="status-cell">${getStatusIcon(item.status)}</td>
+                    <td class="actions-cell">
+                        <a href="/api/download/logger/${b64FullPath}" class="download-btn" title="Download BLF">⬇️ BLF</a>
+                        ${item.status === 'converted' ? `
+                            <a href="/api/download-converted/${b64ConvertedPath}" class="download-btn" title="Download JSON">⬇️ JSON</a>
+                            <button class="view-plot-btn" data-converted-path="${convertedFullPath}">View Plot</button>
+                        ` : ''}
+                    </td>
                 </tr>`;
                 fileTableBody.insertAdjacentHTML('beforeend', row);
             }
@@ -130,14 +157,12 @@ async function fetchAndDisplayFiles(path) {
     }
 }
 
-function getStatusIcon(status, filename, path) {
-    const jsonFilename = filename.replace('.blf', '.json');
-    const fullPath = path ? `${path}/${jsonFilename}` : jsonFilename;
+function getStatusIcon(status) {
     switch (status) {
         case 'not_converted':
             return '<span>⚪ Not converted</span>';
         case 'converted':
-            return `<span class="status-icon" data-status="converted" data-filename="${fullPath}" data-path="${path}" style="cursor:pointer;">🟢 Converted</span>`;
+            return `<span>🟢 Converted</span>`;
         case 'converting':
             return '<span><div class="recorderSpin" style="display: flex;"></div> Converting...</span>';
         case 'error':
@@ -157,17 +182,44 @@ function formatFileSize(bytes) {
 
 function triggerConversion(file, folder, status) {
     if (status === 'converted') {
-        if (confirm(`File ${file} is already converted. Do you want to start a new conversion?`)) {
-            convertFile(file, folder, true);
-        }
+        showConfirmationModal(
+            'Re-convert File?',
+            `File ${file} is already converted. Do you want to start a new conversion? This will overwrite the existing converted file.`,
+            () => convertFile(file, folder, true)
+        );
     } else {
         convertFile(file, folder, false);
     }
 }
 
+function showConfirmationModal(title, text, onConfirm, isAlert = false) {
+    domElements.modalTitle.textContent = title;
+    domElements.modalText.textContent = text;
+
+    if (isAlert) {
+        domElements.modalConfirmBtn.style.display = 'none';
+        domElements.modalCancelBtn.textContent = 'Close';
+    } else {
+        domElements.modalConfirmBtn.style.display = 'inline-block';
+        domElements.modalCancelBtn.textContent = 'Cancel';
+
+        // Clone and replace the confirm button to remove old event listeners
+        const newConfirmBtn = domElements.modalConfirmBtn.cloneNode(true);
+        domElements.modalConfirmBtn.parentNode.replaceChild(newConfirmBtn, domElements.modalConfirmBtn);
+        domElements.modalConfirmBtn = newConfirmBtn;
+
+        domElements.modalConfirmBtn.onclick = () => {
+            onConfirm();
+            domElements.modal.style.display = 'none';
+        };
+    }
+
+    domElements.modal.style.display = 'flex';
+}
+
+
 async function convertFile(file, folder, force = false) {
     const plotlyPanel = document.getElementById('plotly-panel');
-    const loader = document.getElementById('loader');
     plotlyPanel.style.display = "none";
     plotlyPanel.innerHTML = '';
 
@@ -190,7 +242,7 @@ async function convertFile(file, folder, force = false) {
     }
 }
 
-async function downloadAndDisplayPlot(filename, path) {
+async function downloadAndDisplayPlot(convertedPath) {
     const plotlyPanel = document.getElementById('plotly-panel');
     const loader = document.getElementById('loader');
     const logStatus = document.getElementById('log-status');
@@ -198,22 +250,22 @@ async function downloadAndDisplayPlot(filename, path) {
     plotlyPanel.style.display = "none";
     plotlyPanel.innerHTML = '';
     loader.style.display = "flex";
-    logStatus.innerHTML = `Loading ${filename}...`;
+    logStatus.innerHTML = `Loading ${convertedPath}...`;
 
     try {
-        const response = await fetch(`/api/converted-files/${filename}`);
+        const response = await fetch(`/api/converted-files/${convertedPath}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
         loader.style.display = "none";
-        logStatus.innerHTML = filename;
+        logStatus.innerHTML = convertedPath;
         displayPlot(data);
         plotlyPanel.style.display = "flex";
     } catch (error) {
         console.error("Error fetching or displaying plot:", error);
         loader.style.display = "none";
-        logStatus.innerHTML = `Error loading ${filename}.`;
+        logStatus.innerHTML = `Error loading ${convertedPath}.`;
     }
 }
 

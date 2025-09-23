@@ -202,6 +202,21 @@ async def download_file(service_name:str, file_path_b64: str):
         return FileResponse(full_path, filename=os.path.basename(full_path))
     return HTMLResponse(f"File not found: {full_path}", status_code=404)
 
+@router.get("/api/download-converted/{file_path_b64:path}")
+async def download_converted_file(file_path_b64: str):
+    try:
+        file_path = base64.b64decode(file_path_b64.encode("utf-8")).decode("utf-8")
+        safe_path = os.path.normpath(os.path.join(CONVERTED_LOGS_DIR, file_path))
+        if not safe_path.startswith(CONVERTED_LOGS_DIR):
+            return JSONResponse(content={"error": "Forbidden"}, status_code=403)
+
+        if os.path.exists(safe_path):
+            return FileResponse(safe_path, filename=os.path.basename(safe_path))
+
+        return JSONResponse(content={"error": "File not found"}, status_code=404)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
 class FileToConvert(BaseModel):
     name: str
     folder: str
