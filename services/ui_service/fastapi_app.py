@@ -76,13 +76,10 @@ def getServiceNameFolder(service_name:str) -> str|None:
 async def list_files_logger(request: Request, path: str = ""):
     service = get_service(request)
     try:
-        command = {
-            "command": "get_conversion_status",
-            "path": path
-        }
+        payload = { "path": path }
         response = await service.messaging_client.request(
-            "commands.convert_service",
-            json.dumps(command).encode(),
+            "commands.convert_service.get_conversion_status",
+            json.dumps(payload).encode(),
             timeout=5
         )
         data = json.loads(response.data.decode())

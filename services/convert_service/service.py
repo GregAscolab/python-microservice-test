@@ -5,6 +5,7 @@ import json
 import cantools.database
 import can
 from datetime import datetime, timezone
+from nats.aio.msg import Msg
 
 # Add the project root to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -32,13 +33,34 @@ class ConvertService(Microservice):
             return
 
         self.command_handler.register_command("blfToTimeseries", self.blf_to_timeseries)
-        self.command_handler.register_command("get_conversion_status", self.get_conversion_status)
 
         await self._subscribe_to_commands()
+
+        # Specific subscription for request-reply pattern
+        await self.messaging_client.subscribe(
+            "commands.convert_service.get_conversion_status",
+            cb=self._handle_get_conversion_status_request
+        )
+
         self.logger.info("Converter service started and subscribed to commands.")
 
     async def _stop_logic(self):
         pass
+
+    async def _handle_get_conversion_status_request(self, msg: Msg):
+        """Handles request for conversion status and replies."""
+        try:
+            data = json.loads(msg.data.decode())
+            path = data.get("path", "")
+            self.logger.info(f"Received request for conversion status for path: {path}")
+
+            status_data = await self.get_conversion_status(path)
+
+            if msg.reply:
+                await self.messaging_client.publish(msg.reply, json.dumps(status_data).encode())
+                self.logger.info(f"Replied to {msg.reply} with conversion status.")
+        except Exception as e:
+            self.logger.error(f"Error handling get_conversion_status request: {e}", exc_info=True)
 
     async def get_conversion_status(self, path=""):
         """
