@@ -17,6 +17,9 @@ function initLoggerPage() {
     // --- DOM Elements & Listeners ---
     const toggleRecordingButton = document.getElementById('toggleRecording-logger');
     const fileTableBody = document.querySelector('#filenameTable tbody');
+    const fileTableHeader = document.querySelector('#filenameTable thead tr');
+
+    fileTableHeader.innerHTML = '<th>Nom</th><th>Taille</th><th>Status</th><th>Download</th>';
 
     toggleRecordingButton.addEventListener('click', onToggleRecording);
     fileTableBody.addEventListener('click', onFileTableClick);
@@ -42,39 +45,49 @@ function onToggleRecording() {
 }
 
 function onFileTableClick(e) {
-    if (e.target.classList.contains('dir-link')) {
-        const path = e.target.dataset.path;
-        fetchAndDisplayFiles(path);
-    }
-    if (e.target.classList.contains('file-link')) {
-        const path = e.target.dataset.path;
-        const file = e.target.dataset.file;
-        openFile(file, path);
+    const target = e.target;
+    if (target.classList.contains('dir-link')) {
+        fetchAndDisplayFiles(target.dataset.path);
+    } else if (target.classList.contains('file-link')) {
+        const path = target.dataset.path;
+        const file = target.dataset.file;
+        const status = target.closest('tr').dataset.status;
+        triggerConversion(file, path, status);
+    } else if (target.classList.contains('status-icon')) {
+        const status = target.dataset.status;
+        if (status === 'converted') {
+            const path = target.dataset.path;
+            const filename = target.dataset.filename;
+            downloadAndDisplayPlot(filename, path);
+        }
     }
 }
 
 function onConvertMessage(m) {
     const data = ConnectionManager.jsonCodec.decode(m.data);
-    const loader = document.getElementById('loader');
-    const plotlyPanel = document.getElementById('plotly-panel');
-    const logStatus = document.getElementById('log-status');
+    const filename = data.filename;
+    const statusCell = document.querySelector(`tr[data-filename="${filename}"] .status-cell`);
 
-    if (data.status === "started") {
-        loader.style.display = "flex";
-        plotlyPanel.style.display = "none";
-        logStatus.innerHTML = data.filename + ' : ' + data.status;
-    } else if (data.status === "success") {
-        loader.style.display = "none";
-        if (Object.keys(data.data).length > 0) {
-            logStatus.innerHTML = data.filename;
-            displayPlot(data.data);
-            plotlyPanel.style.display = "flex";
-        } else {
-            logStatus.innerHTML = "NO DATA in " + data.filename;
-        }
-    } else if (data.status === "error") {
-        loader.style.display = "none";
-        logStatus.innerHTML = data.filename + ' : ' + data.status;
+    if (!statusCell) return;
+
+    switch (data.status) {
+        case "started":
+            statusCell.innerHTML = getStatusIcon("converting", filename);
+            break;
+        case "success":
+            statusCell.innerHTML = getStatusIcon("converted", filename, currentPath);
+            break;
+        case "error":
+            statusCell.innerHTML = getStatusIcon("error", filename);
+            alert(`Error converting ${filename}: ${data.message}`);
+            break;
+        case "already_converted":
+            statusCell.innerHTML = getStatusIcon("converted", filename, currentPath);
+            alert(`${filename} is already converted. Click on the file name to force a new conversion.`);
+            break;
+        case "busy":
+            alert("Converter service is busy. Please try again later.");
+            break;
     }
 }
 
@@ -85,7 +98,7 @@ async function fetchAndDisplayFiles(path) {
     const fileTableBody = document.querySelector('#filenameTable tbody');
 
     currentPathHeader.textContent = `Contenu du dossier : /${path}`;
-    fileTableBody.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
+    fileTableBody.innerHTML = `<tr><td colspan="4">Loading...</td></tr>`;
 
     try {
         const response = await fetch(`/api/files/logger/${path}`);
@@ -94,20 +107,43 @@ async function fetchAndDisplayFiles(path) {
 
         if (path) {
             const parentPath = path.substring(0, path.lastIndexOf('/'));
-            fileTableBody.insertAdjacentHTML('beforeend', `<tr><td class="dir-link" data-path="${parentPath}">..</td><td></td><td></td></tr>`);
+            fileTableBody.insertAdjacentHTML('beforeend', `<tr><td class="dir-link" data-path="${parentPath}">..</td><td></td><td></td><td></td></tr>`);
         }
 
         data.contents.forEach(item => {
             if (item.type === 'dir') {
-                fileTableBody.insertAdjacentHTML('beforeend', `<tr><td class="dir-link" data-path="${path ? path + '/' : ''}${item.name}">${item.name}/</td><td></td><td></td></tr>`);
+                fileTableBody.insertAdjacentHTML('beforeend', `<tr><td class="dir-link" data-path="${path ? path + '/' : ''}${item.name}">${item.name}/</td><td></td><td></td><td></td></tr>`);
             } else {
                 const b64path = btoa((path ? path + '/' : '') + item.name);
-                fileTableBody.insertAdjacentHTML('beforeend', `<tr class="file-row" data-ext="${item.name.split('.').pop()}"><td class="file-link" data-path="${path}" data-file="${item.name}">${item.name}</td><td>${formatFileSize(item.size)}</td><td><a href="/api/download/logger/${b64path}" class="download-btn">⬇️</a></td></tr>`);
+                const row = `<tr class="file-row" data-filename="${item.name}" data-status="${item.status}" data-ext="${item.name.split('.').pop()}">
+                    <td class="file-link" data-path="${path}" data-file="${item.name}">${item.name}</td>
+                    <td>${formatFileSize(item.size)}</td>
+                    <td class="status-cell">${getStatusIcon(item.status, item.name, path)}</td>
+                    <td><a href="/api/download/logger/${b64path}" class="download-btn">⬇️</a></td>
+                </tr>`;
+                fileTableBody.insertAdjacentHTML('beforeend', row);
             }
         });
     } catch (error) {
         console.error("Error fetching file list:", error);
-        fileTableBody.innerHTML = `<tr><td colspan="3">Error fetching file list.</td></tr>`;
+        fileTableBody.innerHTML = `<tr><td colspan="4">Error fetching file list.</td></tr>`;
+    }
+}
+
+function getStatusIcon(status, filename, path) {
+    const jsonFilename = filename.replace('.blf', '.json');
+    const fullPath = path ? `${path}/${jsonFilename}` : jsonFilename;
+    switch (status) {
+        case 'not_converted':
+            return '<span>⚪ Not converted</span>';
+        case 'converted':
+            return `<span class="status-icon" data-status="converted" data-filename="${fullPath}" data-path="${path}" style="cursor:pointer;">🟢 Converted</span>`;
+        case 'converting':
+            return '<span><div class="recorderSpin" style="display: flex;"></div> Converting...</span>';
+        case 'error':
+            return '<span>🔴 Error</span>';
+        default:
+            return '<span>❓ Unknown</span>';
     }
 }
 
@@ -119,26 +155,65 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-async function openFile(file, folder) {
+function triggerConversion(file, folder, status) {
+    if (status === 'converted') {
+        if (confirm(`File ${file} is already converted. Do you want to start a new conversion?`)) {
+            convertFile(file, folder, true);
+        }
+    } else {
+        convertFile(file, folder, false);
+    }
+}
+
+async function convertFile(file, folder, force = false) {
     const plotlyPanel = document.getElementById('plotly-panel');
     const loader = document.getElementById('loader');
     plotlyPanel.style.display = "none";
     plotlyPanel.innerHTML = '';
-    loader.style.display = "flex";
+
+    const statusCell = document.querySelector(`tr[data-filename="${file}"] .status-cell`);
+    if (statusCell) {
+        statusCell.innerHTML = getStatusIcon('converting', file);
+    }
 
     try {
-        const response = await fetch("/api/convert", {
+        await fetch("/api/convert", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: file, folder: folder }),
+            body: JSON.stringify({ name: file, folder: folder, force: force }),
         });
-        const result = await response.json();
-        if (result.status !== "queued") {
-            loader.style.display = "none";
-        }
     } catch (error) {
         console.error("Error calling /api/convert endpoint:", error);
+        if (statusCell) {
+            statusCell.innerHTML = getStatusIcon('error', file);
+        }
+    }
+}
+
+async function downloadAndDisplayPlot(filename, path) {
+    const plotlyPanel = document.getElementById('plotly-panel');
+    const loader = document.getElementById('loader');
+    const logStatus = document.getElementById('log-status');
+
+    plotlyPanel.style.display = "none";
+    plotlyPanel.innerHTML = '';
+    loader.style.display = "flex";
+    logStatus.innerHTML = `Loading ${filename}...`;
+
+    try {
+        const response = await fetch(`/api/converted-files/${filename}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
         loader.style.display = "none";
+        logStatus.innerHTML = filename;
+        displayPlot(data);
+        plotlyPanel.style.display = "flex";
+    } catch (error) {
+        console.error("Error fetching or displaying plot:", error);
+        loader.style.display = "none";
+        logStatus.innerHTML = `Error loading ${filename}.`;
     }
 }
 
