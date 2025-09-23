@@ -18,7 +18,8 @@ const ConnectionManager = {
 
         const connectToNats = async () => {
             try {
-                const wsUrl = `ws://${window.location.hostname}:4223`;
+                // const wsUrl = `ws://${window.location.hostname}:4223`;
+                const wsUrl = `wss://${window.location.hostname}:4443`;
                 console.log(`Attempting to connect to NATS at ${wsUrl}...`);
 
                 const nc = await connect({

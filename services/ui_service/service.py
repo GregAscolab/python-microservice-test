@@ -54,18 +54,19 @@ class UiService(Microservice):
         config = uvicorn.Config(
             app=self.app,
             host=self.settings.get("host", "0.0.0.0"),
-            port=self.settings.get("port", 8000),
+            port=self.settings.get("port", 8443),
             log_config=None,
             # --- HTTPS/SSL Configuration ---
             # To enable HTTPS, generate certs with `mkcert localhost 127.0.0.1 ::1`
             # and uncomment the two lines below.
-            # ssl_keyfile="./localhost+2-key.pem",
-            # ssl_certfile="./localhost+2.pem",
+            ssl_keyfile=os.path.abspath(os.path.join("/","device","ascolab","cert","localhost.key")),
+            ssl_certfile=os.path.abspath(os.path.join("/","device","ascolab","cert","localhost.crt")),
         )
+        self.logger.info(f"Web server config= {config.host}:{config.port}, key={config.ssl_keyfile}, cert={config.ssl_certfile}")
         self.server = uvicorn.Server(config)
 
         self.fastapi_task = asyncio.create_task(self.server.serve())
-        self.logger.info(f"FastAPI server started on http://{config.host}:{config.port}")
+        self.logger.info(f"FastAPI server started on https://{config.host}:{config.port}")
 
     async def _stop_logic(self):
         self.logger.info("Stopping FastAPI server...")
