@@ -162,7 +162,7 @@ button:hover {
     flex-direction: column;
 }
 
-#dashboard-container, .gps-row, .row-container, .log_container {
+#dashboard-container, .gps-row, .row-container {
     display: flex;
     flex-direction: row;
     flex-grow: 1; /* Allow these containers to grow */
@@ -170,7 +170,7 @@ button:hover {
     min-height: 0; /* Fix for flexbox overflow issue in some browsers */
 }
 
-#dashboard-map, #gps-map-container, #gps-skyview-container, #gps-data-container, #files-panel, .loader-container, #plotly-panel {
+#dashboard-map, #gps-map-container, #gps-skyview-container, #gps-data-container, #plotly-panel {
     flex: 1 0 0;
     display: flex;
     flex-direction: column;
@@ -603,17 +603,20 @@ body.modal-open {
     border: 1px solid #dee2e6;
     border-radius: 8px;
     padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .left-panel {
     flex-basis: 400px;
-    transition: margin-left 0.3s ease, min-width 0.3s ease;
+    transition: margin-left 0.3s ease, min-width 0.3s ease, flex-basis 0.3s ease;
     margin-left: 0;
 }
 
 .right-panel {
     flex-basis: 400px;
-    transition: margin-right 0.3s ease, min-width 0.3s ease;
+    transition: margin-right 0.3s ease, min-width 0.3s ease, flex-basis 0.3s ease;
     margin-right: 0;
 }
 
@@ -621,12 +624,16 @@ body.modal-open {
     margin-left: -420px; /* Width + gap */
     min-width: 0;
     flex-basis: 0;
+    padding: 0;
+    border: none;
 }
 
 .right-panel.collapsed {
     margin-right: -420px; /* Width + gap */
     min-width: 0;
     flex-basis: 0;
+    padding: 0;
+    border: none;
 }
 
 .compute-panel {
@@ -678,7 +685,7 @@ body.modal-open {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9em;
-    table-layout: fixed; /* Important for controlling width */
+    /* table-layout: fixed; */
 }
 .compute-table th,
 .compute-table td {

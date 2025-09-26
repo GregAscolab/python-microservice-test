@@ -151,7 +151,7 @@
             <div id="page-logger" class="page-content" style="display: none;">
                 <div class="page-header">
                     <h2>CAN Logger</h2>
-                    <button id="btn-toggle-logger-panel" class="btn-toggle-panel-left">☰ Files</button>
+                    <button id="btn-toggle-logger-panel" class="btn-toggle-panel-left" data-panel-id="logger-files-panel">☰ Files</button>
                 </div>
                 <div class="controls">
                    <button id="toggleRecording-logger">Start Recording</button>
@@ -159,13 +159,15 @@
                 </div>
                 <div class="page-main-container">
                     <div id="logger-files-panel" class="side-panel left-panel">
-                        <h3 id="logger-current-path">Contenu du dossier : /</h3>
-                        <table id="filenameTable">
-                            <!-- Header will be populated by JS -->
-                            <tbody>
-                                <!-- File list will be populated by logger.js -->
-                            </tbody>
-                        </table>
+                        <h3>Files</h3>
+                        <div class="table-container">
+                            <table id="filenameTable" class="compute-table">
+                                <!-- Header will be populated by JS -->
+                                <tbody>
+                                    <!-- File list will be populated by logger.js -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <div class="center-panel">
                         <div id="log-status"></div>
@@ -270,7 +272,7 @@
             <div id="page-compute" class="page-content">
                 <div class="page-header">
                     <h2>Compute Service</h2>
-                    <button id="btn-toggle-compute-panel" class="btn-toggle-panel-right">☰ Config</button>
+                    <button id="btn-toggle-compute-panel" class="btn-toggle-panel-right" data-panel-id="compute-config-panel">☰ Config</button>
                 </div>
                 <div class="page-main-container">
                     <div class="center-panel">
@@ -416,6 +418,7 @@
     <!-- Core App JS -->
     <script type="module" src="/static/js/connection_manager.js"></script>
     <script type="module" src="/static/js/app.js"></script>
+    <script type="module" src="/static/js/layout_manager.js"></script>
 
     <!-- Page-Specific Scripts (loaded upfront) -->
     <script type="module" src="/static/js/dashboard.js"></script>

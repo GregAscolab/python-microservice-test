@@ -260,8 +260,6 @@ function initComputePage() {
     // 1. Get references to all DOM elements
     domElements = {
         page: document.getElementById('page-compute'),
-        configPanel: document.getElementById('compute-config-panel'),
-        btnToggleConfig: document.getElementById('btn-toggle-compute-panel'),
         formRegisterComp: document.getElementById('form-register-computation'),
         formRegisterTrigger: document.getElementById('form-register-trigger'),
         compSearchableSelect: document.getElementById('searchable-select-comp'),
@@ -317,17 +315,7 @@ function initComputePage() {
     setupSearchableSelect(domElements.compSearchableSelect);
     setupSearchableSelect(domElements.triggerSearchableSelect);
 
-    // 8. Add listener for responsive config toggle
-    domElements.btnToggleConfig.addEventListener('click', () => {
-        // On wide screens, we use a different class to shrink content
-        if (window.innerWidth > 1200) {
-            domElements.configPanel.classList.toggle('collapsed');
-        } else {
-            domElements.configPanel.classList.toggle('open');
-        }
-    });
-
-    // 9. Add listeners for the confirmation modal
+    // 8. Add listeners for the confirmation modal
     domElements.modalCancelBtn.addEventListener('click', () => {
         domElements.modal.style.display = 'none';
     });

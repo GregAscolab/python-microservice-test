@@ -14,8 +14,6 @@ function initLoggerPage() {
         modalText: document.getElementById('generic-modal-text'),
         modalCancelBtn: document.getElementById('generic-modal-cancel-btn'),
         modalConfirmBtn: document.getElementById('generic-modal-confirm-btn'),
-        toggleFilesBtn: document.getElementById('btn-toggle-logger-panel'),
-        filesPanel: document.getElementById('logger-files-panel'),
     };
 
     // --- NATS Connections ---
@@ -28,24 +26,17 @@ function initLoggerPage() {
     // --- DOM Elements & Listeners ---
     const toggleRecordingButton = document.getElementById('toggleRecording-logger');
     const fileTable = document.getElementById('filenameTable');
-    fileTable.classList.add('compute-table'); // Add consistent styling
     const fileTableBody = fileTable.querySelector('tbody');
 
-    // Create header row dynamically
-    const headerRow = fileTable.createTHead().insertRow(0);
-    headerRow.innerHTML = '<th>Nom</th><th>Taille</th><th>Status</th><th>Actions</th>';
-
+    // Create header row dynamically if it doesn't exist
+    if (!fileTable.querySelector('thead')) {
+        const headerRow = fileTable.createTHead().insertRow(0);
+        headerRow.innerHTML = '<th>Nom</th><th>Taille</th><th>Status</th><th>Actions</th>';
+    }
 
     toggleRecordingButton.addEventListener('click', onToggleRecording);
     fileTableBody.addEventListener('click', onFileTableClick);
     domElements.modalCancelBtn.addEventListener('click', () => domElements.modal.style.display = 'none');
-    domElements.toggleFilesBtn.addEventListener('click', () => {
-        if (window.innerWidth <= 1200) {
-            domElements.filesPanel.classList.toggle('open');
-        } else {
-            domElements.filesPanel.classList.toggle('collapsed');
-        }
-    });
 
     // --- Initial Load ---
     fetchAndDisplayFiles("");
