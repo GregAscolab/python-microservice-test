@@ -59,6 +59,12 @@ function togglePanel(panelId) {
     if (panelStates[panelId]) {
         panelStates[panelId].isCollapsed = !panelStates[panelId].isCollapsed;
         updateLayout(panelId);
+
+        // After the CSS transition (300ms), dispatch a resize event
+        // to make Plotly graphs resize themselves to the new container width.
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 350);
     }
 }
 

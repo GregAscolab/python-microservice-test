@@ -287,18 +287,12 @@ function displayPlot(data) {
         plots[sig].idx++;
         plots[sig].traces.push(trace);
     });
-
-    const plotPromises = Object.keys(plots).map(sig => {
+    Object.keys(plots).forEach((sig) => {
         const plotDiv = document.createElement('div');
         plotDiv.className = 'plotly-log-graph';
         plotlyPanel.appendChild(plotDiv);
         const layout = { title: { text: plots[sig].title }, autosize: true, automargin: true, xaxis: { rangeslider: { visible: false }, type: 'date', hovermode:'closest', showspikes : true, spikemode  : 'across', spikesnap : 'cursor', spikethickness:1, showline:true, showgrid:true }, yaxis: { fixedrange: false }, grid: { rows: plots[sig].traces.length, columns: 1 }, showlegend : true, hovermode  : 'x' };
-        return Plotly.react(plotDiv, plots[sig].traces, layout, {responsive: true});
-    });
-
-    // After all plots have been rendered, dispatch a resize event.
-    Promise.all(plotPromises).then(() => {
-        window.dispatchEvent(new Event('resize'));
+        Plotly.react(plotDiv, plots[sig].traces, layout, {responsive: true});
     });
 }
 
