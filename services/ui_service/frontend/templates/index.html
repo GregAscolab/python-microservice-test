@@ -149,29 +149,27 @@
             </div>
 
             <div id="page-logger" class="page-content" style="display: none;">
-                <h2>CAN Logger</h2>
+                <div class="page-header">
+                    <h2>CAN Logger</h2>
+                    <button id="btn-toggle-logger-panel" class="btn-toggle-panel-left" data-panel-id="logger-files-panel">☰ Files</button>
+                </div>
                 <div class="controls">
                    <button id="toggleRecording-logger">Start Recording</button>
                    <div id="recorderSpin-logger" class="recorderSpin" style="display: none;"></div>
                 </div>
-                <div class="log_container">
-                    <div id="files-panel">
-                        <h3 id="logger-current-path">Contenu du dossier : /</h3>
-                        <!-- Extension filter can be added back later if needed -->
-                        <table id="filenameTable">
-                            <thead>
-                                <tr>
-                                    <th>Nom</th>
-                                    <th>Taille</th>
-                                    <th>Download</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- File list will be populated by logger.js -->
-                            </tbody>
-                        </table>
+                <div class="page-main-container">
+                    <div id="logger-files-panel" class="side-panel left-panel">
+                        <h3 id="logger-current-path"></h3>
+                        <div class="table-container">
+                            <table id="filenameTable" class="compute-table">
+                                <!-- Header will be populated by JS -->
+                                <tbody>
+                                    <!-- File list will be populated by logger.js -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="loader-container">
+                    <div class="center-panel">
                         <div id="log-status"></div>
                         <div id="loader" class="loader" style="display: none;"></div>
                         <div id="plotly-panel"></div>
@@ -272,13 +270,12 @@
             </div>
 
             <div id="page-compute" class="page-content">
-                <div class="compute-header">
+                <div class="page-header">
                     <h2>Compute Service</h2>
-                    <button id="btn-toggle-config" class="btn-toggle-config">☰ Config</button>
+                    <button id="btn-toggle-compute-panel" class="btn-toggle-panel-right" data-panel-id="compute-config-panel">☰ Config</button>
                 </div>
-                <div class="compute-main-container">
-                    <!-- Main Content Area -->
-                    <div class="compute-content-area">
+                <div class="page-main-container">
+                    <div class="center-panel">
                         <!-- Live State Panel -->
                         <div class="compute-panel live-state-panel">
                             <h3>Live State</h3>
@@ -310,8 +307,7 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Configuration Panel (collapsible) -->
-                    <div class="compute-panel config-panel" id="compute-config-panel">
+                    <div id="compute-config-panel" class="side-panel right-panel">
                         <h3>Configuration</h3>
                         <div class="form-section">
                             <h4>Register New Computation</h4>
@@ -391,6 +387,21 @@
                 </div>
             </div>
 
+            <!-- Generic Confirmation Modal -->
+            <div id="generic-confirm-modal" class="modal" style="display: none;">
+                <div class="modal-content danger-theme">
+                    <div class="modal-header">
+                        <h2 id="generic-modal-title">Confirm Action</h2>
+                    </div>
+                    <div class="modal-body">
+                        <p id="generic-modal-text">Are you sure?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="generic-modal-cancel-btn" class="button">Cancel</button>
+                        <button id="generic-modal-confirm-btn" class="button danger">Confirm</button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
     <footer>
@@ -407,6 +418,7 @@
     <!-- Core App JS -->
     <script type="module" src="/static/js/connection_manager.js"></script>
     <script type="module" src="/static/js/app.js"></script>
+    <script type="module" src="/static/js/layout_manager.js"></script>
 
     <!-- Page-Specific Scripts (loaded upfront) -->
     <script type="module" src="/static/js/dashboard.js"></script>

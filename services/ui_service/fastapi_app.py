@@ -28,6 +28,7 @@ CONFIG_DIR = os.path.abspath("config")
 LOGS_DIR = os.path.abspath("logs")
 CAN_LOGS_DIR = os.path.abspath("can_logs")
 APP_LOGS_DIR = os.path.abspath("app_logs")
+CONVERTED_LOGS_DIR = os.path.abspath("converted_logs")
 CERT_PATH = os.path.abspath(os.path.join(".","..","..","cert", "localhost.crt"))
 
 # We use an APIRouter now, which will be included by the main app in service.py
@@ -71,11 +72,30 @@ def getServiceNameFolder(service_name:str) -> str|None:
 
     return folder_path
 
+@router.get("/api/files/logger/{path:path}", response_class=JSONResponse)
+async def list_files_logger(request: Request, path: str = ""):
+    service = get_service(request)
+    try:
+        payload = { "path": path }
+        response = await service.messaging_client.request(
+            "commands.convert_service.get_conversion_status",
+            json.dumps(payload).encode(),
+            timeout=5
+        )
+        data = json.loads(response.data.decode())
+        return JSONResponse(content=data)
+    except Exception as e:
+        service.logger.error(f"Error listing files for logger path '{path}': {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
 @router.get("/api/files/{service_name}/{path:path}", response_class=HTMLResponse)
 async def list_files(request: Request, service_name:str, path: str = ""):
+    if service_name == "logger":
+        return await list_files_logger(request, path)
+
     folder_path = getServiceNameFolder(service_name)
     if not folder_path:
-        return HTMLResponse(f"Unknowed service name: {service_name}", status_code=404)
+        return HTMLResponse(f"Unknown service name: {service_name}", status_code=404)
     
     service = get_service(request)
     try:
@@ -94,8 +114,23 @@ async def list_files(request: Request, service_name:str, path: str = ""):
         return HTMLResponse(content=json.dumps(response_data), media_type="application/json")
 
     except Exception as e:
-        service.logger.error(f"Error listing files for logger path '{path}': {e}")
+        service.logger.error(f"Error listing files for service '{service_name}' path '{path}': {e}")
         return HTMLResponse(content=json.dumps({"error": str(e)}), status_code=500, media_type="application/json")
+
+@router.get("/api/converted-files/{file_path_b64:path}")
+async def get_converted_file(file_path_b64: str):
+    try:
+        file_path = base64.b64decode(file_path_b64.encode("utf-8")).decode("utf-8")
+        safe_path = os.path.normpath(os.path.join(CONVERTED_LOGS_DIR, file_path))
+        if not safe_path.startswith(CONVERTED_LOGS_DIR):
+            return JSONResponse(content={"error": "Forbidden"}, status_code=403)
+
+        if os.path.exists(safe_path):
+            return FileResponse(safe_path)
+
+        return JSONResponse(content={"error": "File not found"}, status_code=404)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 @router.get("/api/file/{service_name}/{filename}")
 async def get_app_log_content(service_name:str, filename: str, request: Request):
@@ -168,9 +203,25 @@ async def download_file(service_name:str, file_path_b64: str):
         return FileResponse(full_path, filename=os.path.basename(full_path))
     return HTMLResponse(f"File not found: {full_path}", status_code=404)
 
+@router.get("/api/download-converted/{file_path_b64:path}")
+async def download_converted_file(file_path_b64: str):
+    try:
+        file_path = base64.b64decode(file_path_b64.encode("utf-8")).decode("utf-8")
+        safe_path = os.path.normpath(os.path.join(CONVERTED_LOGS_DIR, file_path))
+        if not safe_path.startswith(CONVERTED_LOGS_DIR):
+            return JSONResponse(content={"error": "Forbidden"}, status_code=403)
+
+        if os.path.exists(safe_path):
+            return FileResponse(safe_path, filename=os.path.basename(safe_path))
+
+        return JSONResponse(content={"error": "File not found"}, status_code=404)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
 class FileToConvert(BaseModel):
     name: str
     folder: str
+    force: bool = False
 
 @router.get("/api/settings/export")
 async def export_settings():
@@ -222,7 +273,8 @@ async def convert_file(file_content: FileToConvert, request: Request):
         command = {
             "command": "blfToTimeseries",
             "filename": file_content.name,
-            "folder": file_content.folder
+            "folder": file_content.folder,
+            "force": file_content.force
         }
         await service.messaging_client.publish(
             "commands.convert_service",

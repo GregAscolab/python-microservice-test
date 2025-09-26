@@ -1,4 +1,5 @@
 import ConnectionManager from './connection_manager.js';
+import { initLayoutManager } from './layout_manager.js';
 
 // --- Service Worker Registration ---
 if ('serviceWorker' in navigator) {
@@ -75,6 +76,8 @@ function showPage(path) {
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize NATS connection
     ConnectionManager.getNatsConnection();
+    // Initialize the global layout manager
+    initLayoutManager();
 
     // Handle navigation clicks
     document.querySelectorAll('.sidebar a').forEach(link => {
