@@ -158,7 +158,12 @@
                    <div id="recorderSpin-logger" class="recorderSpin" style="display: none;"></div>
                 </div>
                 <div class="page-main-container">
-                    <div id="logger-files-panel" class="side-panel left-panel">
+                    <div class="center-panel">
+                        <div id="log-status"></div>
+                        <div id="loader" class="loader" style="display: none;"></div>
+                        <div id="plotly-panel"></div>
+                    </div>
+                    <div id="logger-files-panel" class="side-panel right-panel">
                         <h3 id="logger-current-path"></h3>
                         <div class="table-container">
                             <table id="filenameTable" class="compute-table">
@@ -168,11 +173,6 @@
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                    <div class="center-panel">
-                        <div id="log-status"></div>
-                        <div id="loader" class="loader" style="display: none;"></div>
-                        <div id="plotly-panel"></div>
                     </div>
                 </div>
             </div>
