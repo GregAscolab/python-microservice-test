@@ -564,8 +564,8 @@ body.modal-open {
     border: 1px solid #c9c9c9;
 }
 
-/* --- Compute Page Styles --- */
-.compute-header {
+/* --- Logger & Compute Page Headers --- */
+.logger-header, .compute-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -577,7 +577,7 @@ body.modal-open {
     display: block; /* Always visible now */
 }
 
-.compute-main-container {
+.compute-main-container, .log_container {
     display: flex;
     flex-direction: row;
     gap: 20px;
@@ -585,7 +585,7 @@ body.modal-open {
     overflow: hidden;
 }
 
-.compute-content-area {
+.compute-content-area, .loader-container {
     flex: 1;
     display: flex;
     flex-direction: column;

@@ -38,7 +38,12 @@ function initLoggerPage() {
     fileTableBody.addEventListener('click', onFileTableClick);
     domElements.modalCancelBtn.addEventListener('click', () => domElements.modal.style.display = 'none');
     domElements.toggleFilesBtn.addEventListener('click', () => {
-        domElements.filesPanel.classList.toggle('open');
+        // On wide screens, we use a different class to shrink content
+        if (window.innerWidth > 1200) {
+            domElements.filesPanel.classList.toggle('collapsed');
+        } else {
+            domElements.filesPanel.classList.toggle('open');
+        }
     });
 
     // --- Initial Load ---
