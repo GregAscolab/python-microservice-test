@@ -609,13 +609,13 @@ body.modal-open {
 }
 
 .left-panel {
-    flex-basis: 400px;
+    flex-basis: auto;
     transition: margin-left 0.3s ease, min-width 0.3s ease, flex-basis 0.3s ease;
     margin-left: 0;
 }
 
 .right-panel {
-    flex-basis: 400px;
+    flex-basis: auto;
     transition: margin-right 0.3s ease, min-width 0.3s ease, flex-basis 0.3s ease;
     margin-right: 0;
 }
