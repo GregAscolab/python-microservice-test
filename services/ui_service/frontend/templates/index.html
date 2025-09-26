@@ -35,33 +35,40 @@
 
             <div id="page-dashboard" class="page-content" style="display: none;">
                 <h2>Dashboard</h2>
-                <div id="dashboard-container">
-                    <div id="dashboard-map">
-                        <h3>Map</h3>
-                        <div id="map-dashboard"></div>
-                    </div>
-                    <div id="dashboard-data">
-                        <h3>Sensors</h3>
-                        <table id="pressureTable" class="display">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Value</th>
-                                    <th>Unit</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                        <table id="angleTable" class="display">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Value</th>
-                                    <th>Unit</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                <div class="column-container">
+                    <div class="row-container">
+                        <div class="column-container">
+                            <h3>Map</h3>
+                            <div id="map-dashboard"></div>
+                            <!-- <div id="digital-twin-container"></div> -->
+                        </div>
+                        <div id="dashboard-data">
+                            <h3>Sensors</h3>
+                            <div class="table-container">
+                                <table id="pressureTable" class="compute-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Value</th>
+                                            <th>Unit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div class="table-container">
+                                <table id="angleTable" class="compute-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Value</th>
+                                            <th>Unit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -97,7 +104,10 @@
             </div>
             
             <div id="page-applogger" class="page-content" style="display: none;">
-                <h2>App Logger</h2>
+                <div class="page-header">
+                    <h2>App Logger</h2>
+                    <button id="btn-toggle-logger-panel" class="btn-toggle-panel-left" data-panel-id="app-logger-files-panel">☰ Files</button>
+                </div>
                 <div class="controls">
                     <div class="form-grid">
                         <div class="form-group">
@@ -118,32 +128,38 @@
                 </div>
                 <div id="status-display">
                     <h3>Status</h3>
-                    <p><strong>State:</strong> <span id="app-logger-state">Stopped</span></p>
-                    <p><strong>Start Time:</strong> <span id="start-time">N/A</span></p>
-                    <p><strong>Start Position:</strong> <span id="start-position">N/A</span></p>
+                    <div class="controls">
+                        <div class="controls-item"><p><strong>State:</strong> <span id="app-logger-state">Stopped</span></p></div>
+                        <div class="controls-item"><p><strong>Start Time:</strong> <span id="start-time">N/A</span></p></div>
+                        <div class="controls-item"><p><strong>Start Position:</strong> <span id="start-position">N/A</span></p></div>
+                    </div>
                 </div>
-                <div class="log_container">
-                    <div id="files-panel">
+                <div class="page-main-container">
+                    <div class="center-panel">
+                        <div class="loader-container">
+                            <h3>Log Content</h3>
+                            <pre id="app-log-content"></pre>
+                            <div id="app-log-status"></div>
+                            <div id="app-log-loader" class="loader" style="display: none;"></div>
+                        </div>
+                    </div>
+                    <div id="app-logger-files-panel" class="side-panel right-panel">
                         <h3 id="app-logger-current-path">Contenu du dossier : /</h3>
                         <!-- Extension filter can be added back later if needed -->
-                        <table id="app-filenameTable">
-                            <thead>
-                                <tr>
-                                    <th>Nom</th>
-                                    <th>Taille</th>
-                                    <th>Download</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- File list will be populated by app_logger.js -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="loader-container">
-                        <h3>Log Content</h3>
-                        <pre id="app-log-content"></pre>
-                        <div id="app-log-status"></div>
-                        <div id="app-log-loader" class="loader" style="display: none;"></div>
+                        <div class="table-container">
+                            <table id="app-filenameTable" class="compute-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nom</th>
+                                        <th>Taille</th>
+                                        <th>Download</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- File list will be populated by app_logger.js -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

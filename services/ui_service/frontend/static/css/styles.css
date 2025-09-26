@@ -103,21 +103,25 @@ main {
     color: white;
 }
 
-
 /* --- General Content & Controls --- */
 .controls {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    padding: 10px;
-    background: #f1f1f1;
-    border-radius: 5px;
     margin-bottom: 1em;
-    gap: 10px;
+    gap: 5px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 6px;
+}
+
+.controls-item {
+    flex:1;
 }
 
 button {
-    padding: 8px 16px;
+    padding: 10px 16px;
     cursor: pointer;
     border: 1px solid #ccc;
     border-radius: 4px;
@@ -162,9 +166,17 @@ button:hover {
     flex-direction: column;
 }
 
-#dashboard-container, .gps-row, .row-container {
+.gps-row, .row-container {
     display: flex;
     flex-direction: row;
+    flex-grow: 1; /* Allow these containers to grow */
+    gap: 0.5em;
+    min-height: 0; /* Fix for flexbox overflow issue in some browsers */
+}
+
+.column-container {
+    display: flex;
+    flex-direction: column;
     flex-grow: 1; /* Allow these containers to grow */
     gap: 0.5em;
     min-height: 0; /* Fix for flexbox overflow issue in some browsers */
@@ -176,7 +188,6 @@ button:hover {
     flex-direction: column;
     min-width: 0px; /* Fix for flexbox overflow issue */
 }
-#dashboard-map { flex: 1 0 0; } /* Make dashboard map wider */
 
 #dashboard-data {
     flex: 1 0 0;
@@ -580,7 +591,7 @@ body.modal-open {
 .page-main-container {
     display: flex;
     flex-direction: row;
-    gap: 20px;
+    gap: 10px;
     flex-grow: 1;
     overflow: hidden;
     position: relative; /* Needed for absolute positioning of side panels on mobile */
@@ -590,9 +601,13 @@ body.modal-open {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 10px;
     overflow-y: auto;
     min-width: 0;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 6px;
 }
 
 .side-panel {
@@ -602,10 +617,10 @@ body.modal-open {
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 8px;
-    padding: 15px;
+    padding: 6px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 6px;
 }
 
 .left-panel {
@@ -634,11 +649,11 @@ body.modal-open {
 .compute-panel {
     display: flex;
     flex-direction: column;
-    padding: 15px;
+    padding: 6px;
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 8px;
-    gap: 15px;
+    gap: 6px;
 }
 
 .live-state-panel {
@@ -655,7 +670,7 @@ body.modal-open {
 }
 
 .form-section {
-    padding: 15px;
+    padding: 6px;
     border: 1px solid #dee2e6;
     border-radius: 6px;
 }
