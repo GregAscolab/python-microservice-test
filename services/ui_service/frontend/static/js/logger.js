@@ -14,8 +14,8 @@ function initLoggerPage() {
         modalText: document.getElementById('generic-modal-text'),
         modalCancelBtn: document.getElementById('generic-modal-cancel-btn'),
         modalConfirmBtn: document.getElementById('generic-modal-confirm-btn'),
-        toggleFilesBtn: document.getElementById('btn-toggle-files'),
-        filesPanel: document.getElementById('files-panel'),
+        toggleFilesBtn: document.getElementById('btn-toggle-logger-panel'),
+        filesPanel: document.getElementById('logger-files-panel'),
     };
 
     // --- NATS Connections ---
@@ -30,19 +30,20 @@ function initLoggerPage() {
     const fileTable = document.getElementById('filenameTable');
     fileTable.classList.add('compute-table'); // Add consistent styling
     const fileTableBody = fileTable.querySelector('tbody');
-    const fileTableHeader = fileTable.querySelector('thead tr');
 
-    fileTableHeader.innerHTML = '<th>Nom</th><th>Taille</th><th>Status</th><th>Actions</th>';
+    // Create header row dynamically
+    const headerRow = fileTable.createTHead().insertRow(0);
+    headerRow.innerHTML = '<th>Nom</th><th>Taille</th><th>Status</th><th>Actions</th>';
+
 
     toggleRecordingButton.addEventListener('click', onToggleRecording);
     fileTableBody.addEventListener('click', onFileTableClick);
     domElements.modalCancelBtn.addEventListener('click', () => domElements.modal.style.display = 'none');
     domElements.toggleFilesBtn.addEventListener('click', () => {
-        // On wide screens, we use a different class to shrink content
-        if (window.innerWidth > 1200) {
-            domElements.filesPanel.classList.toggle('collapsed');
-        } else {
+        if (window.innerWidth <= 1200) {
             domElements.filesPanel.classList.toggle('open');
+        } else {
+            domElements.filesPanel.classList.toggle('collapsed');
         }
     });
 
