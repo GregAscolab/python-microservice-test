@@ -260,8 +260,6 @@ function initComputePage() {
     // 1. Get references to all DOM elements
     domElements = {
         page: document.getElementById('page-compute'),
-        configPanel: document.getElementById('compute-config-panel'),
-        btnToggleConfig: document.getElementById('btn-toggle-config'),
         formRegisterComp: document.getElementById('form-register-computation'),
         formRegisterTrigger: document.getElementById('form-register-trigger'),
         compSearchableSelect: document.getElementById('searchable-select-comp'),
@@ -270,11 +268,11 @@ function initComputePage() {
         activeTriggers: document.getElementById('compute-active-triggers'),
         computedTableBody: document.getElementById('compute-computed-table')?.querySelector('tbody'),
         sourceTablesContainer: document.getElementById('source-tables-container'),
-        modal: document.getElementById('compute-confirm-modal'),
-        modalTitle: document.getElementById('compute-modal-title'),
-        modalText: document.getElementById('compute-modal-text'),
-        modalCancelBtn: document.getElementById('compute-modal-cancel-btn'),
-        modalConfirmBtn: document.getElementById('compute-modal-confirm-btn'),
+        modal: document.getElementById('generic-confirm-modal'),
+        modalTitle: document.getElementById('generic-modal-title'),
+        modalText: document.getElementById('generic-modal-text'),
+        modalCancelBtn: document.getElementById('generic-modal-cancel-btn'),
+        modalConfirmBtn: document.getElementById('generic-modal-confirm-btn'),
         lastState: { computations: [], triggers: [], computation_state: {} }, // Initial empty state
         cellCache: {}, // To store references to value cells <td>
         tableCache: {}, // To store references to source tables
@@ -317,17 +315,7 @@ function initComputePage() {
     setupSearchableSelect(domElements.compSearchableSelect);
     setupSearchableSelect(domElements.triggerSearchableSelect);
 
-    // 8. Add listener for responsive config toggle
-    domElements.btnToggleConfig.addEventListener('click', () => {
-        // On wide screens, we use a different class to shrink content
-        if (window.innerWidth > 1200) {
-            domElements.configPanel.classList.toggle('collapsed');
-        } else {
-            domElements.configPanel.classList.toggle('open');
-        }
-    });
-
-    // 9. Add listeners for the confirmation modal
+    // 8. Add listeners for the confirmation modal
     domElements.modalCancelBtn.addEventListener('click', () => {
         domElements.modal.style.display = 'none';
     });

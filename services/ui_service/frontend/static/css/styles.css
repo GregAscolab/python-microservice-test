@@ -103,21 +103,25 @@ main {
     color: white;
 }
 
-
 /* --- General Content & Controls --- */
 .controls {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    padding: 10px;
-    background: #f1f1f1;
-    border-radius: 5px;
     margin-bottom: 1em;
-    gap: 10px;
+    gap: 5px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 6px;
+}
+
+.controls-item {
+    flex:1;
 }
 
 button {
-    padding: 8px 16px;
+    padding: 10px 16px;
     cursor: pointer;
     border: 1px solid #ccc;
     border-radius: 4px;
@@ -162,7 +166,7 @@ button:hover {
     flex-direction: column;
 }
 
-#dashboard-container, .gps-row, .row-container, .log_container {
+.gps-row, .row-container {
     display: flex;
     flex-direction: row;
     flex-grow: 1; /* Allow these containers to grow */
@@ -170,13 +174,20 @@ button:hover {
     min-height: 0; /* Fix for flexbox overflow issue in some browsers */
 }
 
-#dashboard-map, #gps-map-container, #gps-skyview-container, #gps-data-container, #files-panel, .loader-container, #plotly-panel {
+.column-container {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Allow these containers to grow */
+    gap: 0.5em;
+    min-height: 0; /* Fix for flexbox overflow issue in some browsers */
+}
+
+#dashboard-map, #gps-map-container, #gps-skyview-container, #gps-data-container, #plotly-panel {
     flex: 1 0 0;
     display: flex;
     flex-direction: column;
     min-width: 0px; /* Fix for flexbox overflow issue */
 }
-#dashboard-map { flex: 1 0 0; } /* Make dashboard map wider */
 
 #dashboard-data {
     flex: 1 0 0;
@@ -564,8 +575,8 @@ body.modal-open {
     border: 1px solid #c9c9c9;
 }
 
-/* --- Compute Page Styles --- */
-.compute-header {
+/* --- Generic Page Layout with Side Panels --- */
+.page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -573,50 +584,76 @@ body.modal-open {
     flex-shrink: 0;
 }
 
-.btn-toggle-config {
-    display: block; /* Always visible now */
+.btn-toggle-panel-left, .btn-toggle-panel-right {
+    display: block;
 }
 
-.compute-main-container {
+.page-main-container {
     display: flex;
     flex-direction: row;
-    gap: 20px;
+    gap: 10px;
     flex-grow: 1;
     overflow: hidden;
+    position: relative; /* Needed for absolute positioning of side panels on mobile */
 }
 
-.compute-content-area {
+.center-panel {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 10px;
     overflow-y: auto;
     min-width: 0;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 6px;
 }
 
-.config-panel {
-    flex-basis: 400px; /* Default width */
+.side-panel {
     flex-shrink: 0;
     flex-grow: 0;
-    transition: margin-right 0.3s ease, min-width 0.3s ease;
     overflow-y: auto;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.left-panel {
+    flex-basis: auto;
+    transition: margin-left 0.3s ease, min-width 0.3s ease, flex-basis 0.3s ease;
+    margin-left: 0;
+}
+
+.right-panel {
+    flex-basis: auto;
+    transition: margin-right 0.3s ease, min-width 0.3s ease, flex-basis 0.3s ease;
     margin-right: 0;
 }
 
-.config-panel.collapsed {
-    margin-right: -50px;
-    min-width: 0;
+.left-panel.collapsed, .right-panel.collapsed {
     flex-basis: 0;
+    min-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: 0;
+    margin-right: 0;
+    border: none;
+    overflow: hidden;
 }
 
 .compute-panel {
     display: flex;
     flex-direction: column;
-    padding: 15px;
+    padding: 6px;
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 8px;
-    gap: 15px;
+    gap: 6px;
 }
 
 .live-state-panel {
@@ -633,7 +670,7 @@ body.modal-open {
 }
 
 .form-section {
-    padding: 15px;
+    padding: 6px;
     border: 1px solid #dee2e6;
     border-radius: 6px;
 }
@@ -658,7 +695,7 @@ body.modal-open {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9em;
-    table-layout: fixed; /* Important for controlling width */
+    /* table-layout: fixed; */
 }
 .compute-table th,
 .compute-table td {
@@ -800,27 +837,31 @@ body.modal-open {
 
 /* --- Responsive Media Query --- */
 @media (max-width: 1200px) {
-    .compute-main-container {
-        flex-direction: row; /* Keep as row */
-        position: relative;
+    .page-main-container {
+        flex-direction: column;
     }
-    .compute-content-area {
-        flex-grow: 1; /* Allow content to take full width */
-    }
-    .config-panel {
-        position: absolute; /* Overlay on top of content */
-        right: -100%; /* Hide off-screen */
+    .side-panel {
+        position: absolute;
         top: 0;
         bottom: 0;
         width: 350px;
+        max-width: 90%;
         z-index: 100;
-        background-color: #f8f9fa;
-        padding: 1em;
-        box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    .left-panel {
+        left: -100%;
+        transition: left 0.3s ease;
+    }
+    .left-panel.open {
+        left: 0;
+    }
+    .right-panel {
+        right: -100%;
         transition: right 0.3s ease;
     }
-    .config-panel.open {
-        right: 0; /* Slide in */
+    .right-panel.open {
+        right: 0;
     }
 }
 
