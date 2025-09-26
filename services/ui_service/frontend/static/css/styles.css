@@ -620,20 +620,15 @@ body.modal-open {
     margin-right: 0;
 }
 
-.left-panel.collapsed {
-    margin-left: -420px; /* Width + gap */
-    min-width: 0;
+.left-panel.collapsed, .right-panel.collapsed {
     flex-basis: 0;
-    padding: 0;
-    border: none;
-}
-
-.right-panel.collapsed {
-    margin-right: -420px; /* Width + gap */
     min-width: 0;
-    flex-basis: 0;
-    padding: 0;
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: 0;
+    margin-right: 0;
     border: none;
+    overflow: hidden;
 }
 
 .compute-panel {
