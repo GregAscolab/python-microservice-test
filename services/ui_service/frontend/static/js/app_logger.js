@@ -82,7 +82,7 @@ function onAppLoggerMessage(m) {
         startTime.textContent = new Date(data.startDate).toLocaleString();
         if (data.startPosition && data.startPosition.geometry) {
             const coords = data.startPosition.geometry.coordinates;
-            startPosition.textContent = `Lat: ${coords[1].toFixed(6)}, Lon: ${coords[0].toFixed(6)}`;
+            startPosition.textContent = `Lat: ${coords.lat.toFixed(6)}, Lon: ${coords.lon.toFixed(6)}`;
         } else {
             startPosition.textContent = 'N/A';
         }
