@@ -33,7 +33,7 @@ function initDashboardPage() {
     const mapContainer = document.getElementById('map-dashboard');
     if (!mapContainer) return; // In case the element is not there
 
-    map = L.map(mapContainer).setView([51.505, -0.09], 13);
+    map = L.map(mapContainer).setView([45.525, 4.924], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
@@ -63,9 +63,9 @@ function initDashboardPage() {
         const data = ConnectionManager.jsonCodec.decode(m.data);
         const value = data.value;
 
-        if (subject.endsWith('.coordinates.1')) { // Latitude
+        if (subject.endsWith('.coordinates.lat')) { // Latitude
             lastLat = value;
-        } else if (subject.endsWith('.coordinates.0')) { // Longitude
+        } else if (subject.endsWith('.coordinates.lon')) { // Longitude
             lastLon = value;
         }
         updateMap(); // Attempt to update map on each new piece of data

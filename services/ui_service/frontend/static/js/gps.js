@@ -29,9 +29,15 @@ function initGpsPage() {
             angularaxis: { tickfont: { size: 10 }, rotation: 90, direction: "clockwise" }
         },
         showlegend: false,
+        type: 'scatterpolar',
         margin: { l: 40, r: 40, t: 40, b: 40 }
     };
-    Plotly.newPlot(skyviewDiv, [], layout);
+    const initTrace = {
+        r: [90],
+        theta: [0],
+        type: 'scatterpolar'
+    };
+    Plotly.newPlot(skyviewDiv, [initTrace], layout);
 
     let gpsState = {}; // Local cache for the entire GPS data structure
 
@@ -52,8 +58,8 @@ function initGpsPage() {
         if (!gpsState || !gpsTableBody || !map || !marker) return;
 
         // Update Map
-        const lat = gpsState.geometry?.coordinates?.[1];
-        const lon = gpsState.geometry?.coordinates?.[0];
+        const lat = gpsState.geometry?.coordinates?.lat;
+        const lon = gpsState.geometry?.coordinates?.lon;
         if (lat !== undefined && lon !== undefined) {
             const latLng = [lat, lon];
             marker.setLatLng(latLng);
@@ -122,7 +128,7 @@ function getSnrColor(snr) {
 }
 
 function updateSkyviewChart(svData) {
-    const satellites = svData.SV.filter(s => s.SV_Id > 0 && s.SV_Elevation > 0);
+    const satellites = Object.values(svData.SV).filter(s => s.SV_Id > 0 && s.SV_Elevation > 0);
     const trace = {
         r: satellites.map(s => 90 - s.SV_Elevation),
         theta: satellites.map(s => s.SV_Azimuth),
