@@ -9,7 +9,7 @@ import os
 import glob
 import random
 from botocore.exceptions import NoCredentialsError
-from datetime import datetime
+from datetime import datetime, timezone
 
 def load_settings(path="config/settings.json") -> dict:
     """Loads settings from a JSON file."""
@@ -55,7 +55,7 @@ async def main(args):
         nats_url = global_settings.get("nats_url", "nats://127.0.0.1:8888") # Default for safety
 
         # Generate a unique filename for this test run
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
         test_filename = f"test_log_{timestamp}.blf"
 
         if not args.no_nats:

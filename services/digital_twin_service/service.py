@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 import sys
 import os
 import cantools
@@ -113,7 +113,7 @@ class DigitalTwinService(Microservice):
                     model_data = self.excavator.get_3d_representation()
 
                     # Get a single timestamp for this entire update cycle
-                    timestamp = datetime.now().timestamp()
+                    timestamp = datetime.now(timezone.utc).astimezone().timestamp()
 
                     # Recursively publish all data points
                     await self._publish_data_recursively("digital_twin.data", model_data, timestamp)

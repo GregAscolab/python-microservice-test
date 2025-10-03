@@ -78,7 +78,7 @@ class AppLoggerService(Microservice):
             return
 
         self.is_running = True
-        self.start_date = datetime.now(timezone.utc)
+        self.start_date = datetime.now(timezone.utc).astimezone()
         self.logger.info(f"Starting app logger at {self.start_date.isoformat()}")
 
         # Generate a unique filename

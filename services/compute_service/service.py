@@ -2,7 +2,7 @@ import asyncio
 import json
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add the project root to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -99,7 +99,7 @@ class ComputeService(Microservice):
         if status:
             self.status = status
 
-        status_payload = {"service": self.service_name, "status": self.status, "timestamp": datetime.now().isoformat()}
+        status_payload = {"service": self.service_name, "status": self.status, "timestamp": datetime.now(timezone.utc).astimezone().isoformat()}
         await self.messaging_client.publish(f"compute.status", json.dumps(status_payload).encode())
         self.logger.info(f"Published status: {self.status}")
 
@@ -263,7 +263,7 @@ class ComputeService(Microservice):
                 data = json.loads(msg.data.decode())
                 if isinstance(data, dict) and 'value' in data:
                     value = data['value']
-                    timestamp = data.get('ts', datetime.now().timestamp())
+                    timestamp = data.get('ts', datetime.now(timezone.utc).astimezone().timestamp())
                     await self._process_data(signal_name, value, timestamp)
                     return  # Success, we are done.
             except (json.JSONDecodeError, UnicodeDecodeError):
@@ -277,7 +277,7 @@ class ComputeService(Microservice):
             # --- If JSON parsing did not return, try parsing as raw float ---
             try:
                 value = float(msg.data.decode())
-                timestamp = datetime.now().timestamp()
+                timestamp = datetime.now(timezone.utc).astimezone().timestamp()
                 await self._process_data(signal_name, value, timestamp)
                 return  # Success, we are done.
             except (ValueError, UnicodeDecodeError):
@@ -312,7 +312,7 @@ class ComputeService(Microservice):
                     new_value = instance.update(value, timestamp)
 
                     # Publish the individual result
-                    result_payload = {"value": new_value, "timestamp": datetime.now().isoformat()}
+                    result_payload = {"value": new_value, "timestamp": datetime.now(timezone.utc).astimezone().isoformat()}
                     await self.messaging_client.publish(f"compute.result.{output_name}", json.dumps(result_payload).encode())
 
                     # 3. Recursively call _process_data with the new result
@@ -338,7 +338,7 @@ class ComputeService(Microservice):
                 self.logger.warning(f"Trigger '{trigger_name}': 'publish' action is missing a 'subject'.")
                 return
 
-            payload = action.get("payload", {"trigger_name": trigger_name, "timestamp": datetime.now().isoformat()})
+            payload = action.get("payload", {"trigger_name": trigger_name, "timestamp": datetime.now(timezone.utc).astimezone().isoformat()})
             await self.messaging_client.publish(subject, json.dumps(payload).encode())
             self.logger.info(f"Trigger '{trigger_name}' action: Published to {subject}")
         # Other action types could be implemented here
@@ -367,13 +367,13 @@ class ComputeService(Microservice):
                 # State change detection
                 if all_conditions_met and not was_active:
                     trigger['is_currently_active'] = True
-                    trigger['last_event_timestamp'] = datetime.now().isoformat()
+                    trigger['last_event_timestamp'] = datetime.now(timezone.utc).astimezone().isoformat()
                     self.logger.info(f"Trigger '{trigger['name']}' became ACTIVE.")
                     await self._execute_trigger_action(trigger['name'], trigger['action'].get('on_become_active'))
 
                 elif not all_conditions_met and was_active:
                     trigger['is_currently_active'] = False
-                    trigger['last_event_timestamp'] = datetime.now().isoformat()
+                    trigger['last_event_timestamp'] = datetime.now(timezone.utc).astimezone().isoformat()
                     self.logger.info(f"Trigger '{trigger['name']}' became INACTIVE.")
                     await self._execute_trigger_action(trigger['name'], trigger['action'].get('on_become_inactive'))
 

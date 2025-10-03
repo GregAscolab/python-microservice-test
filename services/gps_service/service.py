@@ -282,7 +282,7 @@ class GpsService(Microservice):
                     },
                     "SV": self._generate_fake_sv_data(),
                     "fake": True,
-                    "datetime":str(datetime.now()),
+                    "datetime":str(datetime.now(timezone.utc).astimezone()),
                 }
             }
 
@@ -290,7 +290,7 @@ class GpsService(Microservice):
             self.last_payload = payload # Keep for request/reply
 
             # Get a single timestamp for this update cycle
-            timestamp = datetime.now().timestamp()
+            timestamp = datetime.now(timezone.utc).astimezone().timestamp()
 
             # Start the recursive publishing
             await self._publish_data_recursively("gps.data", payload, timestamp)

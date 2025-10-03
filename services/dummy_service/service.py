@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 import sys
 import os
 
@@ -54,7 +54,7 @@ class DummyService(Microservice):
                 payload = {
                     "message": "Hello from the dummy service!",
                     "count": self.counter,
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now(timezone.utc).astimezone().isoformat()
                 }
                 # Publish the data to a unique NATS subject
                 await self.messaging_client.publish(

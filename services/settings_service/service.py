@@ -1,7 +1,7 @@
 import json
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from nats.aio.msg import Msg
 
 # Add the project root to the Python path
@@ -156,7 +156,7 @@ class SettingsService(Microservice):
         try:
             # Backup the current settings file
             if os.path.exists(self.settings_path):
-                timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+                timestamp = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d-%H-%M-%S")
                 backup_path = f"{self.settings_path}.{timestamp}.json"
                 os.rename(self.settings_path, backup_path)
                 self.logger.info(f"Backed up current settings to {backup_path}")

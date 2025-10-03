@@ -162,7 +162,7 @@ class CanBusService(Microservice):
             self.current_log_path_pattern = os.path.join(log_dir, base_name)
         else:
             # Use the timestamp-based filename
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
             self.current_log_path_pattern = os.path.join(log_dir, f"can_log_{timestamp}")
 
         log_path_with_ext = f"{self.current_log_path_pattern}{file_format}"
