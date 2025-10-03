@@ -86,30 +86,23 @@ class AppLoggerService(Microservice):
         self.log_filename = f"app_log_{timestamp}.json"
         self.log_data = {
             "startDate": self.start_date.isoformat(),
-            "startPosition": None,
-            "canBusLogs": [],
             "hardness": hardness,
             "testName": testName,
             "comments": comments,
-            "dbcFile": None
+            "canBusLogs": [],
+            "startPosition": None,
+            "settings": None
         }
 
-        # Get DBC file name from can_bus_service settings
         try:
-            can_bus_settings_msg = await self.messaging_client.request(
-                "settings.get.can_bus_service",
-                b'',
-                timeout=5.0
-            )
-            can_bus_settings = json.loads(can_bus_settings_msg.data)
-            dbc_file_path = can_bus_settings.get("dbc_file")
-            if dbc_file_path:
-                self.log_data["dbcFile"] = os.path.basename(dbc_file_path)
-                self.logger.info(f"Using DBC file: {self.log_data['dbcFile']}")
+            # Update settings latest values
+            await self.get_settings()
+            # Store settings in use in log file
+            self.log_data["settings"] = self.all_settings
         except asyncio.TimeoutError:
-            self.logger.error("Request to settings_service for can_bus_service settings timed out.")
+            self.logger.error("Update 'settings' timed out.")
         except Exception as e:
-            self.logger.error(f"Error getting can_bus_service settings: {e}", exc_info=True)
+            self.logger.error(f"Error getting 'settings': {e}", exc_info=True)
 
 
         # Get GPS position
