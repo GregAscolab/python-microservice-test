@@ -21,9 +21,12 @@ header {
     background-color: #333;
     color: white;
     text-align: center;
-    padding: 0.5em 1em;
+    padding: 0.2em 0.2em;
     flex-shrink: 0;
-    
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
 }
 
 header h1 {
@@ -38,13 +41,13 @@ h1, h2, h3, h5 {
 footer {
     background-color: #333;
     color: white;
-    padding: 5px 0;
+    /* padding: 5px 0; */
     flex-shrink: 0;
     display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    gap: 10px;
+    /* gap: 10px; */
 }
 
 .sidebar {

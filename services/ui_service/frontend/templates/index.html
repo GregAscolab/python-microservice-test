@@ -12,7 +12,9 @@
 </head>
 <body>
     <header>
-        <h1>RockMeter Project</h1>
+        <h1 id="headerTitle">RockMeter Project</h1>
+        <div id="connection-status" class="status-offline">Offline</div>
+        <p style="font-size: x-small;">&copy; 2025 RockMeter Made by Ascolab</p>
     </header>
     <div class="container">
         <nav class="sidebar">
@@ -421,8 +423,6 @@
         </main>
     </div>
     <footer>
-        <div id="connection-status" class="status-offline">Offline</div>
-        <p style="font-size: x-small;">&copy; 2025 RockMeter Made by Ascolab</p>
     </footer>
 
     <!-- Libs JS -->
@@ -448,5 +448,12 @@
     <script type="module" src="/static/js/dummy.js"></script>
     <script type="module" src="/static/js/digital_twin.js"></script>
     <script type="module" src="/static/js/compute.js"></script>
+
+    <script>
+        function goFullScreen() {
+            document.querySelector("body").requestFullscreen();
+        }
+        document.getElementById("headerTitle").addEventListener('click', goFullScreen);
+    </script>
 </body>
 </html>
