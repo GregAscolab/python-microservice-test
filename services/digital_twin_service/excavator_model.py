@@ -112,21 +112,46 @@ class Sensor3DModel:
         }
         
         angles_xyz={
-            'X': x_deg,
+            'X':x_deg,
             'Y':y_deg,
             'Z':z_deg
         }
     
-        if not (AppFlag & mask[self.axis_mapping.get('roll', 'X')]):
-            self.roll = angles_xyz[self.axis_mapping.get('roll', 'X')] + self.roll_offset
-        if not (AppFlag & mask[self.axis_mapping.get('pitch', 'Y')]):
-            self.pitch = angles_xyz[self.axis_mapping.get('pitch', 'Y')] + self.pitch_offset
-            # if self.axis_reverse["pitch"] :
-            #     self.pitch = 180-self.pitch
-        if not (AppFlag & mask[self.axis_mapping.get('yaw', 'Y')]):
-            self.yaw = angles_xyz[self.axis_mapping.get('yaw', 'Z')] + self.yaw_offset
-            # if self.axis_reverse["yaw"] :
-            #     self.yaw = 180-self.yaw
+        if True:
+            if not (AppFlag & mask[self.axis_mapping.get('roll', 'X')]):
+                self.roll = angles_xyz[self.axis_mapping.get('roll', 'X')] + self.roll_offset
+                if self.axis_reverse["roll"] :
+                    self.roll = 360-self.roll
+            if not (AppFlag & mask[self.axis_mapping.get('pitch', 'Y')]):
+                self.pitch = angles_xyz[self.axis_mapping.get('pitch', 'Y')] + self.pitch_offset
+                if self.axis_reverse["pitch"] :
+                    self.pitch = 360-self.pitch
+            if not (AppFlag & mask[self.axis_mapping.get('yaw', 'Z')]):
+                self.yaw = angles_xyz[self.axis_mapping.get('yaw', 'Z')] + self.yaw_offset
+                if self.axis_reverse["yaw"] :
+                    self.yaw = 360-self.yaw
+        else :
+            if not (AppFlag & mask[self.axis_mapping.get('roll', 'X')]):
+                self.roll = angles_xyz[self.axis_mapping.get('roll', 'X')]
+                self.roll = self.roll if (self.roll) <= 180 else (self.roll - 360) 
+                self.roll += self.roll_offset
+                if self.axis_reverse["roll"] :
+                    self.roll = -self.roll
+
+            if not (AppFlag & mask[self.axis_mapping.get('pitch', 'Y')]):
+                self.pitch = angles_xyz[self.axis_mapping.get('pitch', 'Y')]
+                self.pitch = self.pitch if (self.pitch) <= 180 else (self.pitch - 360) 
+                self.pitch += self.pitch_offset
+                if self.axis_reverse["pitch"] :
+                    self.pitch = -self.pitch
+
+            if not (AppFlag & mask[self.axis_mapping.get('yaw', 'Z')]):
+                self.yaw = angles_xyz[self.axis_mapping.get('yaw', 'Z')]
+                self.yaw = self.yaw if (self.yaw) <= 180 else (self.yaw - 360) 
+                self.yaw += self.yaw_offset
+                if self.axis_reverse["yaw"] :
+                    self.yaw = -self.yaw
+
         
     def update_angles_quaternion(self, qx, qy, qz, qw):
         """
@@ -182,20 +207,29 @@ class Sensor3DModel:
         #     self.axis_mapping.get('pitch', 'Y'): math.radians(self.pitch),
         #     self.axis_mapping.get('yaw', 'Z'): math.radians(self.yaw)
         # }
-        if self.axis_reverse["roll"] :
-            roll = 180-self.roll
-        else:
-            roll=self.roll
+        # if self.axis_reverse["roll"] :
+        #     # roll = 180-self.roll
+        #     roll = 360-self.roll
+        # else:
+        #     roll=self.roll
+        roll = 360-self.roll
+        # roll = -self.roll
 
-        if self.axis_reverse["pitch"] :
-            pitch = 180-self.pitch
-        else:
-            pitch=self.roll
+        # if self.axis_reverse["pitch"] :
+        #     # pitch = 180-self.pitch
+        #     pitch = 360-self.pitch
+        # else:
+        #     pitch=self.pitch
+        pitch = 360-self.pitch
+        # pitch = -self.pitch
         
-        if self.axis_reverse["yaw"] :
-            yaw = 180-self.yaw
-        else:
-            yaw=self.yaw
+        # if self.axis_reverse["yaw"] :
+        #     # yaw = 180-self.yaw
+        #     yaw = 360-self.yaw
+        # else:
+        #     yaw=self.yaw
+        yaw = 360-self.yaw
+        # yaw = -self.yaw
 
         angles = {
             'X': math.radians(roll),
