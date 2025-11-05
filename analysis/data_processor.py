@@ -41,9 +41,9 @@ def process_logs(app_log_dir_path, root_path):
             print(f"Fichier JSON {json_file_path} de session lu avec succès.")
 
             # Extraire le chemin du fichier DBC et d'autres données de session
-            dbc_file_path_relative = session_data.get('dbFile')
+            dbc_file_path_relative = session_data.get('settings').get('can_bus_service').get('dbc_file')
             if not dbc_file_path_relative:
-                print(f"Erreur: Le chemin du fichier DBC n'est pas spécifié dans le fichier JSON.")
+                print(f"Erreur: Le chemin du fichier DBC n'est pas spécifié dans le fichier JSON. ({dbc_file_path_relative})")
                 continue
             
             # Construire le chemin absolu du fichier DBC
