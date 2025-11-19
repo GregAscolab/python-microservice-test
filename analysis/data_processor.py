@@ -3,15 +3,19 @@ import numpy as np
 import json
 import os
 import glob
+import sys
+sys.path.append('../services/')
+
 try:
     import cantools
     import pyarrow.parquet as pq
     import can
-except ImportError:
-    print("Veuillez installer les librairies requises: pip install cantools pyarrow python-can")
+    from digital_twin_service.excavator_model import Excavator
+except ImportError as e:
+    print(f"Veuillez installer les librairies requises: pip install cantools pyarrow python-can. {e}")
     exit()
 
-def process_logs(app_log_dir_path, root_path):
+def process_logs(app_log_dir_path, can_log_dir_path, dbc_dir_path):
     """
     Traite tous les fichiers de log JSON et leurs fichiers BLF associés dans un répertoire spécifié.
     Charge la base de données DBC pour décoder les messages CAN.
@@ -40,14 +44,15 @@ def process_logs(app_log_dir_path, root_path):
                 session_data = json.load(f)
             print(f"Fichier JSON {json_file_path} de session lu avec succès.")
 
-            # Extraire le chemin du fichier DBC et d'autres données de session
-            dbc_file_path_relative = session_data.get('settings').get('can_bus_service').get('dbc_file')
-            if not dbc_file_path_relative:
-                print(f"Erreur: Le chemin du fichier DBC n'est pas spécifié dans le fichier JSON. ({dbc_file_path_relative})")
+            # Extraire le fichier DBC et d'autres données de session
+            dbc_file_path_split = os.path.split(session_data.get('settings').get('can_bus_service').get('dbc_file'))
+            dbc_filename = dbc_file_path_split[1]
+            if not dbc_filename:
+                print(f"Erreur: Le chemin du fichier DBC n'est pas spécifié dans le fichier JSON. ({dbc_file_path_split})")
                 continue
             
             # Construire le chemin absolu du fichier DBC
-            dbc_full_path = os.path.join(root_path, 'config', os.path.basename(dbc_file_path_relative))
+            dbc_full_path = os.path.join(dbc_dir_path, dbc_filename)
             if not os.path.exists(dbc_full_path):
                 print(f"Erreur: Le chemin du fichier DBC '{dbc_full_path}' est invalide ou introuvable.")
                 continue
@@ -60,14 +65,16 @@ def process_logs(app_log_dir_path, root_path):
             blf_files_relative = session_data.get('canBusLogs', [])
             
             # Récupérer les données de session pertinentes
-            gps_data = session_data.get('startPosition', {}).get('properties', {}).get('lastCoord', {})
+            # gps_data = session_data.get('startPosition', {}).get('properties', {}).get('lastCoord', {})
             session_id = session_data.get('startDate')
-            hardness = session_data.get('hardness')
+            hardness = float(session_data.get('hardness'))
             test_name = session_data.get('testName')
+
+            print(f"{test_name} at {hardness}")
 
             for blf_file_relative in blf_files_relative:
                 # Construire le chemin absolu du fichier BLF
-                blf_full_path = os.path.join(root_path, 'can_logs', os.path.basename(blf_file_relative))
+                blf_full_path = os.path.join(can_log_dir_path, os.path.basename(blf_file_relative))
                 print(f"Décodage du fichier BLF: {blf_full_path}")
                 
                 if not os.path.exists(blf_full_path):
@@ -82,8 +89,11 @@ def process_logs(app_log_dir_path, root_path):
                         try:
                             decoded = db.decode_message(msg.arbitration_id, msg.data)
                             # Ajout d'un préfixe pour différencier les signaux
-                            prefixed_decoded = {f"signal_{k}": v for k, v in decoded.items()}
+                            # prefixed_decoded = {f"signal_{k}": v for k, v in decoded.items()}
+                            prefixed_decoded = decoded
                             prefixed_decoded['timestamp'] = msg.timestamp
+                            # prefixed_decoded['timestamp'] = round(msg.timestamp, 3)
+                            # print(f"Msg ts = {round(msg.timestamp, 3)}")
                             decoded_messages.append(prefixed_decoded)
                         except Exception as e:
                             # Ignorer les messages qui ne peuvent pas être décodés
@@ -92,6 +102,7 @@ def process_logs(app_log_dir_path, root_path):
 
                     if decoded_messages:
                         df_decoded = pd.DataFrame(decoded_messages).set_index('timestamp')
+                        # df_decoded["timestamp"] = pd.to_datetime(df_decoded["timestamp"])
                         all_data.append(df_decoded)
                     else:
                         print(f"Aucun message décodable trouvé dans '{blf_full_path}'.")
@@ -108,14 +119,35 @@ def process_logs(app_log_dir_path, root_path):
             print("Tous les fichiers BLF ont été décodés et concaténés.")
             
             # Ajouter les données de session pertinentes
-            df['start_lat'] = gps_data.get('LatDecimal')
-            df['start_lon'] = gps_data.get('LonDecimal')
-            df['start_speed'] = gps_data.get('Speed')
+            # df['start_lat'] = gps_data.get('LatDecimal')
+            # df['start_lon'] = gps_data.get('LonDecimal')
+            # df['start_speed'] = gps_data.get('Speed')
             df['session_id'] = session_id
             df['hardness'] = hardness
             df['test_name'] = test_name
             
             all_dataframes.append(df)
+            
+            ###################################### EXCAVATOR ####################################
+            my_excavator = Excavator(session_data.get('settings').get('digital_twin_service').get('excavator'), session_data.get('settings').get('digital_twin_service').get('signal_mapping'))
+
+            # Load DBC file to initialize sensor state
+            sensor_state = {}
+            if dbc_full_path:
+                try:
+                    print(f"Loading DBC file from {dbc_full_path}...")
+                    db = cantools.db.load_file(dbc_full_path)
+                    for message in db.messages:
+                        for signal in message.signals:
+                            sensor_state[signal.name] = 0
+                            # if signal.name == "PF_BOOM_PFAngGF":
+                            #     self.logger.info(f"PF_BOOM_PFAngGF exist <<<<<<")
+                    print(f"Initialized sensor state with {len(sensor_state)} signals.")
+                except FileNotFoundError:
+                    print(f"DBC file not found at {dbc_full_path}")
+            else:
+                print("No dbc_file configured for digital_twin_service.")
+
         except FileNotFoundError as e:
             print(f"Erreur: Fichier introuvable. Veuillez vérifier le chemin: {e}")
             continue
@@ -126,12 +158,13 @@ def process_logs(app_log_dir_path, root_path):
             print(f"Une erreur inattendue est survenue lors du traitement: {e}")
             continue
 
+
     if all_dataframes:
-        return pd.concat(all_dataframes)
+        return pd.concat(all_dataframes), my_excavator, sensor_state
     else:
         print("Aucun signal n'a pu être décodé à partir des fichiers traités.")
         # return None
-        return pd.DataFrame()
+        return pd.DataFrame(), my_excavator, sensor_state
 
 if __name__ == '__main__':
     # Exemple d'utilisation du script en mode autonome
