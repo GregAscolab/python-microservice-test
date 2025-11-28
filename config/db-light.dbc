@@ -40,22 +40,22 @@ BO_ 394 DIN0_3: 8 Vector__XXX
  SG_ DIN0_3 : 0|8@1+ (1,0) [0|0] "" Vector__XXX
 
 BO_ 650 AIN1_4: 8 Vector__XXX
- SG_ A4_STICK_BP_b : 48|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
- SG_ A3_STICK_HP_b : 32|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
+ SG_ A4_JIB_BP_b : 48|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
+ SG_ A3_JIB_HP_b : 32|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
  SG_ A2_BOOM_BP_b : 16|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
  SG_ A1_BOOM_HP_b : 0|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
 
 BO_ 906 AIN5_8: 8 Vector__XXX
  SG_ A8 : 48|16@1- (1,0) [0|0] "" Vector__XXX
  SG_ A7 : 32|16@1- (1,0) [0|0] "" Vector__XXX
- SG_ A6_TOOTH_BP_b : 16|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
- SG_ A5_TOOTH_HP_b : 0|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
+ SG_ A6_BUCKET_BP_b : 16|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
+ SG_ A5_BUCKET_HP_b : 0|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
 
-BO_ 658 PF_CHASSIS_PFAng: 8 Vector__XXX
- SG_ PF_CHASSIS_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
- SG_ PF_CHASSIS_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
- SG_ PF_CHASSIS_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
- SG_ PF_CHASSIS_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
+BO_ 658 PF_TURRET_PFAng: 8 Vector__XXX
+ SG_ PF_TURRET_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_TURRET_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_TURRET_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_TURRET_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
 
 BO_ 662 PF_BOOM_PFAng: 8 Vector__XXX
  SG_ PF_BOOM_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
@@ -63,11 +63,11 @@ BO_ 662 PF_BOOM_PFAng: 8 Vector__XXX
  SG_ PF_BOOM_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BOOM_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
 
-BO_ 666 PF_BAL_PFAng: 8 Vector__XXX
- SG_ PF_BAL_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
- SG_ PF_BAL_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
- SG_ PF_BAL_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
- SG_ PF_BAL_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
+BO_ 666 PF_JIB_PFAng: 8 Vector__XXX
+ SG_ PF_JIB_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PF_JIB_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_JIB_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ PF_JIB_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
 
 BO_ 670 PF_BUCKET_PFAng: 8 Vector__XXX
  SG_ PF_BUCKET_PFAngAF : 48|16@1+ (1,0) [0|0] "" Vector__XXX

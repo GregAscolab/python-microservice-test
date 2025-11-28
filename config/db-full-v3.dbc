@@ -51,59 +51,59 @@ BO_ 906 AIN5_8: 8 Vector__XXX
  SG_ A6_BUCKET_BP_b : 16|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
  SG_ A5_BUCKET_HP_b : 0|16@1- (0.015320069339859434,-99.99999999999997) [0|0] "" Vector__XXX
 
-BO_ 400 PF_TURRET_Incl: 6 Vector__XXX
+BO_ 412 PF_TURRET_Incl: 6 Vector__XXX
  SG_ PF_TURRET_InclY : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_InclX : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_Temp : 0|16@1- (1,0) [0|0] "" Vector__XXX
 
-BO_ 401 PF_TURRET_Acc: 8 Vector__XXX
+BO_ 413 PF_TURRET_Acc: 8 Vector__XXX
  SG_ PF_TURRET_AccAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_AccZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_AccY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_AccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
-BO_ 657 PF_TURRET_RotRate: 8 Vector__XXX
+BO_ 669 PF_TURRET_RotRate: 8 Vector__XXX
  SG_ PF_TURRET_RotRateAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_RotRateZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_RotRateY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_RotRateX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
 
-BO_ 913 PF_TURRET_AccRotRate: 6 Vector__XXX
+BO_ 925 PF_TURRET_AccRotRate: 6 Vector__XXX
  SG_ PF_TURRET_AccRotRateZ : 32|16@1- (1,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_AccRotRateY : 16|16@1- (1,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_AccRotRateX : 0|16@1- (1,0) [0|0] "" Vector__XXX
 
-BO_ 1169 PF_TURRET_Gravity: 6 Vector__XXX
+BO_ 1181 PF_TURRET_Gravity: 6 Vector__XXX
  SG_ PF_TURRET_GravityZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_GravityY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_GravityX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
-BO_ 402 PF_TURRET_LinAcc: 6 Vector__XXX
+BO_ 414 PF_TURRET_LinAcc: 6 Vector__XXX
  SG_ PF_TURRET_LinAccZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_LinAccY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_LinAccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
-BO_ 658 PF_TURRET_PFAng: 8 Vector__XXX
+BO_ 670 PF_TURRET_PFAng: 8 Vector__XXX
  SG_ PF_TURRET_PFAngGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_PFAngAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
 
-BO_ 914 PF_TURRET_Euler: 8 Vector__XXX
+BO_ 926 PF_TURRET_Euler: 8 Vector__XXX
  SG_ PF_TURRET_EulerGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_EulerAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_EulerZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_EulerY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_EulerX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
 
-BO_ 1170 PF_TURRET_Quat: 8 Vector__XXX
+BO_ 1182 PF_TURRET_Quat: 8 Vector__XXX
  SG_ PF_TURRET_QuatW : 48|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_QuatZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_QuatY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_QuatX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
-BO_ 403 PF_TURRET_Temp: 4 Vector__XXX
+BO_ 415 PF_TURRET_Temp: 4 Vector__XXX
  SG_ PF_TURRET_TempMain : 16|16@1- (0.1,0) [0|0] "" Vector__XXX
  SG_ PF_TURRET_TempMems : 0|16@1- (0.1,0) [0|0] "" Vector__XXX
 
@@ -219,59 +219,59 @@ BO_ 411 PF_JIB_Temp: 4 Vector__XXX
  SG_ PF_JIB_TempMain : 16|16@1- (0.1,0) [0|0] "" Vector__XXX
  SG_ PF_JIB_TempMems : 0|16@1- (0.1,0) [0|0] "" Vector__XXX
 
-BO_ 412 PF_BUCKET_Incl: 6 Vector__XXX
+BO_ 400 PF_BUCKET_Incl: 6 Vector__XXX
  SG_ PF_BUCKET_InclY : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_InclX : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_Temp : 0|16@1- (1,0) [0|0] "" Vector__XXX
 
-BO_ 413 PF_BUCKET_Acc: 8 Vector__XXX
+BO_ 401 PF_BUCKET_Acc: 8 Vector__XXX
  SG_ PF_BUCKET_AccAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_AccZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_AccY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_AccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
-BO_ 669 PF_BUCKET_RotRate: 8 Vector__XXX
+BO_ 657 PF_BUCKET_RotRate: 8 Vector__XXX
  SG_ PF_BUCKET_RotRateAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_RotRateZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_RotRateY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_RotRateX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
 
-BO_ 925 PF_BUCKET_AccRotRate: 6 Vector__XXX
+BO_ 913 PF_BUCKET_AccRotRate: 6 Vector__XXX
  SG_ PF_BUCKET_AccRotRateZ : 32|16@1- (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_AccRotRateY : 16|16@1- (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_AccRotRateX : 0|16@1- (1,0) [0|0] "" Vector__XXX
 
-BO_ 1181 PF_BUCKET_Gravity: 6 Vector__XXX
+BO_ 1169 PF_BUCKET_Gravity: 6 Vector__XXX
  SG_ PF_BUCKET_GravityZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_GravityY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_GravityX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
-BO_ 414 PF_BUCKET_LinAcc: 6 Vector__XXX
+BO_ 402 PF_BUCKET_LinAcc: 6 Vector__XXX
  SG_ PF_BUCKET_LinAccZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_LinAccY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_LinAccX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
-BO_ 670 PF_BUCKET_PFAng: 8 Vector__XXX
+BO_ 658 PF_BUCKET_PFAng: 8 Vector__XXX
  SG_ PF_BUCKET_PFAngGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_PFAngAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_PFAngZ : 32|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_PFAngY : 16|16@1+ (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_PFAngX : 0|16@1+ (0.01,0) [0|0] "" Vector__XXX
 
-BO_ 926 PF_BUCKET_Euler: 8 Vector__XXX
+BO_ 914 PF_BUCKET_Euler: 8 Vector__XXX
  SG_ PF_BUCKET_EulerGF : 56|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_EulerAF : 48|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_EulerZ : 32|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_EulerY : 16|16@1- (0.01,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_EulerX : 0|16@1- (0.01,0) [0|0] "" Vector__XXX
 
-BO_ 1182 PF_BUCKET_Quat: 8 Vector__XXX
+BO_ 1170 PF_BUCKET_Quat: 8 Vector__XXX
  SG_ PF_BUCKET_QuatW : 48|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_QuatZ : 32|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_QuatY : 16|16@1- (0.001,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_QuatX : 0|16@1- (0.001,0) [0|0] "" Vector__XXX
 
-BO_ 415 PF_BUCKET_Temp: 4 Vector__XXX
+BO_ 403 PF_BUCKET_Temp: 4 Vector__XXX
  SG_ PF_BUCKET_TempMain : 16|16@1- (0.1,0) [0|0] "" Vector__XXX
  SG_ PF_BUCKET_TempMems : 0|16@1- (0.1,0) [0|0] "" Vector__XXX
 

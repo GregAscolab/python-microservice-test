@@ -121,7 +121,8 @@ class ConvertService(Microservice):
                 json.dumps({"status": "started", "filename": filename}).encode()
             )
 
-            db_path = os.path.abspath("config/db-full.dbc")
+            # TODO : Use path from settings !!!! Remove hardlink to "config/db-full-v3.dbc"
+            db_path = os.path.abspath("config/db-full-v3.dbc")
             db = cantools.database.load_file(db_path)
             file_path = os.path.join(CAN_LOGS_DIR, folder, filename)
 

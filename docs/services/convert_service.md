@@ -2,7 +2,7 @@
 
 ## Primary Responsibility
 
-The Convert Service is an on-demand utility service responsible for post-processing captured CAN bus data. Its main function is to convert binary CAN log files (e.g., `.blf` format) into a structured, time-series JSON format. It reads a specified log file, decodes all messages within it using a hardcoded DBC file (`config/db-full.dbc`), and aggregates the data for each CAN signal into a list of timestamps and corresponding values.
+The Convert Service is an on-demand utility service responsible for post-processing captured CAN bus data. Its main function is to convert binary CAN log files (e.g., `.blf` format) into a structured, time-series JSON format. It reads a specified log file, decodes all messages within it using a hardcoded DBC file (`config/db-full-v3.dbc`), and aggregates the data for each CAN signal into a list of timestamps and corresponding values.
 
 This service does not run any continuous loops; it only performs work when triggered by a command.
 
@@ -36,7 +36,7 @@ sequenceDiagram
     Client->>ConvertService: REQ: `commands.convert_service` ('blfToTimeseries', filename, folder)
     ConvertService->>ConvertService: PUB: `conversion.results` (status: started)
 
-    ConvertService->>FileSystem: Reads DBC file (`config/db-full.dbc`)
+    ConvertService->>FileSystem: Reads DBC file (`config/db-full-v3.dbc`)
     ConvertService->>FileSystem: Reads BLF log file from `can_logs/<folder>/<filename>`
 
     loop For each message in BLF file
