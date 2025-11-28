@@ -90,7 +90,7 @@ async def main():
         nats_url="nats://127.0.0.1:4222",
         can_interface="virtual",
         can_channel="vcan0",
-        dbc_file="config/db-full.dbc"
+        dbc_file="config/db-full-v3.dbc"
     )
 
     await tester.connect()
