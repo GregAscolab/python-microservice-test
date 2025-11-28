@@ -222,6 +222,10 @@ function showConfirmationModal(title, text, onConfirm, isAlert = false) {
 
 
 async function convertFile(file, folder, force = false) {
+    const plotlyPartsPanel = document.getElementById('plotly-parts-panel');
+    plotlyPartsPanel.style.display = "none";
+    plotlyPartsPanel.innerHTML = '';
+
     const plotlyPanel = document.getElementById('plotly-panel');
     plotlyPanel.style.display = "none";
     plotlyPanel.innerHTML = '';
@@ -247,12 +251,15 @@ async function convertFile(file, folder, force = false) {
 
 async function downloadAndDisplayPlot(b64convertedPath) {
     const plotlyPanel = document.getElementById('plotly-panel');
+    const plotlyPartsPanel = document.getElementById('plotly-parts-panel');
     const loader = document.getElementById('loader');
     const logStatus = document.getElementById('log-status');
     const decodedFilename = atob(b64convertedPath);
 
     plotlyPanel.style.display = "none";
     plotlyPanel.innerHTML = '';
+    plotlyPartsPanel.style.display = "none";
+    plotlyPartsPanel.innerHTML = '';
     loader.style.display = "flex";
     logStatus.innerHTML = `Loading ${decodedFilename}...`;
 
@@ -266,6 +273,7 @@ async function downloadAndDisplayPlot(b64convertedPath) {
         logStatus.innerHTML = decodedFilename;
         displayPlot(data);
         plotlyPanel.style.display = "flex";
+        plotlyPartsPanel.style.display = "flex";
     } catch (error) {
         console.error("Error fetching or displaying plot:", error);
         loader.style.display = "none";
@@ -274,9 +282,20 @@ async function downloadAndDisplayPlot(b64convertedPath) {
 }
 
 function displayPlot(data) {
+    const plotlyPartsPanel = document.getElementById('plotly-parts-panel');
+    plotlyPartsPanel.innerHTML = '';
+    const partsPlots = {};
+
     const plotlyPanel = document.getElementById('plotly-panel');
     plotlyPanel.innerHTML = '';
     const plots = {};
+
+    const tooth_plot_sig = {"title":"Tooth signals", "datas":["A5_BUCKET_HP_b", "A6_BUCKET_BP_b", "PF_BUCKET_PFAngX", "PF_BUCKET_RotRateX", "PF_BUCKET_AccRotRateX", "PF_BUCKET_AccX", "PF_BUCKET_AccY", "PF_BUCKET_AccZ"]};
+    const jib_plot_sig = {"title":"Jib signals", "datas":["A3_JIB_HP_b", "A4_JIB_BP_b", "PF_JIB_PFAngZ", "PF_JIB_RotRateZ", "PF_JIB_AccRotRateZ", "PF_JIB_AccX", "PF_JIB_AccY", "PF_JIB_AccZ"]};
+    const boom_plot_sig = {"title":"Boom signals", "datas":["A1_BOOM_HP_b", "A2_BOOM_BP_b", "PF_BOOM_PFAngZ", "PF_BOOM_RotRateZ", "PF_BOOM_AccRotRateZ", "PF_BOOM_AccX", "PF_BOOM_AccY", "PF_BOOM_AccZ"]};
+
+    const parts_plots = [tooth_plot_sig, jib_plot_sig, boom_plot_sig];
+
     data.forEach((series) => {
         let [prefix, part, sig] = series.name.split('_');
         if (!sig) { sig = "Others"; }
@@ -286,6 +305,17 @@ function displayPlot(data) {
         const trace = { x: series.timestamps, y: series.values, type: 'scatter', mode: 'lines', name: series.name, yaxis: 'y' + plots[sig].idx };
         plots[sig].idx++;
         plots[sig].traces.push(trace);
+
+        parts_plots.forEach((partPlot) => {
+            if (partPlot.datas.includes(series.name)) {
+                if(!partsPlots[partPlot.title]) {
+                    partsPlots[partPlot.title] = { traces: [], title: partPlot.title, idx: 0 };
+                }
+                partsPlots[partPlot.title].idx++;
+                const trace2 = { x: series.timestamps, y: series.values, type: 'scatter', mode: 'lines', name: series.name, yaxis: 'y' + partsPlots[partPlot.title].idx };
+                partsPlots[partPlot.title].traces.push(trace2)
+            }
+        });
     });
     Object.keys(plots).forEach((sig) => {
         const plotDiv = document.createElement('div');
@@ -293,6 +323,13 @@ function displayPlot(data) {
         plotlyPanel.appendChild(plotDiv);
         const layout = { title: { text: plots[sig].title }, autosize: true, automargin: true, xaxis: { rangeslider: { visible: false }, type: 'date', hovermode:'closest', showspikes : true, spikemode  : 'across', spikesnap : 'cursor', spikethickness:1, showline:true, showgrid:true }, yaxis: { fixedrange: false }, grid: { rows: plots[sig].traces.length, columns: 1 }, showlegend : true, hovermode  : 'x' };
         Plotly.react(plotDiv, plots[sig].traces, layout, {responsive: true});
+    });
+    Object.keys(partsPlots).forEach((sig) => {
+        const plotDiv = document.createElement('div');
+        plotDiv.className = 'plotly-log-graph';
+        plotlyPartsPanel.appendChild(plotDiv);
+        const layout = { title: { text: partsPlots[sig].title }, autosize: true, automargin: true, xaxis: { rangeslider: { visible: false }, type: 'date', hovermode:'closest', showspikes : true, spikemode  : 'across', spikesnap : 'cursor', spikethickness:1, showline:true, showgrid:true }, yaxis: { fixedrange: false }, grid: { rows: partsPlots[sig].traces.length, columns: 1 }, showlegend : true, hovermode  : 'x' };
+        Plotly.react(plotDiv, partsPlots[sig].traces, layout, {responsive: true});
     });
 }
 

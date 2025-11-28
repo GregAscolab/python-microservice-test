@@ -51,6 +51,14 @@ class UiService(Microservice):
         logging.getLogger("uvicorn.error").handlers = self.logger.handlers
         logging.getLogger("uvicorn.access").handlers = self.logger.handlers
 
+        # Cert path according plateform
+        if self.global_settings.get("hardware_platform") == "owa5x" :
+            key_path = os.path.abspath(os.path.join("/","device","ascolab","cert","localhost.key"))
+            cert_path = os.path.abspath(os.path.join("/","device","ascolab","cert","localhost.crt"))
+        else:
+            key_path = ""
+            cert_path = ""
+
         config = uvicorn.Config(
             app=self.app,
             host=self.settings.get("host", "0.0.0.0"),
@@ -59,8 +67,8 @@ class UiService(Microservice):
             # --- HTTPS/SSL Configuration ---
             # To enable HTTPS, generate certs with `mkcert localhost 127.0.0.1 ::1`
             # and uncomment the two lines below.
-            ssl_keyfile=os.path.abspath(os.path.join("/","device","ascolab","cert","localhost.key")),
-            ssl_certfile=os.path.abspath(os.path.join("/","device","ascolab","cert","localhost.crt")),
+            ssl_keyfile=key_path,
+            ssl_certfile=cert_path,
         )
         self.logger.info(f"Web server config= {config.host}:{config.port}, key={config.ssl_keyfile}, cert={config.ssl_certfile}")
         self.server = uvicorn.Server(config)

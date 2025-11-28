@@ -185,7 +185,7 @@ button:hover {
     min-height: 0; /* Fix for flexbox overflow issue in some browsers */
 }
 
-#dashboard-map, #gps-map-container, #gps-skyview-container, #gps-data-container, #plotly-panel {
+#dashboard-map, #gps-map-container, #gps-skyview-container, #gps-data-container, #plotly-panel, #plotly-parts-panel {
     flex: 1 0 0;
     display: flex;
     flex-direction: column;
