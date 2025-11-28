@@ -91,6 +91,29 @@ class Sensor3DModel:
         else:
             raise ValueError("L'axe de rotation doit être 'X', 'Y' ou 'Z'")
 
+    def _left_mount_correction(self, raw_sens_deg):
+        """
+        Reverse sensor mount
+        """
+        angle_correct = 0
+        if raw_sens_deg <= 180:
+            angle_correct = -raw_sens_deg
+        else :
+            angle_correct = 360 - raw_sens_deg
+        return angle_correct
+    
+    def _right_mount_correction(self, raw_sens_deg):
+        """
+        Default sensor mount
+        """
+        angle_correct = 0
+        if raw_sens_deg <= 180:
+            angle_correct = raw_sens_deg
+        else :
+            angle_correct = raw_sens_deg - 360
+        return angle_correct
+            
+
     def update_angles(self, x_deg, y_deg, z_deg, AppFlag:int):
         """
         Met à jour les angles du capteur en appliquant le mappage et les décalages.
@@ -116,42 +139,36 @@ class Sensor3DModel:
             'Y':y_deg,
             'Z':z_deg
         }
-    
-        if True:
-            if not (AppFlag & mask[self.axis_mapping.get('roll', 'X')]):
-                self.roll = angles_xyz[self.axis_mapping.get('roll', 'X')] + self.roll_offset
-                if self.axis_reverse["roll"] :
-                    self.roll = 360-self.roll
-            if not (AppFlag & mask[self.axis_mapping.get('pitch', 'Y')]):
-                self.pitch = angles_xyz[self.axis_mapping.get('pitch', 'Y')] + self.pitch_offset
-                if self.axis_reverse["pitch"] :
-                    self.pitch = 360-self.pitch
-            if not (AppFlag & mask[self.axis_mapping.get('yaw', 'Z')]):
-                self.yaw = angles_xyz[self.axis_mapping.get('yaw', 'Z')] + self.yaw_offset
-                if self.axis_reverse["yaw"] :
-                    self.yaw = 360-self.yaw
-        else :
-            if not (AppFlag & mask[self.axis_mapping.get('roll', 'X')]):
-                self.roll = angles_xyz[self.axis_mapping.get('roll', 'X')]
-                self.roll = self.roll if (self.roll) <= 180 else (self.roll - 360) 
-                self.roll += self.roll_offset
-                if self.axis_reverse["roll"] :
-                    self.roll = -self.roll
 
-            if not (AppFlag & mask[self.axis_mapping.get('pitch', 'Y')]):
-                self.pitch = angles_xyz[self.axis_mapping.get('pitch', 'Y')]
-                self.pitch = self.pitch if (self.pitch) <= 180 else (self.pitch - 360) 
-                self.pitch += self.pitch_offset
-                if self.axis_reverse["pitch"] :
-                    self.pitch = -self.pitch
+        if not (AppFlag & mask[self.axis_mapping.get('roll', 'X')]):
+            self.roll = angles_xyz[self.axis_mapping.get('roll', 'X')]
+            if self.axis_reverse["roll"] :
+                self.roll = self._left_mount_correction(self.roll)
+            else :
+                self.roll = self._right_mount_correction(self.roll)
 
-            if not (AppFlag & mask[self.axis_mapping.get('yaw', 'Z')]):
-                self.yaw = angles_xyz[self.axis_mapping.get('yaw', 'Z')]
-                self.yaw = self.yaw if (self.yaw) <= 180 else (self.yaw - 360) 
-                self.yaw += self.yaw_offset
-                if self.axis_reverse["yaw"] :
-                    self.yaw = -self.yaw
+            self.roll += self.roll_offset
 
+
+        if not (AppFlag & mask[self.axis_mapping.get('pitch', 'Y')]):
+            self.pitch = angles_xyz[self.axis_mapping.get('pitch', 'Y')]
+            if self.axis_reverse["pitch"] :
+                self.pitch = self._left_mount_correction(self.pitch)
+            else:
+                self.pitch = self._right_mount_correction(self.pitch)
+
+            self.pitch += self.pitch_offset
+
+
+        if not (AppFlag & mask[self.axis_mapping.get('yaw', 'Z')]):
+            self.yaw = angles_xyz[self.axis_mapping.get('yaw', 'Z')]
+            if self.axis_reverse["yaw"] :
+                self.yaw = self._left_mount_correction(self.yaw)
+            else:
+                self.yaw = self._right_mount_correction(self.yaw)
+
+            self.yaw += self.yaw_offset
+                
         
     def update_angles_quaternion(self, qx, qy, qz, qw):
         """
@@ -212,8 +229,8 @@ class Sensor3DModel:
         #     roll = 360-self.roll
         # else:
         #     roll=self.roll
-        roll = 360-self.roll
-        # roll = -self.roll
+        # roll = 360-self.roll
+        roll = self.roll
 
         # if self.axis_reverse["pitch"] :
         #     # pitch = 180-self.pitch
@@ -221,15 +238,15 @@ class Sensor3DModel:
         # else:
         #     pitch=self.pitch
         pitch = 360-self.pitch
-        # pitch = -self.pitch
+        # pitch = self.pitch
         
         # if self.axis_reverse["yaw"] :
         #     # yaw = 180-self.yaw
         #     yaw = 360-self.yaw
         # else:
         #     yaw=self.yaw
-        yaw = 360-self.yaw
-        # yaw = -self.yaw
+        # yaw = 360-self.yaw
+        yaw = self.yaw
 
         angles = {
             'X': math.radians(roll),
@@ -354,12 +371,29 @@ class Part:
         self.planPoints = self.sensor.calculate_3d_points(center_point)
 
     def get_height(self):
-        """Returns the maximum height (Z coordinate) of the part."""
-        return max(self.start_point[2], self.end_point[2])
+        """Returns the height (Z coordinate) of the part: distance between start and end height."""
+        return (self.end_point[2] - self.start_point[2])
 
     def get_radius(self):
         """Returns the horizontal distance (in the X-Y plane) of the part's end point from the origin."""
         return math.sqrt(self.end_point[0]**2 + self.end_point[1]**2)
+    
+    def get_angle_rep(self):
+        representation = {}
+        representation["roll"]  = self.rollAngle
+        representation["pitch"] = self.pitchAngle
+        representation["yaw"]   = self.yawAngle
+        return representation
+    
+    def get_kinematics(self):
+        kinematics = {}
+        kinematics[f"{self.name}_radius"]  = self.get_radius()
+        kinematics[f"{self.name}_height"]  = self.get_height()
+        kinematics[f"{self.name}_roll"]  = self.rollAngle
+        kinematics[f"{self.name}_pitch"] = self.pitchAngle
+        kinematics[f"{self.name}_yaw"]   = self.yawAngle
+        return kinematics
+
     
     def __calculate_plane_equation_from_angles(self, roll_deg, pitch_deg, yaw_deg, point_on_plane):
         """
@@ -621,14 +655,26 @@ class Excavator:
             current_parent_end_point = part.end_point
             current_parent_angle += part.pitchAngle
 
+    def get_parts_kinematics(self):
+        kine = {}
+        for part in self.parts:
+            kine.update(part.get_kinematics())
+        return kine
+
     def get_3d_representation(self):
         """
         Collects the start and end points of each part for 3D visualization.
         """
         representation = {}
         for part in self.parts:
-            representation[part.name] = {"points":[part.start_point, part.end_point], "plan": part.planPoints}
+            representation[part.name] = {"points":[part.start_point, part.end_point], "plan": part.planPoints, "angles":part.get_angle_rep()}
         return representation
+    
+    # def get_parts_angles(self):
+    #     representation = {}
+    #     for part in self.parts:
+    #         representation[part.name] = part.get_angle_rep()
+    #     return representation
 
     def get_height(self):
         """Returns the maximum height of the bucket."""
@@ -637,3 +683,8 @@ class Excavator:
     def get_radius(self):
         """Returns the horizontal radius of the bucket."""
         return self.bucket.get_radius()
+    
+    def update_and_get_kinematics(self, sensor_state):
+        self.update_from_sensors(sensor_state)
+        return self.get_parts_kinematics()
+
