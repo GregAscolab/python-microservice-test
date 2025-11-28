@@ -101,8 +101,9 @@ def process_logs(app_log_dir_path, can_log_dir_path, dbc_dir_path):
                     reader.stop()
 
                     if decoded_messages:
-                        df_decoded = pd.DataFrame(decoded_messages).set_index('timestamp')
-                        # df_decoded["timestamp"] = pd.to_datetime(df_decoded["timestamp"])
+                        df_decoded = pd.DataFrame(decoded_messages)
+                        df_decoded["timestamp"] = pd.to_datetime(df_decoded["timestamp"], unit='s', origin='unix')
+                        df_decoded = df_decoded.set_index('timestamp')
                         all_data.append(df_decoded)
                     else:
                         print(f"Aucun message décodable trouvé dans '{blf_full_path}'.")
